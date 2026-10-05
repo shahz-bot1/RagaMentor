@@ -76,7 +76,20 @@
   .abbox b { color: var(--accent); }
   #loopsList { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
   #loopsList li { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
-                  padding: 9px 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+                  padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
+  #loopsList .looptop { display: flex; align-items: center; gap: 10px; }
+  .lnote { font-size: 12.5px; color: var(--muted); margin-top: 6px; padding: 6px 8px;
+           background: var(--panel); border: 1px dashed transparent; border-radius: 7px;
+           cursor: text; white-space: pre-wrap; word-break: break-word; }
+  .lnote.empty { opacity: .55; }
+  .lnote:hover { border-color: var(--accent); }
+  textarea.noteEdit { width: 100%; font-size: 13px; padding: 6px 8px; border-radius: 7px;
+                      border: 1px solid var(--accent); background: var(--panel); color: var(--text);
+                      font-family: inherit; resize: vertical; margin-top: 6px; box-sizing: border-box; }
+  #fsNote { font-size: 13px; color: var(--muted); padding: 2px 4px; cursor: text; flex: 0 0 auto;
+            max-height: 64px; overflow-y: auto; }
+  #fsNote[hidden] { display: none; }
+  #fsNote b { color: var(--text); }
   #loopsList li.active { border-color: var(--accent); background: var(--accent-soft); }
   #loopsList .nm { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #loopsList .rng { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -203,6 +216,7 @@
   </div>
   <canvas id="fsWave"></canvas>
   <div id="fsChips"></div>
+  <div id="fsNote" class="hint" hidden></div>
   <div id="fsControls"></div>
 </div>
 
@@ -475,6 +489,32 @@ function renderFSChips() {
     sp.className = "hint"; sp.textContent = "No loops yet — set A/B below";
     c.appendChild(sp);
   }
+  renderFSNote();
+}
+function renderFSNote() {
+  const el = $("fsNote"), lp = selLoop();
+  if (!el) return;
+  if (!lp) { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = "";
+  const label = document.createElement("b"); label.textContent = "Note: ";
+  const body = document.createElement("span");
+  body.textContent = lp.note || "— tap to add";
+  el.append(label, body);
+  el.onclick = () => {
+    const ta = document.createElement("textarea");
+    ta.className = "noteEdit"; ta.rows = 2; ta.value = lp.note || "";
+    ta.placeholder = "e.g. key of D · sa lands on beat 3…";
+    el.innerHTML = ""; el.appendChild(ta); ta.focus();
+    const done = save => { if (save) { lp.note = ta.value.trim(); persist(); } renderLoops(); };
+    ta.addEventListener("keydown", e => {
+      e.stopPropagation();
+      if (e.key === "Enter" && !e.shiftKey) done(true);
+      else if (e.key === "Escape") done(false);
+    });
+    ta.addEventListener("blur", () => done(true));
+    ta.onclick = e => e.stopPropagation();
+  };
 }
 function fsZoom(factor, centerT) {
   const d = dur(); if (!d) return;
@@ -595,7 +635,7 @@ function addLoop() {
   if (b - a < MIN_LOOP) b = Math.min(dur(), a + MIN_LOOP);
   const n = s.loops.length + 1;
   const name = ($("loopName").value.trim() || ("Loop " + n));
-  const lp = { id: uid(), name, start: a, end: b };
+  const lp = { id: uid(), name, start: a, end: b, note: "" };
   s.loops.push(lp);
   $("loopName").value = "";
   selectedLoopId = lp.id; looping = true;
@@ -640,6 +680,7 @@ function renderLoops() {
   for (const lp of sorted) {
     const li = document.createElement("li");
     if (lp.id === selectedLoopId) li.classList.add("active");
+    const top = document.createElement("div"); top.className = "looptop";
     const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = lp.name; nm.title = "Click to select · double-click to rename";
     const rng = document.createElement("span"); rng.className = "rng"; rng.textContent = fmt(lp.start) + " → " + fmt(lp.end);
     const ren = document.createElement("button"); ren.className = "icon"; ren.textContent = "✎"; ren.title = "Rename";
@@ -651,7 +692,14 @@ function renderLoops() {
       if (selectedLoopId === lp.id) { selectedLoopId = null; looping = false; workingA = workingB = null; }
       persist(); renderLoops(); updateABUI();
     };
-    li.append(nm, rng, ren, del);
+    top.append(nm, rng, ren, del);
+    li.appendChild(top);
+    const noteDiv = document.createElement("div");
+    noteDiv.className = "lnote" + (lp.note ? "" : " empty");
+    noteDiv.textContent = lp.note || "+ add note (key, vocal cues…)";
+    noteDiv.title = "Tap to edit note";
+    noteDiv.onclick = e => { e.stopPropagation(); if (selectedLoopId !== lp.id) selectLoop(lp.id); editNote(li, noteDiv, lp); };
+    li.appendChild(noteDiv);
     li.onclick = () => selectLoop(lp.id);
     nm.ondblclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
     ul.appendChild(li);
@@ -661,7 +709,7 @@ function renderLoops() {
 function startRename(li, lp, nmSpan) {
   const input = document.createElement("input");
   input.className = "rename"; input.value = lp.name; input.maxLength = 40;
-  li.replaceChild(input, nmSpan);
+  nmSpan.parentNode.replaceChild(input, nmSpan);
   input.focus(); input.select();
   const commit = () => {
     const v = input.value.trim();
@@ -671,6 +719,24 @@ function startRename(li, lp, nmSpan) {
   input.addEventListener("keydown", e => { if (e.key === "Enter") commit(); if (e.key === "Escape") renderLoops(); e.stopPropagation(); });
   input.addEventListener("blur", commit);
   input.onclick = e => e.stopPropagation();
+}
+function editNote(li, noteDiv, lp) {
+  const ta = document.createElement("textarea");
+  ta.className = "noteEdit"; ta.rows = 2; ta.value = lp.note || "";
+  ta.placeholder = "e.g. key of D · sa lands on beat 3 · watch the gamaka…";
+  li.replaceChild(ta, noteDiv);
+  ta.focus();
+  const done = save => {
+    if (save) { lp.note = ta.value.trim(); persist(); }
+    renderLoops();
+  };
+  ta.addEventListener("keydown", e => {
+    e.stopPropagation();
+    if (e.key === "Enter" && !e.shiftKey) done(true);
+    else if (e.key === "Escape") done(false);
+  });
+  ta.addEventListener("blur", () => done(true));
+  ta.onclick = e => e.stopPropagation();
 }
 
 /* ============================== song lifecycle ============================== */
