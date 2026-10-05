@@ -97,6 +97,29 @@
               border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
   kbd { background: var(--chip); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+  /* fullscreen waveform */
+  #fsOverlay { position: fixed; inset: 0; z-index: 1000; background: var(--bg);
+               display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+  #fsOverlay[hidden] { display: none; }
+  #fsHeader { display: flex; align-items: center; gap: 12px; }
+  #fsClose { background: var(--chip); color: var(--text); border: 1px solid var(--border);
+             border-radius: 10px; width: 42px; height: 42px; font-size: 17px; cursor: pointer; flex: 0 0 auto; }
+  #fsTitleWrap { flex: 1; min-width: 0; }
+  #fsTitle { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #fsTime { font-variant-numeric: tabular-nums; }
+  #fsZoomBtns { display: flex; gap: 6px; flex: 0 0 auto; }
+  #fsZoomBtns button { background: var(--chip); color: var(--text); border: 1px solid var(--border);
+                       border-radius: 9px; min-width: 42px; height: 38px; font-size: 15px; cursor: pointer; padding: 0 10px; }
+  #fsWave { flex: 1; width: 100%; min-height: 220px; background: var(--panel2);
+            border: 1px solid var(--border); border-radius: 12px; touch-action: none; cursor: crosshair; }
+  #fsChips { display: flex; gap: 8px; overflow-x: auto; padding: 2px; min-height: 40px; align-items: center; flex: 0 0 auto; }
+  .chip { flex: 0 0 auto; background: var(--chip); color: var(--text); border: 1px solid var(--border);
+          border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  #fsControls { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+                padding: 12px; display: flex; flex-direction: column; gap: 10px;
+                box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; }
+  #fsControls .transport, #fsControls .row { margin: 0; }
 </style>
 </head>
 <body>
@@ -121,15 +144,15 @@
     <div id="emptyPlayer">Import a track to start practicing.<br><span class="hint">Files stay on this device, in your browser's storage.</span></div>
     <div id="playerUI" hidden>
       <h2 id="songTitle">—</h2>
-      <canvas id="wave"></canvas>
-      <div class="transport">
+      <canvas id="wave" title="Tap for fullscreen"></canvas>
+      <div class="transport" id="transportRow">
         <button class="tbtn" id="backBtn" title="Back 10s">−10</button>
         <button class="tbtn play" id="playBtn" title="Play/Pause (Space)">▶</button>
         <button class="tbtn" id="fwdBtn" title="Forward 10s">+10</button>
         <span id="timeLabel">0:00.0 / 0:00.0</span>
       </div>
 
-      <div class="row">
+      <div class="row" id="speedRow">
         <span class="label">Speed</span>
         <div class="seg" id="speedPresets">
           <button data-r="1">1x</button><button data-r="0.75">0.75x</button><button data-r="0.5">0.5x</button><button data-r="0.25">0.25x</button>
@@ -139,7 +162,7 @@
         <span class="hint">pitch locked</span>
       </div>
 
-      <div class="row">
+      <div class="row" id="abRow">
         <span class="label">A–B</span>
         <button class="btn small ghost" id="setABtn">Set A</button>
         <button class="btn small ghost" id="setBBtn">Set B</button>
@@ -148,13 +171,13 @@
         <button class="btn small ghost" id="bMinus" title="Nudge B earlier">B−</button>
         <button class="btn small ghost" id="bPlus" title="Nudge B later">B+</button>
       </div>
-      <div class="abbox">
+      <div class="abbox" id="abBox">
         <span>A <b id="aVal">—</b></span>
         <span>B <b id="bVal">—</b></span>
         <span class="hint" id="abHint"></span>
       </div>
 
-      <div class="row">
+      <div class="row" id="loopRow">
         <input id="loopName" placeholder="Loop name (optional)" maxlength="40">
         <button class="btn small" id="addLoopBtn">＋ Add loop</button>
         <button class="btn small ghost" id="newLoopBtn" title="Deselect and define a new loop">New</button>
@@ -163,10 +186,25 @@
 
       <h2 style="margin-top:16px">Loops for this song</h2>
       <ul id="loopsList"></ul>
-      <p class="hint">Tip: click the waveform to seek · <kbd>Space</kbd> play/pause · select a loop to edit its A/B live · everything is saved automatically.</p>
+      <p class="hint">Tip: tap the waveform for fullscreen · drag it to scrub · <kbd>Space</kbd> play/pause · in fullscreen, pinch to zoom and tap to seek.</p>
     </div>
   </section>
 </main>
+
+<div id="fsOverlay" hidden>
+  <div id="fsHeader">
+    <button id="fsClose" title="Close (Esc)">✕</button>
+    <div id="fsTitleWrap"><div id="fsTitle">—</div><div id="fsTime" class="hint">0:00.0 / 0:00.0</div></div>
+    <div id="fsZoomBtns">
+      <button id="zoomOut" title="Zoom out">−</button>
+      <button id="zoomIn" title="Zoom in">+</button>
+      <button id="zoomFit" title="Fit whole song">Fit</button>
+    </div>
+  </div>
+  <canvas id="fsWave"></canvas>
+  <div id="fsChips"></div>
+  <div id="fsControls"></div>
+</div>
 
 <footer>Prototype only — audio &amp; loops live in this browser (IndexedDB). Same DRM rule as native: no Spotify/Apple Music streams.</footer>
 
@@ -226,10 +264,9 @@ let currentId = null;
 let selectedLoopId = null;
 let workingA = null, workingB = null;   // A/B being defined, or mirror of selected loop
 let looping = false;
-let peaks = [], peaksFor = null;
+let peaks = [];
 let objectUrl = null;
-let waveBase = null;            // offscreen canvas with peaks
-let waveColor = "#6f7f95";
+let waveColor = "#6f7f95", playheadColor = "#ff5d5d";
 
 const audio = new Audio();
 audio.preload = "auto";
@@ -285,8 +322,16 @@ function tick() {
     }
   }
   if (s) {
-    $("timeLabel").textContent = fmt(audio.currentTime || 0) + " / " + fmt(dur());
-    drawWave();
+    const t = audio.currentTime || 0, d = dur();
+    $("timeLabel").textContent = fmt(t) + " / " + fmt(d);
+    paintWave($("wave"), 0, d);
+    if (fsOpen) {
+      if (!audio.paused && d > 0 && (t < fsView.start || t > fsView.start + fsView.dur)) {
+        fsView.start = clamp(t - fsView.dur * 0.25, 0, Math.max(0, d - fsView.dur));
+      }
+      paintWave(fsCanvas, fsView.start, fsView.dur);
+      $("fsTime").textContent = fmt(t) + " / " + fmt(d);
+    }
   }
   requestAnimationFrame(tick);
 }
@@ -298,7 +343,7 @@ async function computePeaks(blob) {
   const actx = new AC();
   try {
     const buf = await actx.decodeAudioData(raw);
-    const ch = buf.getChannelData(0), N = 900, out = new Array(N).fill(0);
+    const ch = buf.getChannelData(0), N = 6000, out = new Array(N).fill(0);
     const block = Math.max(1, Math.floor(ch.length / N));
     for (let i = 0; i < N; i++) {
       let m = 0; const start = i * block, end = Math.min(ch.length, start + block);
@@ -309,70 +354,196 @@ async function computePeaks(blob) {
     return out;
   } finally { try { actx.close(); } catch (e) {} }
 }
-function renderWaveBase() {
-  const c = $("wave"), w = c.clientWidth, h = c.clientHeight, dpr = window.devicePixelRatio || 1;
-  waveBase = document.createElement("canvas");
-  waveBase.width = w * dpr; waveBase.height = h * dpr;
-  const x = waveBase.getContext("2d");
-  x.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const mid = h / 2;
-  x.fillStyle = waveColor;
-  const n = peaks.length;
-  if (!n) {  // no peaks yet — flat line fallback
-    x.fillRect(0, mid - 1, w, 2); return;
+/* paint a waveform canvas for the time window [viewStart, viewStart+viewDur) */
+function paintWave(canvas, viewStart, viewDur) {
+  const ctx = canvas.getContext("2d");
+  const w = canvas.clientWidth, h = canvas.clientHeight, dpr = window.devicePixelRatio || 1;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   }
-  const bw = w / n;
-  for (let i = 0; i < n; i++) {
-    const ph = Math.max(1, peaks[i] * (h * 0.46));
-    x.fillRect(i * bw, mid - ph, Math.max(1, bw * 0.7), ph * 2);
-  }
-}
-function drawWave() {
-  const c = $("wave"); if (!c.clientWidth) return;
-  const w = c.clientWidth, h = c.clientHeight, dpr = window.devicePixelRatio || 1;
-  if (c.width !== Math.round(w * dpr)) { c.width = w * dpr; c.height = h * dpr; }
-  const ctx = c.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  if (waveBase) ctx.drawImage(waveBase, 0, 0, w, h);
-  const d = dur(); if (!d) return;
-  const s = cur();
+  const d = dur(), s = cur();
+  if (!d || !s) return;
+  const t2x = t => (t - viewStart) / viewDur * w;
   // loop regions
   for (const lp of s.loops) {
-    const x1 = lp.start / d * w, x2 = lp.end / d * w;
     ctx.fillStyle = lp.id === selectedLoopId ? "rgba(91,157,255,.30)" : "rgba(91,157,255,.12)";
-    ctx.fillRect(x1, 0, x2 - x1, h);
+    ctx.fillRect(t2x(lp.start), 0, t2x(lp.end) - t2x(lp.start), h);
+  }
+  // peaks (per-pixel max over the high-res buckets in view)
+  const n = peaks.length, mid = h / 2;
+  ctx.fillStyle = waveColor;
+  if (n) {
+    for (let x = 0; x < w; x++) {
+      const b0 = Math.floor((viewStart + x / w * viewDur) / d * n);
+      const b1 = Math.max(b0 + 1, Math.floor((viewStart + (x + 1) / w * viewDur) / d * n));
+      let m = 0;
+      for (let b = Math.max(0, b0); b < Math.min(n, b1); b++) if (peaks[b] > m) m = peaks[b];
+      const ph = Math.max(1, m * h * 0.46);
+      ctx.fillRect(x, mid - ph, 1, ph * 2);
+    }
+  } else {
+    ctx.fillRect(0, mid - 1, w, 2);
   }
   // working A/B dashed markers
   ctx.strokeStyle = "#5b9dff"; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
   for (const v of [workingA, workingB]) {
     if (v == null) continue;
-    const x = clamp(v, 0, d) / d * w;
+    const x = t2x(clamp(v, 0, d));
     ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
   }
   ctx.setLineDash([]);
   // playhead
-  const px = clamp(audio.currentTime || 0, 0, d) / d * w;
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--playhead") || "#ff5d5d";
+  const px = t2x(clamp(audio.currentTime || 0, 0, d));
+  ctx.strokeStyle = playheadColor;
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, h); ctx.stroke();
 }
 function refreshWaveColors() {
-  waveColor = getComputedStyle(document.documentElement).getPropertyValue("--wave").trim() || "#6f7f95";
-  renderWaveBase();
+  const cs = getComputedStyle(document.documentElement);
+  waveColor = cs.getPropertyValue("--wave").trim() || "#6f7f95";
+  playheadColor = cs.getPropertyValue("--playhead").trim() || "#ff5d5d";
 }
 // click / drag to seek
 (function () {
-  const c = $("wave"); let scrubbing = false;
+  const c = $("wave"); let wDown = null;
   const toTime = e => {
     const r = c.getBoundingClientRect();
     return clamp((e.clientX - r.left) / r.width, 0, 1) * dur();
   };
-  c.addEventListener("pointerdown", e => { if (!cur()) return; scrubbing = true; c.setPointerCapture(e.pointerId); seekTo(toTime(e)); });
-  c.addEventListener("pointermove", e => { if (scrubbing) seekTo(toTime(e)); });
-  c.addEventListener("pointerup", () => scrubbing = false);
-  c.addEventListener("pointercancel", () => scrubbing = false);
+  c.addEventListener("pointerdown", e => {
+    if (!cur()) return;
+    wDown = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false };
+    c.setPointerCapture(e.pointerId);
+  });
+  c.addEventListener("pointermove", e => {
+    if (!wDown) return;
+    if (Math.hypot(e.clientX - wDown.x, e.clientY - wDown.y) > 10) { wDown.moved = true; seekTo(toTime(e)); }
+  });
+  c.addEventListener("pointerup", e => {
+    if (wDown && !wDown.moved && performance.now() - wDown.t < 400) openFullscreen();
+    wDown = null;
+  });
+  c.addEventListener("pointercancel", () => wDown = null);
 })();
+
+/* ============================== fullscreen waveform ==============================
+   Tap the main waveform to expand. Pinch (or +/-/wheel) to zoom, drag to pan,
+   tap to seek. The transport / speed / A-B control rows move into the floating
+   panel so all wiring and state is shared — nothing is duplicated. */
+const fsCanvas = $("fsWave");
+let fsOpen = false;
+let fsView = { start: 0, dur: 0 };
+const MIN_ZOOM = 2; // seconds — deepest zoom window
+const moveIds = ["transportRow", "speedRow", "abRow", "abBox", "loopRow"];
+let savedSpots = [];
+
+function openFullscreen() {
+  if (!cur() || fsOpen || !dur()) return;
+  fsOpen = true;
+  savedSpots = moveIds.map(id => { const el = $(id); return { el, parent: el.parentNode, next: el.nextSibling }; });
+  const fc = $("fsControls");
+  moveIds.forEach(id => fc.appendChild($(id)));
+  fsView = { start: 0, dur: dur() };
+  $("fsTitle").textContent = cur().title;
+  $("fsOverlay").hidden = false;
+  document.body.style.overflow = "hidden";
+  renderFSChips();
+}
+function closeFullscreen() {
+  if (!fsOpen) return;
+  fsOpen = false;
+  savedSpots.forEach(({ el, parent, next }) => parent.insertBefore(el, next));
+  $("fsOverlay").hidden = true;
+  document.body.style.overflow = "";
+}
+function renderFSChips() {
+  const c = $("fsChips"); if (!c) return;
+  c.innerHTML = "";
+  const s = cur(); if (!s) return;
+  for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
+    const b = document.createElement("button");
+    b.className = "chip" + (lp.id === selectedLoopId ? " on" : "");
+    b.textContent = lp.name;
+    b.onclick = () => selectLoop(lp.id);
+    c.appendChild(b);
+  }
+  if (!s.loops.length) {
+    const sp = document.createElement("span");
+    sp.className = "hint"; sp.textContent = "No loops yet — set A/B below";
+    c.appendChild(sp);
+  }
+}
+function fsZoom(factor, centerT) {
+  const d = dur(); if (!d) return;
+  const c = centerT != null ? centerT : fsView.start + fsView.dur / 2;
+  const newDur = clamp(fsView.dur / factor, MIN_ZOOM, d);
+  fsView.start = clamp(c - (c - fsView.start) * (newDur / fsView.dur), 0, Math.max(0, d - newDur));
+  fsView.dur = newDur;
+}
+function fsTimeAt(clientX) {
+  const r = fsCanvas.getBoundingClientRect();
+  return fsView.start + clamp((clientX - r.left) / r.width, 0, 1) * fsView.dur;
+}
+const fsPtrs = new Map();
+let pinch = null, suppressTap = false;
+fsCanvas.addEventListener("pointerdown", e => {
+  fsCanvas.setPointerCapture(e.pointerId);
+  fsPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY, ox: e.clientX, oy: e.clientY, moved: false });
+  if (fsPtrs.size === 2) {
+    const p = [...fsPtrs.values()];
+    suppressTap = true;
+    pinch = {
+      d0: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y),
+      dur0: fsView.dur,
+      anchorT: fsTimeAt((p[0].x + p[1].x) / 2)
+    };
+  }
+});
+fsCanvas.addEventListener("pointermove", e => {
+  const pt = fsPtrs.get(e.pointerId); if (!pt) return;
+  const dx = e.clientX - pt.x;
+  pt.x = e.clientX; pt.y = e.clientY;
+  if (Math.hypot(e.clientX - pt.ox, e.clientY - pt.oy) > 10) pt.moved = true;
+  const d = dur(); if (!d) return;
+  if (fsPtrs.size === 2 && pinch) {
+    const p = [...fsPtrs.values()];
+    const dist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y);
+    if (dist > 10 && pinch.d0 > 10) {
+      const newDur = clamp(pinch.dur0 * pinch.d0 / dist, MIN_ZOOM, d);
+      const r = fsCanvas.getBoundingClientRect();
+      const frac = clamp(((p[0].x + p[1].x) / 2 - r.left) / r.width, 0, 1);
+      fsView.dur = newDur;
+      fsView.start = clamp(pinch.anchorT - frac * newDur, 0, Math.max(0, d - newDur));
+    }
+  } else if (fsPtrs.size === 1 && pt.moved) {
+    if (fsView.dur < d - 0.01) {
+      const r = fsCanvas.getBoundingClientRect();   // pan when zoomed in
+      fsView.start = clamp(fsView.start - dx / r.width * fsView.dur, 0, Math.max(0, d - fsView.dur));
+    } else {
+      seekTo(fsTimeAt(e.clientX));                  // scrub when fully zoomed out
+    }
+  }
+});
+function fsUp(e) {
+  const pt = fsPtrs.get(e.pointerId);
+  fsPtrs.delete(e.pointerId);
+  if (fsPtrs.size < 2) pinch = null;
+  if (pt && !pt.moved && fsPtrs.size === 0 && !suppressTap) seekTo(fsTimeAt(e.clientX)); // tap = seek
+  if (fsPtrs.size === 0) suppressTap = false;
+}
+fsCanvas.addEventListener("pointerup", fsUp);
+fsCanvas.addEventListener("pointercancel", fsUp);
+fsCanvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  fsZoom(e.deltaY < 0 ? 1.25 : 1 / 1.25, fsTimeAt(e.clientX));
+}, { passive: false });
+$("fsClose").onclick = closeFullscreen;
+$("zoomIn").onclick = () => fsZoom(1.6, audio.currentTime || undefined);
+$("zoomOut").onclick = () => fsZoom(1 / 1.6);
+$("zoomFit").onclick = () => { const d = dur(); if (d) fsView = { start: 0, dur: d }; };
 
 /* ============================== A–B loop logic ============================== */
 function syncABFromSelection() {
@@ -464,7 +635,7 @@ function renderLoops() {
   if (!sorted.length) {
     const li = document.createElement("li");
     li.innerHTML = '<span class="hint">No loops yet — set A and B above, then ＋ Add loop.</span>';
-    li.style.cursor = "default"; ul.appendChild(li); return;
+    li.style.cursor = "default"; ul.appendChild(li); renderFSChips(); return;
   }
   for (const lp of sorted) {
     const li = document.createElement("li");
@@ -485,6 +656,7 @@ function renderLoops() {
     nm.ondblclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
     ul.appendChild(li);
   }
+  renderFSChips();
 }
 function startRename(li, lp, nmSpan) {
   const input = document.createElement("input");
@@ -507,7 +679,7 @@ async function selectSong(id) {
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   currentId = id; selectedLoopId = null; looping = false;
-  workingA = workingB = null; peaks = []; peaksFor = null; waveBase = null;
+  workingA = workingB = null; peaks = [];
   objectUrl = URL.createObjectURL(s.blob);
   audio.src = objectUrl;
   audio.load();
@@ -519,9 +691,7 @@ async function selectSong(id) {
   // waveform peaks (async, non-blocking)
   try {
     peaks = await computePeaks(s.blob);
-    peaksFor = id;
-    if (currentId === id) renderWaveBase();
-  } catch (e) { console.warn("peaks failed", e); renderWaveBase(); }
+  } catch (e) { console.warn("peaks failed", e); }
 }
 async function importFiles(files) {
   let first = null;
@@ -573,9 +743,9 @@ $("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop(
 $("newLoopBtn").onclick = () => { selectedLoopId = null; looping = false; workingA = workingB = null; renderLoops(); updateABUI(); };
 $("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
 document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && fsOpen) { closeFullscreen(); return; }
   if (e.code === "Space" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); togglePlay(); }
 });
-window.addEventListener("resize", () => renderWaveBase());
 
 /* theme */
 (function () {
