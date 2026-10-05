@@ -97,6 +97,13 @@
               border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
   kbd { background: var(--chip); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+  .tinput { background: var(--panel); border: 1px solid var(--border); color: var(--text);
+            border-radius: 8px; padding: 7px 10px; font-size: 14px; width: 86px;
+            font-variant-numeric: tabular-nums; font-family: inherit; }
+  .tinput.small { width: 78px; padding: 6px 8px; font-size: 13px; }
+  .tinput:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .tfield { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+  .transport { flex-wrap: wrap; }
   /* fullscreen waveform */
   #fsOverlay { position: fixed; inset: 0; z-index: 1000; background: var(--bg);
                display: flex; flex-direction: column; gap: 10px; padding: 12px; }
@@ -150,6 +157,7 @@
         <button class="tbtn play" id="playBtn" title="Play/Pause (Space)">▶</button>
         <button class="tbtn" id="fwdBtn" title="Forward 10s">+10</button>
         <span id="timeLabel">0:00.0 / 0:00.0</span>
+        <input id="gotoInput" class="tinput small" inputmode="decimal" enterkeyhint="go" placeholder="go to…" title="Type a time to jump the playhead">
       </div>
 
       <div class="row" id="speedRow">
@@ -172,8 +180,8 @@
         <button class="btn small ghost" id="bPlus" title="Nudge B later">B+</button>
       </div>
       <div class="abbox" id="abBox">
-        <span>A <b id="aVal">—</b></span>
-        <span>B <b id="bVal">—</b></span>
+        <span class="tfield">A <input id="aInput" class="tinput" inputmode="decimal" enterkeyhint="done" placeholder="0:00.0" title="Type a time (seconds or m:ss.t), Enter to set"></span>
+        <span class="tfield">B <input id="bInput" class="tinput" inputmode="decimal" enterkeyhint="done" placeholder="0:00.0" title="Type a time (seconds or m:ss.t), Enter to set"></span>
         <span class="hint" id="abHint"></span>
       </div>
 
@@ -553,8 +561,9 @@ function syncABFromSelection() {
   updateABUI();
 }
 function updateABUI() {
-  $("aVal").textContent = workingA == null ? "—" : fmt(workingA);
-  $("bVal").textContent = workingB == null ? "—" : fmt(workingB);
+  const aI = $("aInput"), bI = $("bInput");
+  if (document.activeElement !== aI) aI.value = workingA == null ? "" : fmt(workingA);
+  if (document.activeElement !== bI) bI.value = workingB == null ? "" : fmt(workingB);
   const lp = selLoop();
   $("abHint").textContent = lp ? ("Editing “" + lp.name + "” — changes save automatically") :
     (workingA != null || workingB != null ? "New loop — set both A and B, name it, hit ＋ Add loop" : "No loop selected");
@@ -562,32 +571,63 @@ function updateABUI() {
   $("loopToggle").classList.toggle("on", looping);
   $("loopToggle").setAttribute("aria-checked", looping ? "true" : "false");
 }
+/* parse "83.4" (seconds) or "1:23.4" / "1:23" (m:ss) into seconds; null if invalid */
+function parseTime(str) {
+  str = String(str).trim().replace(",", ".");
+  if (!str) return null;
+  if (str.includes(":")) {
+    const parts = str.split(":");
+    if (parts.length > 3) return null;
+    let secs = 0;
+    for (const p of parts) {
+      const v = parseFloat(p);
+      if (p === "" || isNaN(v) || v < 0) return null;
+      secs = secs * 60 + v;
+    }
+    return secs;
+  }
+  const v = parseFloat(str);
+  return isNaN(v) || v < 0 ? null : v;
+}
+function applyA(t) {
+  const d = dur(), lp = selLoop();
+  workingA = clamp(t, 0, d);
+  if (lp) { lp.start = Math.min(workingA, lp.end - MIN_LOOP); workingA = lp.start; persist(); renderLoops(); }
+  updateABUI();
+}
+function applyB(t) {
+  const d = dur(), lp = selLoop();
+  workingB = clamp(t, 0, d);
+  if (lp) { lp.end = Math.max(workingB, lp.start + MIN_LOOP); workingB = lp.end; persist(); renderLoops(); }
+  updateABUI();
+}
 function setPoint(which) {
   if (!cur() || !dur()) return;
-  const t = audio.currentTime || 0, d = dur();
-  const lp = selLoop();
-  if (which === "A") {
-    workingA = clamp(t, 0, d);
-    if (lp) { lp.start = Math.min(workingA, lp.end - MIN_LOOP); workingA = lp.start; persist(); renderLoops(); }
-  } else {
-    workingB = clamp(t, 0, d);
-    if (lp) { lp.end = Math.max(workingB, lp.start + MIN_LOOP); workingB = lp.end; persist(); renderLoops(); }
-  }
-  updateABUI();
+  const t = audio.currentTime || 0;
+  if (which === "A") applyA(t); else applyB(t);
 }
 function nudge(which, dir) {
   if (!cur() || !dur()) return;
-  const d = dur(), lp = selLoop();
-  if (which === "A" && workingA != null) {
-    workingA = clamp(workingA + dir * NUDGE, 0, d);
-    if (lp) { lp.start = Math.min(workingA, lp.end - MIN_LOOP); workingA = lp.start; }
-  }
-  if (which === "B" && workingB != null) {
-    workingB = clamp(workingB + dir * NUDGE, 0, d);
-    if (lp) { lp.end = Math.max(workingB, lp.start + MIN_LOOP); workingB = lp.end; }
-  }
-  if (lp) { persist(); renderLoops(); }
-  updateABUI();
+  if (which === "A" && workingA != null) applyA(workingA + dir * NUDGE);
+  if (which === "B" && workingB != null) applyB(workingB + dir * NUDGE);
+}
+/* wire a time text field: Enter commits, Esc reverts, blur commits (iOS keyboard Done) */
+function wireTimeInput(input, apply) {
+  const commit = () => {
+    if (!cur() || !dur()) { updateABUI(); return; }
+    const v = parseTime(input.value);
+    if (v == null) updateABUI();            // invalid → revert display
+    else apply(clamp(v, 0, dur()));
+  };
+  input.addEventListener("keydown", e => {
+    e.stopPropagation();                    // keep Space/Escape for the field itself
+    if (e.key === "Enter") { commit(); input.blur(); }
+    else if (e.key === "Escape") { updateABUI(); input.blur(); }
+  });
+  input.addEventListener("blur", () => {
+    if (document.activeElement !== input) commit();
+  });
+  input.addEventListener("focus", () => input.select());
 }
 function addLoop() {
   const s = cur(); if (!s || workingA == null || workingB == null) return;
@@ -742,6 +782,9 @@ $("addLoopBtn").onclick = addLoop;
 $("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop(); e.stopPropagation(); });
 $("newLoopBtn").onclick = () => { selectedLoopId = null; looping = false; workingA = workingB = null; renderLoops(); updateABUI(); };
 $("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
+wireTimeInput($("aInput"), applyA);
+wireTimeInput($("bInput"), applyB);
+wireTimeInput($("gotoInput"), t => seekTo(t));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && fsOpen) { closeFullscreen(); return; }
   if (e.code === "Space" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); togglePlay(); }
