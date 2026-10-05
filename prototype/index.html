@@ -149,6 +149,7 @@
     <h2>Library</h2>
     <div id="dropHint">Drop audio files here<br>or</div>
     <button class="btn" id="importBtn" style="width:100%">＋ Import audio</button>
+    <div id="importMsg" class="hint" style="margin-top:8px;min-height:18px"></div>
     <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.m4b,.aac,.wav,.aiff,.aif,.caf,.ogg,.oga,.flac,.opus" multiple hidden>
     <ul id="songList"></ul>
   </section>
@@ -759,17 +760,44 @@ async function selectSong(id) {
     peaks = await computePeaks(s.blob);
   } catch (e) { console.warn("peaks failed", e); }
 }
+/* content hash for dedupe: SHA-256 when available, sampled FNV-1a fallback */
+async function fileHash(blob) {
+  try {
+    if (crypto.subtle) {
+      const buf = await blob.arrayBuffer();
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      return "sha256:" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+  } catch (e) { /* fall through to sampled hash */ }
+  const size = blob.size;
+  const head = new Uint8Array(await blob.slice(0, 65536).arrayBuffer());
+  const tail = new Uint8Array(await blob.slice(Math.max(0, size - 65536)).arrayBuffer());
+  let h = 0x811c9dc5;
+  const mix = arr => { for (const b of arr) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } };
+  mix(head); mix(tail);
+  for (const ch of String(size)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return "fnv:" + h.toString(16);
+}
 async function importFiles(files) {
-  let first = null;
+  let toOpen = null, dupes = 0, added = 0;
   for (const f of files) {
     if (!f.type.startsWith("audio/") && !/\.(mp3|m4a|aac|wav|aiff|aif|caf|ogg|flac)$/i.test(f.name)) continue;
-    const rec = { id: uid(), title: f.name.replace(/\.[^.]+$/, ""), blob: f, duration: 0, loops: [] };
+    const hash = await fileHash(f);
+    const existing = songs.find(s => s.hash === hash);
+    if (existing) { dupes++; if (!toOpen) toOpen = existing.id; continue; }
+    const rec = { id: uid(), title: f.name.replace(/\.[^.]+$/, ""), blob: f, duration: 0, loops: [], hash };
     songs.push(rec);
     await idbPut(rec);
-    if (!first) first = rec.id;
+    added++;
+    if (!toOpen) toOpen = rec.id;
   }
   renderSongs();
-  if (first) selectSong(first);
+  const msg = $("importMsg");
+  if (dupes > 0) {
+    msg.textContent = "Already in your library — opened the existing song" + (dupes > 1 ? "s" : "") + ".";
+    setTimeout(() => { if (msg.textContent.startsWith("Already")) msg.textContent = ""; }, 4000);
+  }
+  if (toOpen) selectSong(toOpen);
 }
 async function deleteSong(id) {
   if (!confirm("Delete this song and all its loops?")) return;
@@ -834,6 +862,14 @@ document.addEventListener("keydown", e => {
     songs = await idbAll();
     songs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
   } catch (e) { console.warn("idb unavailable", e); songs = []; }
+  // backfill content hashes for songs imported before dedupe existed
+  (async () => {
+    for (const s of songs) {
+      if (!s.hash && s.blob) {
+        try { s.hash = await fileHash(s.blob); await idbPut(s); } catch (e) { /* keep going */ }
+      }
+    }
+  })();
   refreshWaveColors();
   renderSongs(); updateABUI();
   let last = null;
