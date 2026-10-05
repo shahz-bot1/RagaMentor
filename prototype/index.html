@@ -198,7 +198,14 @@
         <span class="toggle" id="loopToggle" role="switch" aria-checked="false"><span class="dot"></span>Loop</span>
       </div>
 
-      <h2 style="margin-top:16px">Loops for this song</h2>
+      <div class="row" style="margin-top:16px;margin-bottom:2px">
+        <h2 style="margin:0">Loops for this song</h2>
+        <span style="flex:1"></span>
+        <button class="btn small ghost" id="exportLoopsBtn" title="Download loops as a JSON file">⤓ Export</button>
+        <button class="btn small ghost" id="importLoopsBtn" title="Import loops from a JSON file (replaces current loops)">⤒ Import</button>
+      </div>
+      <div id="loopsMsg" class="hint" style="min-height:18px"></div>
+      <input type="file" id="loopsFileInput" accept=".json,application/json" hidden>
       <ul id="loopsList"></ul>
       <p class="hint">Tip: tap the waveform for fullscreen · drag it to scrub · <kbd>Space</kbd> play/pause · in fullscreen, pinch to zoom and tap to seek.</p>
     </div>
@@ -836,6 +843,64 @@ $("addLoopBtn").onclick = addLoop;
 $("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop(); e.stopPropagation(); });
 $("newLoopBtn").onclick = () => { selectedLoopId = null; looping = false; workingA = workingB = null; renderLoops(); updateABUI(); };
 $("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
+
+/* ---- loop list interchange: export/import JSON at song level (import replaces) ---- */
+function sanitizeFilename(s) {
+  return ((s || "song").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "song");
+}
+function loopsMessage(text) {
+  const msg = $("loopsMsg");
+  msg.textContent = text;
+  setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
+}
+$("exportLoopsBtn").onclick = () => {
+  const s = cur(); if (!s) return;
+  const data = {
+    app: "RagaMentor",
+    version: 1,
+    song: s.title,
+    exportedAt: new Date().toISOString(),
+    loops: [...s.loops].sort((a, b) => a.start - b.start).map((lp, i) => ({
+      name: lp.name || ("Loop " + (i + 1)),
+      start: Math.round(lp.start * 100) / 100,
+      end: Math.round(lp.end * 100) / 100,
+      note: lp.note || ""
+    }))
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = sanitizeFilename(s.title) + "-loops.json";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  loopsMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") + " as JSON.");
+};
+$("importLoopsBtn").onclick = () => $("loopsFileInput").click();
+$("loopsFileInput").addEventListener("change", async e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    if (!data || !Array.isArray(data.loops)) throw new Error("bad format");
+    const s = cur(); if (!s) return;
+    const d = dur(), loops = [];
+    data.loops.forEach((raw, i) => {
+      const st = parseFloat(raw.start), en = parseFloat(raw.end);
+      if (!isFinite(st) || !isFinite(en)) return;                 // skip invalid entries
+      const start = clamp(st, 0, d), end = clamp(en, 0, d);
+      if (end - start < MIN_LOOP) return;                         // skip degenerate
+      loops.push({ id: uid(), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
+    });
+    s.loops = loops;                                              // replace semantics
+    selectedLoopId = null; looping = false; workingA = workingB = null;
+    persist(); renderLoops(); updateABUI();
+    loopsMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") + " — replaced previous loops.");
+  } catch (err) {
+    loopsMessage("Could not import: not a valid RagaMentor loops file.");
+  }
+});
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && fsOpen) { closeFullscreen(); return; }
   if (e.code === "Space" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); togglePlay(); }
