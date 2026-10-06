@@ -485,6 +485,7 @@ let selectedGroupId = null;     // XOR with selectedLoopId: selection is one loo
 let fsGroupView = null;         // group id whose members the Loops-tab chips show; null = top level
 let fsChecklist = false;        // add-loops checklist mode inside a group
 let checkSel = null;            // staged {loopId:true} while in checklist mode
+let checkConstrain = null;      // group id whose subtree loops are offered (new sub-group); null = open
 const GROUP_COLORS = ["#2dd4bf", "#fbbf24", "#a78bfa", "#fb7185", "#38bdf8"];
 const escapeHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function hexA(hex, a) {
@@ -506,26 +507,96 @@ try { audio.webkitPreservesPitch = true; } catch (e) {}
 const cur = () => songs.find(s => s.id === currentId) || null;
 const selLoop = () => { const s = cur(); return s ? s.loops.find(l => l.id === selectedLoopId) || null : null; };
 const selGroup = () => { const s = cur(); return s ? (s.groups || []).find(g => g.id === selectedGroupId) || null : null; };
-const loopGroupOf = loopId => { const s = cur(); return s ? (s.groups || []).find(g => (g.members || []).includes(loopId)) || null : null; };
-/* a group's range is derived: earliest member start → latest member end */
-function groupRange(g) {
-  const s = cur(); if (!s || !g) return null;
-  const ms = (g.members || []).map(id => s.loops.find(l => l.id === id)).filter(Boolean);
-  if (!ms.length) return null;
-  return { a: Math.min(...ms.map(l => l.start)), b: Math.max(...ms.map(l => l.end)) };
+const groupById = gid => { const s = cur(); return s ? (s.groups || []).find(g => g.id === gid) || null : null; };
+/* one parent per item (loop or group); null = top level */
+const parentOf = id => { const s = cur(); return s ? (s.groups || []).find(g => (g.members || []).includes(id)) || null : null; };
+const isGroupId = id => { const s = cur(); return s ? (s.groups || []).some(g => g.id === id) : false; };
+/* range of any item: loops directly; groups derive bottom-up (depth capped at 2) */
+function itemRange(id){
+  const s = cur(); if (!s) return null;
+  const lp = s.loops.find(l => l.id === id);
+  if (lp) return { a: lp.start, b: lp.end };
+  const g = (s.groups || []).find(x => x.id === id);
+  return g ? groupRange(g) : null;
 }
+function groupRange(g) {
+  if (!g) return null;
+  let a = Infinity, b = -Infinity;
+  for (const id of (g.members || [])){
+    const r = itemRange(id);
+    if (r){ a = Math.min(a, r.a); b = Math.max(b, r.b); }
+  }
+  return a === Infinity ? null : { a, b };
+}
+const topGroups = () => { const s = cur(); return s ? (s.groups || []).filter(g => !parentOf(g.id)) : []; };
+/* a group with no sub-groups of its own — the only kind that may be nested */
+const isFlatGroup = g => (g.members || []).every(m => !isGroupId(m));
+/* every loop under a group, direct members or via sub-groups */
+function subtreeLoops(gid){
+  const s = cur(); if (!s) return [];
+  const out = [], seen = new Set();
+  (function walk(id){
+    if (seen.has(id)) return; seen.add(id);
+    const g = (s.groups || []).find(x => x.id === id); if (!g) return;
+    for (const m of (g.members || [])){
+      if (s.loops.some(l => l.id === m)) out.push(m); else walk(m);
+    }
+  })(gid);
+  return out;
+}
+const ancestorsOf = gid => {
+  const out = []; let p = parentOf(gid), guard = 0;
+  while (p && guard++ < 8){ out.unshift(p); p = parentOf(p.id); }
+  return out;
+};
 /* what actually loops right now: the selected group section, the selected loop, or nothing */
 const activeRange = () => {
   const g = selGroup(); if (g) return groupRange(g);
   const lp = selLoop(); return lp ? { a: lp.start, b: lp.end } : null;
 };
 const activeName = () => { const g = selGroup(); if (g) return g.name; const lp = selLoop(); return lp ? lp.name : null; };
-/* drop dangling member ids; drop groups left with no members */
+/* drop dangling member ids; break reference cycles; enforce the 2-level cap
+   (a sub-group holds loops only — deeper links are lifted to top level);
+   drop groups left with no members (cascading) */
 function sanitizeGroups(s) {
   if (!Array.isArray(s.groups)) s.groups = [];
-  const ids = new Set(s.loops.map(l => l.id));
-  for (const g of s.groups) g.members = (g.members || []).filter(id => ids.has(id));
-  s.groups = s.groups.filter(g => g.members.length > 0);
+  const loopIds = new Set(s.loops.map(l => l.id));
+  const byId = new Map();
+  for (const g of s.groups) byId.set(g.id, g);
+  // 1. drop dangling ids and self-references
+  for (const g of s.groups) g.members = (g.members || []).filter(id => id !== g.id && (loopIds.has(id) || byId.has(id)));
+  const parentOfS = id => s.groups.find(g => g.members.includes(id)) || null;
+  // 2. break cycles: walk up from each group; on a repeat, cut the link
+  for (const g of [...s.groups]){
+    const seen = new Set([g.id]);
+    let prev = g.id, p = parentOfS(g.id);
+    while (p){
+      if (seen.has(p.id)){ p.members = p.members.filter(m => m !== prev); break; }
+      seen.add(p.id); prev = p.id; p = parentOfS(p.id);
+    }
+  }
+  // 3. depth cap: members below the top level must be loops; deeper group
+  //    links are cut (the sub-group surfaces to top level, loops intact)
+  const depthOf = gid => {
+    let d = 0, curId = gid; const seen = new Set();
+    while (!seen.has(curId)){ seen.add(curId); const p = parentOfS(curId); if (!p) break; curId = p.id; d++; }
+    return d;
+  };
+  for (const g of s.groups){
+    if (depthOf(g.id) >= 1) g.members = g.members.filter(id => loopIds.has(id));
+  }
+  // 4. drop emptied groups, cascading (scrub their ids from parents)
+  let changed = true;
+  while (changed){
+    changed = false;
+    for (const g of [...s.groups]){
+      if (!g.members.length){
+        s.groups = s.groups.filter(x => x.id !== g.id);
+        for (const o of s.groups) o.members = o.members.filter(m => m !== g.id);
+        changed = true;
+      }
+    }
+  }
 }
 const dur = () => { const s = cur(); return s ? (s.duration || 0) : 0; };
 
@@ -695,15 +766,18 @@ function paintWave(canvas, viewStart, viewDur) {
   const d = dur(), s = cur();
   if (!d || !s) return;
   const t2x = t => (t - viewStart) / viewDur * w;
-  // group section bands (derived range: first member start → last member end)
-  for (const g of (s.groups || [])) {
+  // group section bands (derived bottom-up); parents first and lighter so nested bands read
+  const depthOf = gid => { let d = 0, cur = gid, guard = 0; let p = parentOf(cur);
+    while (p && guard++ < 8){ d++; cur = p.id; p = parentOf(cur); } return d; };
+  for (const g of [...(s.groups || [])].sort((a, b) => depthOf(a.id) - depthOf(b.id))) {
     const r = groupRange(g); if (!r) continue;
-    ctx.fillStyle = hexA(g.color, g.id === selectedGroupId ? 0.30 : 0.13);
+    const sel = g.id === selectedGroupId;
+    ctx.fillStyle = hexA(g.color, sel ? 0.30 : Math.max(0.07, 0.13 - depthOf(g.id) * 0.05));
     ctx.fillRect(t2x(r.a), 0, Math.max(1, t2x(r.b) - t2x(r.a)), h);
   }
-  // loop regions (group members tinted with their group color)
+  // loop regions (tinted with their direct parent group's color)
   for (const lp of s.loops) {
-    const g = loopGroupOf(lp.id), sel = lp.id === selectedLoopId;
+    const g = parentOf(lp.id), sel = lp.id === selectedLoopId;
     ctx.fillStyle = g ? hexA(g.color, sel ? 0.45 : 0.20)
                       : (sel ? "rgba(91,157,255,.30)" : "rgba(91,157,255,.12)");
     ctx.fillRect(t2x(lp.start), 0, t2x(lp.end) - t2x(lp.start), h);
@@ -832,15 +906,35 @@ function renderFSChips() {
       persist(); renderLoops(); updateABUI();
     } else selectLoop(lp.id);
   });
+  const groupChipHTML = g => `<span class="dot" style="background:${g.color}"></span><span>${escapeHtml(g.name)}</span>` +
+    `<span class="chev">▸</span><span class="cnt">${g.members.length}</span>`;
+  const groupChip = g => chip(groupChipHTML(g), "", () => selectGroup(g.id), "Open group and loop the whole section");
+  const byRangeStart = id => { const r = itemRange(id); return r ? r.a : 1e9; };
   if (fsChecklist) {
     const g = (s.groups || []).find(x => x.id === fsGroupView);
-    if (!g) { fsChecklist = false; renderFSChips(); return; }
-    for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
-      const on = !!(checkSel && checkSel[lp.id]);
-      const og = loopGroupOf(lp.id);
+    if (!g) { fsChecklist = false; checkConstrain = null; renderFSChips(); return; }
+    let items;
+    if (checkConstrain) {
+      // new sub-group: only loops from the parent group's own contents
+      items = subtreeLoops(checkConstrain).map(id => s.loops.find(l => l.id === id)).filter(Boolean);
+    } else {
+      // ＋ Add: loops always eligible; groups only when the open group is
+      // top-level, and only flat groups (depth cap: sub-groups hold loops only)
+      items = [...s.loops];
+      if (!parentOf(g.id)) {
+        for (const gr of (s.groups || [])) {
+          if (gr.id !== g.id && !parentOf(gr.id) && isFlatGroup(gr)) items.push(gr);
+        }
+      }
+    }
+    items.sort((a, b) => byRangeStart(a.id) - byRangeStart(b.id));
+    for (const it of items) {
+      const on = !!(checkSel && checkSel[it.id]);
+      const og = parentOf(it.id);
       const tag = (og && og.id !== g.id) ? ` <span class="cnt">· ${escapeHtml(og.name)}</span>` : "";
-      chip(`<span class="tick">${on ? "✓" : ""}</span><span>${escapeHtml(lp.name)}</span>${tag}`,
-        on ? "checked" : "", () => { checkSel[lp.id] = !checkSel[lp.id]; renderFSChips(); },
+      const sub = isGroupId(it.id) ? `<span class="chev">▸</span>` : "";
+      chip(`<span class="tick">${on ? "✓" : ""}</span><span>${escapeHtml(it.name)}</span>${sub}${tag}`,
+        on ? "checked" : "", () => { checkSel[it.id] = !checkSel[it.id]; renderFSChips(); },
         (og && og.id !== g.id) ? `Currently in “${og.name}” — checking moves it here` : "Tap to toggle membership");
     }
     chip("Done", "done", applyChecklist, "Apply membership");
@@ -851,20 +945,19 @@ function renderFSChips() {
     const g = (s.groups || []).find(x => x.id === fsGroupView);
     if (!g) { fsGroupView = null; renderFSChips(); return; }
     chip("‹ All", "", backToTop, "Back to all loops");
-    for (const id of g.members) {
-      const lp = s.loops.find(l => l.id === id);
-      if (lp) loopChip(lp);
+    for (const a of ancestorsOf(g.id)) groupChip(a);   // breadcrumb: tap = open + loop
+    const mem = [...g.members].sort((a, b) => byRangeStart(a) - byRangeStart(b));
+    for (const id of mem) {
+      if (isGroupId(id)) { const sg = groupById(id); if (sg) groupChip(sg); }
+      else { const lp = s.loops.find(l => l.id === id); if (lp) loopChip(lp); }
     }
-    chip("＋ Add loops", "dashed", enterChecklist, "Choose which loops belong to this group");
+    chip("＋ Add", "dashed", enterChecklist, "Choose which loops and groups belong here");
+    if (!parentOf(g.id)) chip("＋ New group", "dashed", newGroup, "Create a sub-group inside “" + g.name + "”");
     return;
   }
-  for (const g of (s.groups || [])) {
-    chip(`<span class="dot" style="background:${g.color}"></span><span>${escapeHtml(g.name)}</span>` +
-      `<span class="chev">▸</span><span class="cnt">${g.members.length}</span>`,
-      "", () => selectGroup(g.id), "Open group and loop the whole section");
-  }
+  for (const g of topGroups()) groupChip(g);
   for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
-    if (loopGroupOf(lp.id)) continue;   // members live inside their group
+    if (parentOf(lp.id)) continue;   // members live inside their group
     loopChip(lp);
   }
   chip("＋ New group", "dashed", newGroup, "Group loops into a practicable section");
@@ -879,7 +972,7 @@ function selectGroup(id) {
   const s = cur(); if (!s) return;
   const g = (s.groups || []).find(x => x.id === id); if (!g) return;
   selectedGroupId = id; selectedLoopId = null; looping = true;
-  fsGroupView = id; fsChecklist = false; checkSel = null;
+  fsGroupView = id; fsChecklist = false; checkSel = null; checkConstrain = null;
   workingA = workingB = null;   // A–B tab edits scratch for a new loop while a group is selected
   persist(); renderLoops(); updateABUI();
   const r = groupRange(g);
@@ -888,7 +981,7 @@ function selectGroup(id) {
 }
 /* ‹ All: leave the group, clear selection — playback continues un-looped */
 function backToTop() {
-  fsGroupView = null; fsChecklist = false; checkSel = null;
+  fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
   selectedGroupId = null; selectedLoopId = null;
   looping = false; workingA = workingB = null;
   persist(); renderLoops(); updateABUI();
@@ -896,16 +989,29 @@ function backToTop() {
 function deleteGroup(id) {
   const s = cur(); if (!s) return;
   const g = (s.groups || []).find(x => x.id === id);
-  const n = g ? g.members.length : 0;
+  if (!g) return;
+  const p = parentOf(id);
+  const kids = [...g.members];
+  const n = kids.length;
   s.groups = (s.groups || []).filter(x => x.id !== id);
+  // children move up one level: loops ungroup, sub-groups surface (ids scrubbed)
+  if (p) p.members = p.members.filter(m => m !== id);
+  for (const k of kids) {
+    if (p && !p.members.includes(k)) p.members.push(k);
+  }
+  if (p) p.members.sort((a, b) => { const ra = itemRange(a), rb = itemRange(b); return (ra ? ra.a : 1e9) - (rb ? rb.a : 1e9); });
   if (selectedGroupId === id) { selectedGroupId = null; looping = false; workingA = workingB = null; }
-  if (fsGroupView === id) fsGroupView = null;
-  fsChecklist = false; checkSel = null;
+  if (fsGroupView === id) fsGroupView = p ? p.id : null;   // fall back to the parent view
+  fsChecklist = false; checkSel = null; checkConstrain = null;
   persist(); renderLoops(); updateABUI();
-  loopsMessage(`Deleted group — kept ${n} loop${n === 1 ? "" : "s"} as ungrouped.`);
+  loopsMessage(`Deleted group — moved ${n} item${n === 1 ? "" : "s"} up to ${p ? "“" + p.name + "”" : "top level"}.`);
 }
+/* ＋ New group creates a group right where you are: top level, or a
+   sub-group inside the open top-level group (hidden in sub-groups: depth cap) */
 function newGroup() {
   const s = cur(); if (!s) return;
+  const parentId = fsGroupView;
+  if (parentId && parentOf(parentId)) return;   // depth cap: sub-groups hold loops only
   const used = new Set((s.groups || []).map(g => g.name));
   let n = (s.groups || []).length + 1;
   while (used.has("Group " + n)) n++;
@@ -915,51 +1021,72 @@ function newGroup() {
     members: []
   };
   s.groups = [...(s.groups || []), g];
+  if (parentId) {
+    const par = groupById(parentId);
+    if (par) par.members.push(g.id);
+  }
   fsGroupView = g.id; selectedGroupId = null; selectedLoopId = null; looping = false;
-  persist(); enterChecklist();
-  loopsMessage("New group — tap loops to add them, then Done.");
+  persist();
+  // drop straight into the checklist: constrained to the parent's loops for a sub-group
+  checkConstrain = parentId || null;
+  checkSel = {};
+  fsChecklist = true;
+  renderFS();
+  loopsMessage(parentId ? "New sub-group — pick loops from “" + (groupById(parentId) || {}).name + "”, then Done."
+                       : "New group — tap loops to add them, then Done.");
 }
 /* the single membership editor: the checklist IS the membership */
+/* the single membership editor: ＋ Add opens it unconstrained (loops always,
+   plus flat top-level groups when the open group is top-level) */
 function enterChecklist() {
   const s = cur();
   const g = s && (s.groups || []).find(x => x.id === fsGroupView);
   if (!g) return;
   checkSel = {};
   for (const id of g.members) checkSel[id] = true;
+  checkConstrain = null;
   fsChecklist = true;
   renderFS();
 }
 function applyChecklist() {
   const s = cur();
   const g = s && (s.groups || []).find(x => x.id === fsGroupView);
-  fsChecklist = false;
+  fsChecklist = false; checkConstrain = null;
   if (!s || !g) { checkSel = null; renderFS(); return; }
-  const sel = s.loops.filter(lp => checkSel && checkSel[lp.id]).map(lp => lp.id);
-  for (const o of s.groups) {           // a loop belongs to one group only — checking moves it
+  // checked ids may be loops or (flat) groups — eligibility was enforced by the checklist
+  const sel = Object.keys(checkSel || {}).filter(id => checkSel[id])
+    .filter(id => s.loops.some(l => l.id === id) || (s.groups || []).some(x => x.id === id));
+  for (const o of s.groups) {           // one parent per item — checking moves it
     if (o.id !== g.id) o.members = o.members.filter(m => !sel.includes(m));
   }
-  const byStart = id => { const l = s.loops.find(x => x.id === id); return l ? l.start : 0; };
+  const byStart = id => { const r = itemRange(id); return r ? r.a : 1e9; };
   g.members = sel.sort((a, b) => byStart(a) - byStart(b));
-  s.groups = s.groups.filter(x => x.members.length > 0);   // emptied groups vanish
+  const parId = (parentOf(g.id) || {}).id || null;   // captured before sanitize may cascade
+  sanitizeGroups(s);                    // emptied groups vanish, cascading
   checkSel = null;
   if (!s.groups.find(x => x.id === g.id)) {
-    fsGroupView = null; selectedGroupId = null; looping = false; workingA = workingB = null;
+    fsGroupView = (parId && s.groups.some(x => x.id === parId)) ? parId : null;
+    selectedGroupId = null; looping = false; workingA = workingB = null;
     loopsMessage("Empty group removed.");
   } else {
     selectedGroupId = g.id; selectedLoopId = null; looping = true;
     const r = groupRange(g);
     if (r) seekTo(r.a);
     if (audio.paused) togglePlay();
-    loopsMessage(`“${g.name}” · ${g.members.length} loops · ${r ? fmt(r.a) + " – " + fmt(r.b) : ""}`);
+    const nItems = g.members.length;
+    loopsMessage(`“${g.name}” · ${nItems} item${nItems === 1 ? "" : "s"} · ${r ? fmt(r.a) + " – " + fmt(r.b) : ""}`);
   }
   persist(); renderLoops(); updateABUI();
 }
 function cancelChecklist() {
   const s = cur();
   const g = s && (s.groups || []).find(x => x.id === fsGroupView);
-  fsChecklist = false; checkSel = null;
-  if (g && g.members.length === 0) {   // brand-new group abandoned before picking loops
-    s.groups = s.groups.filter(x => x.id !== g.id);
+  fsChecklist = false; checkSel = null; checkConstrain = null;
+  if (g && g.members.length === 0) {   // brand-new group abandoned before picking anything
+    const par = parentOf(g.id);
+    s.groups = (s.groups || []).filter(x => x.id !== g.id);
+    if (par) par.members = par.members.filter(m => m !== g.id);
+    sanitizeGroups(s);
     fsGroupView = null; selectedGroupId = null;
   }
   persist(); renderLoops(); updateABUI();
@@ -984,19 +1111,24 @@ function renderFSNote() {
     const n = checkSel ? Object.keys(checkSel).filter(k => checkSel[k]).length : 0;
     const sp = document.createElement("span");
     sp.className = "hint";
-    sp.textContent = `Adding to “${gr ? gr.name : "group"}” — ${n} selected. Checking a loop that's in another group moves it here. Done applies.`;
+    sp.textContent = checkConstrain
+      ? `New sub-group in “${gr ? gr.name : "group"}” — ${n} selected. Only loops from “${(groupById(checkConstrain) || {}).name || "the parent group"}” are offered. Done applies.`
+      : `Adding to “${gr ? gr.name : "group"}” — ${n} selected. Checking an item that's elsewhere moves it here. Groups are capped at 2 levels: sub-groups hold loops only. Done applies.`;
     el.appendChild(sp);
     return;
   }
   if (g && !lp) {
     const r = groupRange(g);
+    const par = parentOf(g.id);
+    const nItems = g.members.length;
     const row = document.createElement("div");
     row.style.display = "flex"; row.style.alignItems = "center"; row.style.gap = "10px";
     const txt = document.createElement("div"); txt.style.flex = "1"; txt.style.minWidth = "0";
     const label = document.createElement("b"); label.textContent = "Section: ";
     const body = document.createElement("span");
-    body.textContent = `${g.members.length} loop${g.members.length === 1 ? "" : "s"}` +
-      (r ? ` · ${fmt(r.a)} – ${fmt(r.b)}` : "");
+    body.textContent = `${nItems} item${nItems === 1 ? "" : "s"}` +
+      (r ? ` · ${fmt(r.a)} – ${fmt(r.b)}` : "") +
+      (par ? ` · in “${par.name}”` : "");
     txt.append(label, body);
     const tg = document.createElement("span");
     tg.className = "toggle" + (looping ? " on" : "");
@@ -1008,7 +1140,7 @@ function renderFSNote() {
     row.append(txt, tg);
     const hint = document.createElement("div");
     hint.className = "hint";
-    hint.textContent = "Tap a member chip to drill that phrase; the group keeps looping the whole section.";
+    hint.textContent = "Tap a member chip to drill it — sub-groups open deeper; the section keeps looping.";
     el.append(row, hint);
     return;
   }
@@ -1073,9 +1205,15 @@ function deleteLoop(id) {
   const s = cur(); if (!s) return;
   s.loops = s.loops.filter(x => x.id !== id);
   for (const g of (s.groups || [])) g.members = (g.members || []).filter(m => m !== id);
-  s.groups = (s.groups || []).filter(g => g.members.length > 0);   // no ghost groups
-  if (fsGroupView && !(s.groups || []).some(g => g.id === fsGroupView)) fsGroupView = null;
+  const viewedParId = fsGroupView ? ((parentOf(fsGroupView) || {}).id || null) : null;
+  sanitizeGroups(s);   // emptied groups vanish, cascading to parents
+  if (fsGroupView && !(s.groups || []).some(g => g.id === fsGroupView)) {
+    fsGroupView = (viewedParId && s.groups.some(g => g.id === viewedParId)) ? viewedParId : null;
+  }
   if (selectedLoopId === id) { selectedLoopId = null; looping = false; workingA = workingB = null; }
+  if (selectedGroupId && !(s.groups || []).some(g => g.id === selectedGroupId)) {
+    selectedGroupId = null; looping = false; workingA = workingB = null;
+  }
   persist(); renderLoops(); updateABUI();
 }
 function fsZoom(factor, centerT) {
@@ -1263,7 +1401,7 @@ async function selectSong(id) {
     audio.pause();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     currentId = id; selectedLoopId = null; selectedGroupId = null;
-    fsGroupView = null; fsChecklist = false; checkSel = null;
+    fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
     looping = false; workingA = workingB = null; peaks = []; peaksOk = false;
     $("emptyPlayer").hidden = true; $("playerUI").hidden = false;
     $("songTitle").textContent = s.title;
@@ -1276,7 +1414,7 @@ async function selectSong(id) {
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   currentId = id; selectedLoopId = null; selectedGroupId = null;
-  fsGroupView = null; fsChecklist = false; checkSel = null;
+  fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
   looping = false; workingA = workingB = null; peaks = []; peaksOk = false;
   objectUrl = URL.createObjectURL(blob);
   audio.src = objectUrl;
@@ -1352,7 +1490,7 @@ async function deleteSong(id) {
     audio.pause(); audio.removeAttribute("src"); audio.load();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     currentId = null; selectedLoopId = null; selectedGroupId = null;
-    fsGroupView = null; fsChecklist = false; checkSel = null; looping = false;
+    fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null; looping = false;
     $("playerUI").hidden = true; $("emptyPlayer").hidden = false;
   }
   renderSongs(); persist();
@@ -1420,7 +1558,7 @@ $("fsLoopName").addEventListener("keydown", e => {
 $("fsTrash").onclick = () => {
   const lp = selLoop(), g = selGroup();
   if (g && !lp) {
-    if (confirm(`Delete group “${g.name}”? Its ${g.members.length} loop${g.members.length === 1 ? "" : "s"} will be kept as ungrouped.`)) deleteGroup(g.id);
+    if (confirm(`Delete group “${g.name}”? Its ${g.members.length} item${g.members.length === 1 ? "" : "s"} move${g.members.length === 1 ? "s" : ""} up one level (nothing is lost).`)) deleteGroup(g.id);
   } else if (lp) {
     if (confirm("Delete loop “" + lp.name + "”?")) deleteLoop(lp.id);
   }
@@ -1455,6 +1593,10 @@ function exportLoops() {
       loops: g.members.map(id => {
         const lp = s.loops.find(l => l.id === id);
         return lp ? (lp.name || "") : null;
+      }).filter(Boolean),
+      groups: g.members.map(id => {
+        const sg = (s.groups || []).find(x => x.id === id);
+        return sg ? (sg.name || "") : null;
       }).filter(Boolean)
     }))
   };
@@ -1487,32 +1629,54 @@ $("loopsFileInput").addEventListener("change", async e => {
       loops.push({ id: uid(), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
     });
     s.loops = loops;                                              // replace semantics
-    // rebuild groups: match member loops by name (fresh ids), one group per loop
+    // rebuild groups: match members by name (fresh ids), one parent per item.
+    // two passes so sub-groups resolve regardless of order in the file.
     const nameToId = {};
     loops.forEach(lp => { if (!(lp.name in nameToId)) nameToId[lp.name] = lp.id; });
-    const byStart = id => loops.find(l => l.id === id).start;
-    const groups = [];
+    const groups = [], groupNameToId = {};
     (Array.isArray(data.groups) ? data.groups : []).forEach((rg, gi) => {
       if (!rg || typeof rg.name !== "string") return;
-      const members = [...new Set(
-        (Array.isArray(rg.loops) ? rg.loops : [])
-          .map(n => nameToId[String(n)])
-          .filter(id => id && !groups.some(g => g.members.includes(id)))
-      )].sort((a, b) => byStart(a) - byStart(b));
-      if (!members.length) return;
-      groups.push({
-        id: uid(),
-        name: String(rg.name).slice(0, 40) || ("Group " + (gi + 1)),
+      const gname = String(rg.name).slice(0, 40) || ("Group " + (gi + 1));
+      if (gname in groupNameToId) return;   // duplicate names: first wins
+      const g = {
+        id: uid(), name: gname,
         color: /^#[0-9a-fA-F]{6}$/.test(rg.color) ? rg.color : GROUP_COLORS[gi % GROUP_COLORS.length],
-        members
-      });
+        members: []
+      };
+      g._loopNames = (Array.isArray(rg.loops) ? rg.loops : []).map(String);
+      g._groupNames = (Array.isArray(rg.groups) ? rg.groups : []).map(String);
+      groups.push(g); groupNameToId[gname] = g.id;
     });
+    const taken = new Set();   // one parent per item
+    for (const g of groups){
+      for (const n of g._loopNames){
+        const id = nameToId[n];
+        if (id && !taken.has(id)){ g.members.push(id); taken.add(id); }
+      }
+      delete g._loopNames;
+    }
+    for (const g of groups){
+      for (const n of g._groupNames){
+        const id = groupNameToId[n];
+        if (id && id !== g.id && !taken.has(id)){ g.members.push(id); taken.add(id); }
+      }
+      delete g._groupNames;
+    }
+    const rStart = id => {
+      const l = loops.find(x => x.id === id); if (l) return l.start;
+      const gg = groups.find(x => x.id === id);
+      if (!gg) return 1e9;
+      const starts = gg.members.map(m => { const ll = loops.find(x => x.id === m); return ll ? ll.start : 1e9; });
+      return starts.length ? Math.min(...starts) : 1e9;
+    };
+    for (const g of groups) g.members.sort((a, b) => rStart(a) - rStart(b));
     s.groups = groups;
-    selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null;
+    sanitizeGroups(s);   // enforce depth cap, break cycles, drop empties
+    selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
     looping = false; workingA = workingB = null;
     persist(); renderLoops(); updateABUI();
     loopsMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
-      (groups.length ? " + " + groups.length + " group" + (groups.length === 1 ? "" : "s") : "") +
+      (s.groups.length ? " + " + s.groups.length + " group" + (s.groups.length === 1 ? "" : "s") : "") +
       " — replaced previous loops.");
   } catch (err) {
     loopsMessage("Could not import: not a valid RagaMentor loops file.");
