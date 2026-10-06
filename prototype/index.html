@@ -86,7 +86,7 @@
   textarea.noteEdit { width: 100%; font-size: 13px; padding: 6px 8px; border-radius: 7px;
                       border: 1px solid var(--accent); background: var(--panel); color: var(--text);
                       font-family: inherit; resize: vertical; margin-top: 6px; box-sizing: border-box; }
-  #fsNote { font-size: 13px; color: var(--muted); padding: 2px 4px; cursor: text; flex: 0 0 auto;
+  #fsNote { font-size: 13px; color: var(--muted); padding: 2px 4px; cursor: text;
             max-height: 64px; overflow-y: auto; }
   #fsNote[hidden] { display: none; }
   #fsNote b { color: var(--text); }
@@ -110,12 +110,12 @@
               border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
   kbd { background: var(--chip); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; font-size: 12px; }
-  /* fullscreen waveform */
+  /* fullscreen waveform — tabbed control panel */
   #fsOverlay { position: fixed; inset: 0; z-index: 1000; background: var(--bg);
                display: flex; flex-direction: column; gap: 10px; padding: 12px;
                overflow-y: auto; overflow-x: hidden; }
   #fsOverlay[hidden] { display: none; }
-  #fsHeader { display: flex; align-items: center; gap: 12px; }
+  #fsHeader { display: flex; align-items: center; gap: 12px; flex: 0 0 auto; }
   #fsClose { background: var(--chip); color: var(--text); border: 1px solid var(--border);
              border-radius: 10px; width: 42px; height: 42px; font-size: 17px; cursor: pointer; flex: 0 0 auto; }
   #fsTitleWrap { flex: 1; min-width: 0; }
@@ -124,17 +124,55 @@
   #fsZoomBtns { display: flex; gap: 6px; flex: 0 0 auto; }
   #fsZoomBtns button { background: var(--chip); color: var(--text); border: 1px solid var(--border);
                        border-radius: 9px; min-width: 42px; height: 38px; font-size: 15px; cursor: pointer; padding: 0 10px; }
-  #fsWave { flex: 1; width: 100%; min-height: 220px; background: var(--panel2);
+  #fsWave { flex: 1 1 auto; width: 100%; min-height: 200px; background: var(--panel2);
             border: 1px solid var(--border); border-radius: 12px; touch-action: none; cursor: crosshair; }
-  #fsChips { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px; min-height: 40px; align-items: center; flex: 0 0 auto; }
   .chip { flex: 0 0 auto; background: var(--chip); color: var(--text); border: 1px solid var(--border);
-          border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; }
+          border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer;
+          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
-  #fsControls { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
-                padding: 12px; display: flex; flex-direction: column; gap: 10px;
-                box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; }
-  #fsControls .transport, #fsControls .row { margin: 0; }
-  #fsControls #abRow { flex-wrap: wrap; }
+  #fsPanel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
+             padding: 12px; display: flex; flex-direction: column; gap: 10px;
+             box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; min-width: 0; }
+  #fsTransport { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #fsTransport .tbtn { background: var(--chip); color: var(--text); border: 0; border-radius: 50%;
+                       width: 42px; height: 42px; font-size: 15px; cursor: pointer; flex: 0 0 auto; }
+  #fsTransport .tbtn.play { width: 54px; height: 54px; font-size: 20px; background: var(--accent); color: #fff; }
+  #fsTimeLabel { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); flex: 0 0 auto; }
+  #fsLoopChip { margin-left: auto; max-width: 44%; flex: 0 1 auto; min-width: 0; }
+  #fsLoopChip[hidden] { display: none; }
+  #fsAudioMsg { color: var(--danger); font-size: 12.5px; }
+  #fsAudioMsg[hidden] { display: none; }
+  #fsSpeedSeg { display: flex; }
+  #fsSpeedSeg button { flex: 1; }
+  #fsTabs { display: flex; background: var(--chip); border-radius: 10px; padding: 3px; gap: 2px; }
+  #fsTabs button { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+                   border-radius: 8px; padding: 8px 0; font-size: 13px; cursor: pointer; }
+  #fsTabs button.on { background: var(--accent); color: #fff; font-weight: 600; }
+  .fsPage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+  .fsPage[hidden] { display: none; }
+  #fsChips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+  #fsSelRow { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  #fsSelRow[hidden] { display: none; }
+  #fsLoopName { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--border);
+                color: var(--text); border-radius: 9px; padding: 9px 12px; font-size: 14px; font-weight: 600; }
+  #fsTrash { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 10px; cursor: pointer;
+             border: 1px solid var(--danger); background: transparent; color: var(--danger);
+             display: flex; align-items: center; justify-content: center; }
+  #fsEditHead { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fsStepper { display: flex; align-items: center; gap: 8px; min-width: 0;
+               background: var(--panel2); border: 1px solid var(--border);
+               border-radius: 10px; padding: 6px 8px; }
+  .fsStepper .abTag { font-weight: 700; color: var(--accent); width: 16px; text-align: center; flex: 0 0 auto; }
+  .fsStepper .step { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 9px; cursor: pointer;
+                     background: var(--chip); color: var(--text); border: 1px solid var(--border); font-size: 16px; }
+  .fsStepper .val { flex: 1; min-width: 0; text-align: center; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .fsStepper .set { flex: 0 0 auto; height: 40px; padding: 0 16px; }
+  #fsAddRow { display: flex; gap: 8px; min-width: 0; }
+  #fsNewName { flex: 1; min-width: 0; background: var(--panel2); border: 1px solid var(--border);
+               color: var(--text); border-radius: 9px; padding: 8px 12px; font-size: 14px; }
+  #fsSliderRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  #fsSpeedSlider { flex: 1; min-width: 0; }
+  #fsSpeedVal { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 52px; text-align: right; }
 #debugWrap{margin:14px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 #debugBar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(128,128,128,.12);font-size:12px;font-weight:700}
 #debugBar button{font-size:12px;padding:3px 10px;margin-left:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
@@ -179,7 +217,7 @@
       <div class="row" id="speedRow">
         <span class="label">Speed</span>
         <div class="seg" id="speedPresets">
-          <button data-r="1">1x</button><button data-r="0.75">0.75x</button><button data-r="0.5">0.5x</button><button data-r="0.25">0.25x</button>
+          <button data-r="0.25">0.25x</button><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1">1x</button>
         </div>
         <input type="range" id="speedSlider" min="0.25" max="1" step="0.05" value="1" style="flex:1;min-width:120px">
         <span id="speedVal">1.00x</span>
@@ -233,9 +271,59 @@
     </div>
   </div>
   <canvas id="fsWave"></canvas>
-  <div id="fsChips"></div>
-  <div id="fsNote" class="hint" hidden></div>
-  <div id="fsControls"></div>
+  <div id="fsPanel">
+    <div id="fsTransport">
+      <button class="tbtn" id="fsBack" title="Back 10s">−10</button>
+      <button class="tbtn play" id="fsPlay" title="Play/Pause">▶</button>
+      <button class="tbtn" id="fsFwd" title="Forward 10s">+10</button>
+      <span id="fsTimeLabel">0:00.0 / 0:00.0</span>
+      <span class="chip on" id="fsLoopChip" hidden></span>
+    </div>
+    <div id="fsAudioMsg" class="hint" hidden></div>
+    <div class="seg" id="fsSpeedSeg">
+      <button data-r="0.25">0.25x</button><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1">1x</button>
+    </div>
+    <div id="fsTabs" role="tablist">
+      <button data-tab="loops" class="on">Loops</button><button data-tab="ab">A–B</button><button data-tab="speed">Speed</button>
+    </div>
+    <div class="fsPage" id="fsPageLoops">
+      <div id="fsChips"></div>
+      <div id="fsSelRow" hidden>
+        <input id="fsLoopName" maxlength="40" placeholder="Loop name" aria-label="Selected loop name">
+        <button id="fsTrash" title="Delete selected loop"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+      <div id="fsNote" class="hint"></div>
+    </div>
+    <div class="fsPage" id="fsPageAB" hidden>
+      <div class="hint" id="fsEditHead">No loop selected</div>
+      <div class="fsStepper">
+        <span class="abTag">A</span>
+        <button class="step" id="fsAMinus" title="Nudge A earlier by 0.1s">−</button>
+        <span class="val" id="fsAVal">—</span>
+        <button class="step" id="fsAPlus" title="Nudge A later by 0.1s">+</button>
+        <button class="btn small ghost set" id="fsASet">Set</button>
+      </div>
+      <div class="fsStepper">
+        <span class="abTag">B</span>
+        <button class="step" id="fsBMinus" title="Nudge B earlier by 0.1s">−</button>
+        <span class="val" id="fsBVal">—</span>
+        <button class="step" id="fsBPlus" title="Nudge B later by 0.1s">+</button>
+        <button class="btn small ghost set" id="fsBSet">Set</button>
+      </div>
+      <div><span class="toggle" id="fsLoopToggle" role="switch" aria-checked="false"><span class="dot"></span>Loop</span></div>
+      <div id="fsAddRow">
+        <input id="fsNewName" maxlength="40" placeholder="Loop name (optional)" aria-label="New loop name">
+        <button class="btn small" id="fsAddBtn">＋ Add loop</button>
+      </div>
+    </div>
+    <div class="fsPage" id="fsPageSpeed" hidden>
+      <div id="fsSliderRow">
+        <input type="range" id="fsSpeedSlider" min="0.25" max="1" step="0.05" value="1" aria-label="Playback speed">
+        <span id="fsSpeedVal">1.00x</span>
+      </div>
+      <div class="hint" style="text-align:center">fine-tune between presets</div>
+    </div>
+  </div>
 </div>
 
 <div id="debugWrap">
@@ -430,6 +518,7 @@ function setRate(r) {
   $("speedVal").textContent = r.toFixed(2) + "x";
   document.querySelectorAll("#speedPresets button").forEach(b =>
     b.classList.toggle("on", Math.abs(parseFloat(b.dataset.r) - r) < 0.001));
+  updateFSSpeedUI();
 }
 let lastRecovery = 0;
 /* Rebuild the audio element's source from a FRESH storage read.
@@ -476,11 +565,16 @@ function showAudioMsg(t) {
   const el = $("audioMsg");
   el.textContent = t || "";
   el.hidden = !t;
-  if (t) setTimeout(() => { if (el.textContent === t) { el.hidden = true; el.textContent = ""; } }, 9000);
+  const fsEl = $("fsAudioMsg");
+  if (fsEl) { fsEl.textContent = t || ""; fsEl.hidden = !t; }
+  if (t) setTimeout(() => { if (el.textContent === t) {
+    el.hidden = true; el.textContent = "";
+    if (fsEl) { fsEl.hidden = true; fsEl.textContent = ""; }
+  } }, 9000);
 }
-audio.addEventListener("play", () => { updatePlayBtn(); showAudioMsg(""); });
-audio.addEventListener("pause", updatePlayBtn);
-audio.addEventListener("ended", () => { updatePlayBtn(); });
+audio.addEventListener("play", () => { updatePlayBtn(); updateFSTransport(); showAudioMsg(""); });
+audio.addEventListener("pause", () => { updatePlayBtn(); updateFSTransport(); });
+audio.addEventListener("ended", () => { updatePlayBtn(); updateFSTransport(); });
 audio.addEventListener("timeupdate", loopCheck);
 audio.addEventListener("error", async () => {
   const code = audio.error ? audio.error.code : 0;
@@ -537,6 +631,7 @@ function tick() {
       }
       paintWave(fsCanvas, fsView.start, fsView.dur);
       $("fsTime").textContent = fmt(t) + " / " + fmt(d);
+      $("fsTimeLabel").textContent = fmt(t) + " / " + fmt(d);
     }
   }
   requestAnimationFrame(tick);
@@ -642,33 +737,47 @@ function refreshWaveColors() {
 
 /* ============================== fullscreen waveform ==============================
    Tap the main waveform to expand. Pinch (or +/-/wheel) to zoom, drag to pan,
-   tap to seek. The transport / speed / A-B control rows move into the floating
-   panel so all wiring and state is shared — nothing is duplicated. */
+   tap to seek. Fullscreen carries its own tabbed control panel (transport,
+   speed presets, Loops / A-B / Speed tabs) wired to the same state and
+   functions as the main view — the main-view rows stay in place. */
 const fsCanvas = $("fsWave");
 let fsOpen = false;
 let fsView = { start: 0, dur: 0 };
+let fsTab = "loops";
 const MIN_ZOOM = 2; // seconds — deepest zoom window
-const moveIds = ["transportRow", "audioMsg", "speedRow", "abRow", "abBox", "loopRow"];
-let savedSpots = [];
 
 function openFullscreen() {
   if (!cur() || fsOpen || !dur()) return;
   fsOpen = true;
-  savedSpots = moveIds.map(id => { const el = $(id); return { el, parent: el.parentNode, next: el.nextSibling }; });
-  const fc = $("fsControls");
-  moveIds.forEach(id => fc.appendChild($(id)));
   fsView = { start: 0, dur: dur() };
   $("fsTitle").textContent = cur().title;
   $("fsOverlay").hidden = false;
   document.body.style.overflow = "hidden";
-  renderFSChips();
+  setFSTab("loops");
+  renderFS();
 }
 function closeFullscreen() {
   if (!fsOpen) return;
   fsOpen = false;
-  savedSpots.forEach(({ el, parent, next }) => parent.insertBefore(el, next));
   $("fsOverlay").hidden = true;
   document.body.style.overflow = "";
+}
+function setFSTab(t) {
+  fsTab = t;
+  document.querySelectorAll("#fsTabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("fsPageLoops").hidden = t !== "loops";
+  $("fsPageAB").hidden = t !== "ab";
+  $("fsPageSpeed").hidden = t !== "speed";
+}
+/* full refresh of the fullscreen panel — called after every state mutation while open */
+function renderFS() {
+  if (!fsOpen) return;
+  renderFSChips();
+  renderFSSel();
+  renderFSNote();
+  updateFSABUI();
+  updateFSSpeedUI();
+  updateFSTransport();
 }
 function renderFSChips() {
   const c = $("fsChips"); if (!c) return;
@@ -678,22 +787,38 @@ function renderFSChips() {
     const b = document.createElement("button");
     b.className = "chip" + (lp.id === selectedLoopId ? " on" : "");
     b.textContent = lp.name;
-    b.onclick = () => selectLoop(lp.id);
+    b.onclick = () => {
+      if (lp.id === selectedLoopId) { // tap the active chip again to deselect
+        selectedLoopId = null; looping = false; workingA = workingB = null;
+        persist(); renderLoops(); updateABUI();
+      } else selectLoop(lp.id);
+    };
     c.appendChild(b);
   }
   if (!s.loops.length) {
     const sp = document.createElement("span");
-    sp.className = "hint"; sp.textContent = "No loops yet — set A/B below";
+    sp.className = "hint"; sp.textContent = "No loops yet — set A/B in the A–B tab";
     c.appendChild(sp);
   }
-  renderFSNote();
+}
+function renderFSSel() {
+  const row = $("fsSelRow"), nameEl = $("fsLoopName"), lp = selLoop();
+  if (!row || !nameEl) return;
+  row.hidden = !lp;
+  if (lp && document.activeElement !== nameEl) nameEl.value = lp.name;
 }
 function renderFSNote() {
   const el = $("fsNote"), lp = selLoop();
   if (!el) return;
-  if (!lp) { el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = "";
+  el.onclick = null;
+  if (!lp) {
+    const sp = document.createElement("span");
+    sp.className = "hint"; sp.textContent = "No loop selected — tap a chip above.";
+    el.appendChild(sp);
+    return;
+  }
   const label = document.createElement("b"); label.textContent = "Note: ";
   const body = document.createElement("span");
   body.textContent = lp.note || "— tap to add";
@@ -712,6 +837,42 @@ function renderFSNote() {
     ta.addEventListener("blur", () => done(true));
     ta.onclick = e => e.stopPropagation();
   };
+}
+function updateFSABUI() {
+  if (!fsOpen) return;
+  $("fsAVal").textContent = workingA == null ? "—" : fmt(workingA);
+  $("fsBVal").textContent = workingB == null ? "—" : fmt(workingB);
+  const lp = selLoop();
+  $("fsEditHead").textContent = lp ? ("Editing “" + lp.name + "” — changes save automatically") :
+    (workingA != null || workingB != null ? "New loop — set both A and B, name it, hit ＋ Add" : "No loop selected");
+  $("fsAddBtn").disabled = !(lp == null && workingA != null && workingB != null);
+  const t = $("fsLoopToggle");
+  t.classList.toggle("on", looping);
+  t.setAttribute("aria-checked", looping ? "true" : "false");
+}
+function updateFSSpeedUI() {
+  if (!fsOpen) return;
+  const r = audio.playbackRate || 1;
+  document.querySelectorAll("#fsSpeedSeg button").forEach(b =>
+    b.classList.toggle("on", Math.abs(parseFloat(b.dataset.r) - r) < 0.001));
+  const sl = $("fsSpeedSlider");
+  if (sl && document.activeElement !== sl) sl.value = r;
+  $("fsSpeedVal").textContent = r.toFixed(2) + "x";
+}
+function updateFSTransport() {
+  if (!fsOpen) return;
+  $("fsPlay").textContent = audio.paused ? "▶" : "❚❚";
+  const lp = selLoop(), chip = $("fsLoopChip");
+  chip.hidden = !lp;
+  if (lp) chip.textContent = lp.name;
+  const t = audio.currentTime || 0, d = dur();
+  $("fsTimeLabel").textContent = fmt(t) + " / " + fmt(d);
+}
+function deleteLoop(id) {
+  const s = cur(); if (!s) return;
+  s.loops = s.loops.filter(x => x.id !== id);
+  if (selectedLoopId === id) { selectedLoopId = null; looping = false; workingA = workingB = null; }
+  persist(); renderLoops(); updateABUI();
 }
 function fsZoom(factor, centerT) {
   const d = dur(); if (!d) return;
@@ -798,6 +959,7 @@ function updateABUI() {
   $("addLoopBtn").disabled = !(lp == null && workingA != null && workingB != null);
   $("loopToggle").classList.toggle("on", looping);
   $("loopToggle").setAttribute("aria-checked", looping ? "true" : "false");
+  updateFSABUI();
 }
 function setPoint(which) {
   if (!cur() || !dur()) return;
@@ -826,15 +988,15 @@ function nudge(which, dir) {
   if (lp) { persist(); renderLoops(); }
   updateABUI();
 }
-function addLoop() {
+function addLoop(nameEl) {
   const s = cur(); if (!s || workingA == null || workingB == null) return;
   let a = Math.min(workingA, workingB), b = Math.max(workingA, workingB);
   if (b - a < MIN_LOOP) b = Math.min(dur(), a + MIN_LOOP);
   const n = s.loops.length + 1;
-  const name = ($("loopName").value.trim() || ("Loop " + n));
+  const name = (nameEl.value.trim() || ("Loop " + n));
   const lp = { id: uid(), name, start: a, end: b, note: "" };
   s.loops.push(lp);
-  $("loopName").value = "";
+  nameEl.value = "";
   selectedLoopId = lp.id; looping = true;
   persist(); renderLoops(); syncABFromSelection();
   seekTo(lp.start);
@@ -874,7 +1036,7 @@ function renderLoops() {
   if (!sorted.length) {
     const li = document.createElement("li");
     li.innerHTML = '<span class="hint">No loops yet — set A and B above, then ＋ Add loop.</span>';
-    li.style.cursor = "default"; ul.appendChild(li); renderFSChips(); return;
+    li.style.cursor = "default"; ul.appendChild(li); renderFS(); return;
   }
   for (const lp of sorted) {
     const li = document.createElement("li");
@@ -885,12 +1047,7 @@ function renderLoops() {
     const ren = document.createElement("button"); ren.className = "icon"; ren.textContent = "✎"; ren.title = "Rename";
     const del = document.createElement("button"); del.className = "icon danger"; del.textContent = "🗑"; del.title = "Delete loop";
     ren.onclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
-    del.onclick = e => {
-      e.stopPropagation();
-      s.loops = s.loops.filter(x => x.id !== lp.id);
-      if (selectedLoopId === lp.id) { selectedLoopId = null; looping = false; workingA = workingB = null; }
-      persist(); renderLoops(); updateABUI();
-    };
+    del.onclick = e => { e.stopPropagation(); deleteLoop(lp.id); };
     top.append(nm, rng, ren, del);
     li.appendChild(top);
     const noteDiv = document.createElement("div");
@@ -903,7 +1060,7 @@ function renderLoops() {
     nm.ondblclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
     ul.appendChild(li);
   }
-  renderFSChips();
+  renderFS();
 }
 function startRename(li, lp, nmSpan) {
   const input = document.createElement("input");
@@ -1076,10 +1233,41 @@ $("aMinus").onclick = () => nudge("A", -1);
 $("aPlus").onclick = () => nudge("A", 1);
 $("bMinus").onclick = () => nudge("B", -1);
 $("bPlus").onclick = () => nudge("B", 1);
-$("addLoopBtn").onclick = addLoop;
-$("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop(); e.stopPropagation(); });
+$("addLoopBtn").onclick = () => addLoop($("loopName"));
+$("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop($("loopName")); e.stopPropagation(); });
 $("newLoopBtn").onclick = () => { selectedLoopId = null; looping = false; workingA = workingB = null; renderLoops(); updateABUI(); };
 $("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
+
+/* fullscreen tabbed panel wiring */
+$("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10);
+$("fsFwd").onclick = () => seekTo((audio.currentTime || 0) + 10);
+$("fsPlay").onclick = togglePlay;
+document.querySelectorAll("#fsTabs button").forEach(b => b.onclick = () => setFSTab(b.dataset.tab));
+document.querySelectorAll("#fsSpeedSeg button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
+$("fsSpeedSlider").addEventListener("input", e => setRate(parseFloat(e.target.value)));
+$("fsAMinus").onclick = () => nudge("A", -1);
+$("fsAPlus").onclick = () => nudge("A", 1);
+$("fsBMinus").onclick = () => nudge("B", -1);
+$("fsBPlus").onclick = () => nudge("B", 1);
+$("fsASet").onclick = () => setPoint("A");
+$("fsBSet").onclick = () => setPoint("B");
+$("fsLoopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
+$("fsAddBtn").onclick = () => addLoop($("fsNewName"));
+$("fsNewName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop($("fsNewName")); e.stopPropagation(); });
+$("fsLoopName").addEventListener("change", () => {
+  const lp = selLoop(); if (!lp) return;
+  const v = $("fsLoopName").value.trim();
+  if (v) { lp.name = v; persist(); }
+  renderLoops();
+});
+$("fsLoopName").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("fsLoopName").blur();
+  e.stopPropagation();
+});
+$("fsTrash").onclick = () => {
+  const lp = selLoop(); if (!lp) return;
+  if (confirm("Delete loop “" + lp.name + "”?")) deleteLoop(lp.id);
+};
 
 /* ---- loop list interchange: export/import JSON at song level (import replaces) ---- */
 function sanitizeFilename(s) {
