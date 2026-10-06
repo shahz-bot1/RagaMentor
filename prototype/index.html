@@ -185,6 +185,12 @@
   .fsSecLabel { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
   .fsSecLabel span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; flex: 0 0 auto; }
   .fsSecLabel::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .npSecLabel { display: flex; align-items: center; gap: 10px; margin: 12px 0 8px; }
+  .npSecLabel::before, .npSecLabel::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .npSecLabel span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  #songImpExpRow { display: flex; align-items: center; justify-content: center; gap: 8px; }
+  #songLoopsMsg { text-align: center; min-height: 17px; margin-top: 4px;
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #fsImpExpRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
   #fsLoopsMsg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #debugWrap{margin:14px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -230,6 +236,12 @@
           <button data-r="0.25">0.25x</button><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1">1x</button>
         </div>
       </div>
+      <div class="npSecLabel"><span>Backup</span></div>
+      <div id="songImpExpRow">
+        <button class="btn small ghost" id="songExportBtn" title="Download all loops as a JSON file">⤓ Export</button>
+        <button class="btn small ghost" id="songImportBtn" title="Import loops from a JSON file (replaces current loops)">⤒ Import</button>
+      </div>
+      <div class="hint" id="songLoopsMsg"></div>
       <input type="file" id="loopsFileInput" accept=".json,application/json" hidden>
     </div>
   </section>
@@ -282,8 +294,6 @@
       <div id="fsNote" class="hint"></div>
       <div class="fsSecLabel"><span>All loops</span></div>
       <div id="fsImpExpRow">
-        <button class="btn small ghost" id="fsExportBtn" title="Download all loops as a JSON file">⤓ Export</button>
-        <button class="btn small ghost" id="fsImportBtn" title="Import loops from a JSON file (replaces current loops)">⤒ Import</button>
         <span class="hint" id="fsLoopsMsg"></span>
       </div>
     </div>
@@ -1574,6 +1584,13 @@ function loopsMessage(text) {
   msg.textContent = text;
   setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
 }
+/* import/export feedback lives on the main-screen song card now */
+function songMessage(text) {
+  const msg = $("songLoopsMsg");
+  if (!msg) return;
+  msg.textContent = text;
+  setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
+}
 function exportLoops() {
   const s = cur(); if (!s) return;
   const data = {
@@ -1607,11 +1624,11 @@ function exportLoops() {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  loopsMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") +
+  songMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") +
     (data.groups.length ? " + " + data.groups.length + " group" + (data.groups.length === 1 ? "" : "s") : "") + " as JSON.");
 }
-$("fsExportBtn").onclick = exportLoops;
-$("fsImportBtn").onclick = () => $("loopsFileInput").click();
+$("songExportBtn").onclick = exportLoops;
+$("songImportBtn").onclick = () => $("loopsFileInput").click();
 $("loopsFileInput").addEventListener("change", async e => {
   const f = e.target.files[0];
   e.target.value = "";
@@ -1675,11 +1692,11 @@ $("loopsFileInput").addEventListener("change", async e => {
     selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
     looping = false; workingA = workingB = null;
     persist(); renderLoops(); updateABUI();
-    loopsMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
+    songMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
       (s.groups.length ? " + " + s.groups.length + " group" + (s.groups.length === 1 ? "" : "s") : "") +
       " — replaced previous loops.");
   } catch (err) {
-    loopsMessage("Could not import: not a valid RagaMentor loops file.");
+    songMessage("Could not import: not a valid RagaMentor loops file.");
   }
 });
 document.addEventListener("keydown", e => {
