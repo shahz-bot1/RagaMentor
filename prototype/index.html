@@ -540,19 +540,6 @@ function groupRange(g) {
 const topGroups = () => { const s = cur(); return s ? (s.groups || []).filter(g => !parentOf(g.id)) : []; };
 /* a group with no sub-groups of its own — the only kind that may be nested */
 const isFlatGroup = g => (g.members || []).every(m => !isGroupId(m));
-/* every loop under a group, direct members or via sub-groups */
-function subtreeLoops(gid){
-  const s = cur(); if (!s) return [];
-  const out = [], seen = new Set();
-  (function walk(id){
-    if (seen.has(id)) return; seen.add(id);
-    const g = (s.groups || []).find(x => x.id === id); if (!g) return;
-    for (const m of (g.members || [])){
-      if (s.loops.some(l => l.id === m)) out.push(m); else walk(m);
-    }
-  })(gid);
-  return out;
-}
 /* what actually loops right now: the selected group section, the selected loop, or nothing */
 const activeRange = () => {
   const g = selGroup(); if (g) return groupRange(g);
@@ -925,8 +912,12 @@ function renderFSChips() {
     if (!g) { fsChecklist = false; checkConstrain = null; checkIsNew = false; renderFSChips(); return; }
     let items;
     if (checkConstrain) {
-      // new sub-group: only loops from the parent group's own contents
-      items = subtreeLoops(checkConstrain).map(id => s.loops.find(l => l.id === id)).filter(Boolean);
+      // new sub-group: only the parent's DIRECT member loops — never loops nested
+      // inside its sub-groups (same rule as top level: only items visible at that level)
+      const pg = (s.groups || []).find(x => x.id === checkConstrain);
+      items = ((pg && pg.members) || [])
+        .map(id => s.loops.find(l => l.id === id))
+        .filter(Boolean);
     } else if (checkIsNew) {
       // new top-level group: only items visible at top level — ungrouped loops
       // plus flat top-level groups (never anything nested inside another group)
@@ -1148,7 +1139,7 @@ function renderFSNote() {
     const sp = document.createElement("span");
     sp.className = "hint";
     sp.textContent = checkConstrain
-      ? `New sub-group in “${gr ? gr.name : "group"}” — ${n} selected. Only loops from “${(groupById(checkConstrain) || {}).name || "the parent group"}” are offered. Done applies.`
+      ? `New sub-group in “${gr ? gr.name : "group"}” — ${n} selected. Only “${(groupById(checkConstrain) || {}).name || "the parent group"}”'s own loops are offered; loops inside its sub-groups stay where they are. Done applies.`
       : checkIsNew
       ? `New group — ${n} selected. Only top-level loops and groups are offered; nested items stay where they are. Done applies.`
       : `Adding to “${gr ? gr.name : "group"}” — ${n} selected. Checking an item that's elsewhere moves it here. Groups are capped at 2 levels: sub-groups hold loops only. Done applies.`;
