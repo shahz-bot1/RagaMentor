@@ -96,6 +96,7 @@
   .toggle .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .toggle.on { border-color: var(--accent); }
   .toggle.on .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  #fsLoopRow { display: flex; align-items: center; justify-content: center; gap: 12px; }
   .hint { font-size: 12.5px; color: var(--muted); }
   #themeBtn { background: var(--chip); color: var(--text); border: 1px solid var(--border);
               border-radius: 9px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
@@ -303,7 +304,7 @@
         <button class="step" id="fsBPlus" title="Nudge B later by 0.1s">+</button>
         <button class="btn small ghost set" id="fsBSet">Set</button>
       </div>
-      <div><span class="toggle" id="fsLoopToggle" role="switch" aria-checked="false"><span class="dot"></span>Loop</span></div>
+      <div id="fsLoopRow"><span class="toggle" id="fsLoopToggle" role="switch" aria-checked="false"><span class="dot"></span>Loop</span><button class="btn small ghost" id="fsSplitBtn" title="Split the editing loop in two at the playhead">Split</button></div>
       <div id="fsAddRow">
         <input id="fsNewName" maxlength="40" placeholder="Loop name (optional)" aria-label="New loop name">
         <button class="btn small" id="fsAddBtn">＋ Add loop</button>
@@ -718,6 +719,7 @@ function loopCheck() {
   // group range derives from its members, so it expands when the loop joins).
   // Loop-edit mode (a loop selected) keeps wrapping so you can audition nudges.
   if (fsOpen && fsTab === "ab" && selGroup() && !selLoop()) return;
+  if (fsOpen && fsTab === "ab") updateSplitBtn();   // playhead moved → split eligibility may have changed
   const r = activeRange();
   if (looping && r && !audio.paused && !audio.seeking && dur() > 0) {
     if (audio.currentTime >= r.b - 0.03) {
@@ -1221,6 +1223,7 @@ function updateFSABUI() {
   const t = $("fsLoopToggle");
   t.classList.toggle("on", looping);
   t.setAttribute("aria-checked", looping ? "true" : "false");
+  updateSplitBtn();
 }
 function updateFSSpeedUI() {
   if (!fsOpen) return;
@@ -1374,7 +1377,8 @@ function addLoop(nameEl) {
     const g = (s.groups || []).find(x => x.id === fsGroupView);
     if (g && !g.members.includes(lp.id)) {
       g.members.push(lp.id);
-      g.members.sort((x, y) => s.loops.find(l => l.id === x).start - s.loops.find(l => l.id === y).start);
+      // mixed members (loops + sub-groups): sort by each item's range start
+      g.members.sort((x, y) => (itemRange(x) || { a: 0 }).a - (itemRange(y) || { a: 0 }).a);
     }
   }
   nameEl.value = "";
@@ -1382,6 +1386,47 @@ function addLoop(nameEl) {
   persist(); renderLoops(); syncABFromSelection();
   seekTo(lp.start);
   if (audio.paused) togglePlay();
+}
+/* split the editing loop in two at the playhead — the first piece keeps the
+   name, the second gets "name 2" (unique-ified); the note is copied to both;
+   both take the original's slot in its group, in order; the first piece stays
+   selected and looping. Carving out a middle = split twice, delete the middle. */
+function canSplit() {
+  const lp = selLoop();
+  if (!lp || !dur()) return false;
+  const t = audio.currentTime || 0;
+  return t > lp.start + MIN_LOOP && t < lp.end - MIN_LOOP;
+}
+function splitLoop() {
+  const s = cur(), lp = selLoop();
+  if (!s || !canSplit()) return;
+  const t = Math.round((audio.currentTime || 0) * 10) / 10;
+  // second piece: "name 2", or bump the trailing number ("Phrase 2" → "Phrase 3")
+  const m = lp.name.match(/^(.*) (\d+)$/);
+  const stem = m ? m[1] : lp.name;
+  let n = m ? parseInt(m[2], 10) + 1 : 2;
+  const taken = new Set(s.loops.map(l => l.name));
+  let name2 = stem + " " + n;
+  while (taken.has(name2)) name2 = stem + " " + (++n);
+  const second = { id: uid(), name: name2, start: t, end: lp.end, note: lp.note || "" };
+  lp.end = t;
+  s.loops.push(second);
+  const par = parentOf(lp.id);
+  if (par) {
+    const i = par.members.indexOf(lp.id);
+    if (i >= 0) par.members.splice(i, 1, lp.id, second.id);
+  }
+  selectedLoopId = lp.id; looping = true;
+  persist(); renderLoops(); syncABFromSelection();
+}
+function updateSplitBtn() {
+  const b = $("fsSplitBtn"); if (!b) return;
+  const lp = selLoop();
+  b.hidden = !lp;
+  b.disabled = !canSplit();
+  b.title = !lp ? "" : canSplit()
+    ? `Split “${lp.name}” in two at the playhead (${fmt(audio.currentTime || 0)})`
+    : "Split needs the playhead at least 0.3s inside each end of the loop";
 }
 function selectLoop(id) {
   selectedLoopId = id; selectedGroupId = null; looping = true;
@@ -1582,6 +1627,7 @@ $("fsBPlus").onclick = () => nudge("B", 1);
 $("fsASet").onclick = () => setPoint("A");
 $("fsBSet").onclick = () => setPoint("B");
 $("fsLoopToggle").onclick = () => { if (activeRange()) { looping = !looping; renderFS(); } };
+$("fsSplitBtn").onclick = splitLoop;
 $("fsAddBtn").onclick = () => addLoop($("fsNewName"));
 $("fsNewName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop($("fsNewName")); e.stopPropagation(); });
 $("fsLoopName").addEventListener("change", () => {
