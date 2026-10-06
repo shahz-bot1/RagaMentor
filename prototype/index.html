@@ -54,10 +54,24 @@
   #songList .del:hover { color: var(--danger); }
   /* player */
   #songTitle { margin: 0 0 4px; font-size: 19px; }
+  #npHead { display: flex; align-items: center; gap: 10px; }
+  #npHead #songTitle { flex: 1; min-width: 0; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #expandBtn { background: var(--chip); color: var(--text); border: 1px solid var(--border);
+               border-radius: 9px; width: 38px; height: 38px; font-size: 16px; cursor: pointer; flex: 0 0 auto; }
+  #waveWrap { position: relative; }
+  #waveLoopBadge { position: absolute; top: 8px; right: 8px; max-width: 62%;
+                   background: rgba(20,26,34,.72); color: #fff;
+                   border-radius: 999px; padding: 5px 10px; font-size: 11px; font-weight: 600;
+                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+  #waveLoopBadge[hidden] { display: none; }
+  #waveTimeBadge { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+                   background: rgba(20,26,34,.72); color: #fff;
+                   border-radius: 999px; padding: 5px 10px; font-size: 11px;
+                   white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
   #emptyPlayer { color: var(--muted); text-align: center; padding: 60px 10px; font-size: 14px; }
-  #wave { width: 100%; height: 128px; display: block; background: var(--panel2);
+  #wave { width: 100%; height: 160px; display: block; background: var(--panel2);
           border: 1px solid var(--border); border-radius: 10px; cursor: crosshair; touch-action: none; }
-  .transport { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px; }
+  .transport { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0 6px; }
   .transport .tbtn { background: var(--chip); color: var(--text); border: 0; border-radius: 50%;
                      width: 44px; height: 44px; font-size: 16px; cursor: pointer; }
   .transport .tbtn.play { width: 58px; height: 58px; font-size: 22px; background: var(--accent); color: #fff; }
@@ -70,19 +84,6 @@
   .seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
   input[type="range"] { accent-color: var(--accent); }
   #speedVal { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 52px; }
-  .abbox { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
-           padding: 10px 12px; font-variant-numeric: tabular-nums; font-size: 14px;
-           display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-  .abbox b { color: var(--accent); }
-  #loopsList { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-  #loopsList li { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
-                  padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; }
-  #loopsList .looptop { display: flex; align-items: center; gap: 10px; }
-  .lnote { font-size: 12.5px; color: var(--muted); margin-top: 6px; padding: 6px 8px;
-           background: var(--panel); border: 1px dashed transparent; border-radius: 7px;
-           cursor: text; white-space: pre-wrap; word-break: break-word; }
-  .lnote.empty { opacity: .55; }
-  .lnote:hover { border-color: var(--accent); }
   textarea.noteEdit { width: 100%; font-size: 13px; padding: 6px 8px; border-radius: 7px;
                       border: 1px solid var(--accent); background: var(--panel); color: var(--text);
                       font-family: inherit; resize: vertical; margin-top: 6px; box-sizing: border-box; }
@@ -90,16 +91,6 @@
             max-height: 64px; overflow-y: auto; white-space: pre-wrap; }
   #fsNote[hidden] { display: none; }
   #fsNote b { color: var(--text); }
-  #loopsList li.active { border-color: var(--accent); background: var(--accent-soft); }
-  #loopsList .nm { font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #loopsList .rng { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  #loopsList .icon { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 14px; padding: 2px 4px; }
-  #loopsList .icon:hover { color: var(--text); }
-  #loopsList .icon.danger:hover { color: var(--danger); }
-  #loopsList input.rename { flex: 1; font-size: 14px; padding: 4px 8px; border-radius: 6px;
-                            border: 1px solid var(--accent); background: var(--panel); color: var(--text); }
-  #loopName { background: var(--panel2); border: 1px solid var(--border); color: var(--text);
-              border-radius: 9px; padding: 8px 12px; font-size: 14px; min-width: 0; flex: 1; }
   .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px;
             background: var(--chip); border-radius: 999px; padding: 7px 14px; border: 1px solid var(--border); }
   .toggle .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
@@ -180,6 +171,11 @@
   #fsSliderRow { display: flex; align-items: center; gap: 10px; min-width: 0; }
   #fsSpeedSlider { flex: 1; min-width: 0; }
   #fsSpeedVal { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 52px; text-align: right; }
+  .fsSecLabel { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .fsSecLabel span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; flex: 0 0 auto; }
+  .fsSecLabel::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  #fsImpExpRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #fsLoopsMsg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #debugWrap{margin:14px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 #debugBar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(128,128,128,.12);font-size:12px;font-weight:700}
 #debugBar button{font-size:12px;padding:3px 10px;margin-left:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
@@ -198,26 +194,22 @@
 </header>
 
 <main>
-  <section class="card" id="libraryCard">
-    <h2>Library</h2>
-    <div id="storageWarn" class="warnBanner" hidden></div>
-    <div id="dropHint">Drop audio files here<br>or</div>
-    <button class="btn" id="importBtn" style="width:100%">＋ Import audio</button>
-    <div id="importMsg" class="hint" style="margin-top:8px;min-height:18px"></div>
-    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.m4b,.aac,.wav,.aiff,.aif,.caf,.ogg,.oga,.flac,.opus" multiple hidden>
-    <ul id="songList"></ul>
-  </section>
-
   <section class="card" id="playerCard">
     <div id="emptyPlayer">Import a track to start practicing.<br><span class="hint">Files stay on this device, in your browser's storage.</span></div>
     <div id="playerUI" hidden>
-      <h2 id="songTitle">—</h2>
-      <canvas id="wave" title="Tap for fullscreen"></canvas>
+      <div id="npHead">
+        <h2 id="songTitle">—</h2>
+        <button id="expandBtn" title="Open fullscreen">⤢</button>
+      </div>
+      <div id="waveWrap">
+        <canvas id="wave" title="Tap for fullscreen"></canvas>
+        <div id="waveLoopBadge" hidden title="Restart loop"></div>
+        <div id="waveTimeBadge">0:00.0 / 0:00.0</div>
+      </div>
       <div class="transport" id="transportRow">
         <button class="tbtn" id="backBtn" title="Back 10s">−10</button>
         <button class="tbtn play" id="playBtn" title="Play/Pause (Space)">▶</button>
         <button class="tbtn" id="fwdBtn" title="Forward 10s">+10</button>
-        <span id="timeLabel">0:00.0 / 0:00.0</span>
       </div>
       <div id="audioMsg" class="hint" hidden style="color:var(--danger);min-height:18px;margin:2px 0"></div>
 
@@ -226,44 +218,19 @@
         <div class="seg" id="speedPresets">
           <button data-r="0.25">0.25x</button><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1">1x</button>
         </div>
-        <input type="range" id="speedSlider" min="0.25" max="1" step="0.05" value="1" style="flex:1;min-width:120px">
-        <span id="speedVal">1.00x</span>
-        <span class="hint">pitch locked</span>
       </div>
-
-      <div class="row" id="abRow">
-        <span class="label">A–B</span>
-        <button class="btn small ghost" id="setABtn">Set A</button>
-        <button class="btn small ghost" id="setBBtn">Set B</button>
-        <button class="btn small ghost" id="aMinus" title="Nudge A earlier by 0.1s">A−</button>
-        <button class="btn small ghost" id="aPlus" title="Nudge A later by 0.1s">A+</button>
-        <button class="btn small ghost" id="bMinus" title="Nudge B earlier by 0.1s">B−</button>
-        <button class="btn small ghost" id="bPlus" title="Nudge B later by 0.1s">B+</button>
-      </div>
-      <div class="abbox" id="abBox">
-        <span>A <b id="aVal">—</b></span>
-        <span>B <b id="bVal">—</b></span>
-        <span class="hint" id="abHint"></span>
-      </div>
-
-      <div class="row" id="loopRow">
-        <input id="loopName" placeholder="Loop name (optional)" maxlength="40">
-        <button class="btn small" id="addLoopBtn">＋ Add loop</button>
-        <button class="btn small ghost" id="newLoopBtn" title="Deselect and define a new loop">New</button>
-        <span class="toggle" id="loopToggle" role="switch" aria-checked="false"><span class="dot"></span>Loop</span>
-      </div>
-
-      <div class="row" style="margin-top:16px;margin-bottom:2px">
-        <h2 style="margin:0">Loops for this song</h2>
-        <span style="flex:1"></span>
-        <button class="btn small ghost" id="exportLoopsBtn" title="Download loops as a JSON file">⤓ Export</button>
-        <button class="btn small ghost" id="importLoopsBtn" title="Import loops from a JSON file (replaces current loops)">⤒ Import</button>
-      </div>
-      <div id="loopsMsg" class="hint" style="min-height:18px"></div>
       <input type="file" id="loopsFileInput" accept=".json,application/json" hidden>
-      <ul id="loopsList"></ul>
-      <p class="hint">Tip: tap the waveform for fullscreen · drag it to scrub · <kbd>Space</kbd> play/pause · in fullscreen, pinch to zoom and tap to seek.</p>
     </div>
+  </section>
+
+  <section class="card" id="libraryCard">
+    <h2>Library</h2>
+    <div id="storageWarn" class="warnBanner" hidden></div>
+    <div id="dropHint">Drop audio files here<br>or</div>
+    <button class="btn" id="importBtn" style="width:100%">＋ Import audio</button>
+    <div id="importMsg" class="hint" style="margin-top:8px;min-height:18px"></div>
+    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.m4b,.aac,.wav,.aiff,.aif,.caf,.ogg,.oga,.flac,.opus" multiple hidden>
+    <ul id="songList"></ul>
   </section>
 </main>
 
@@ -302,6 +269,12 @@
         <button id="fsTrash" title="Delete selected loop"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </div>
       <div id="fsNote" class="hint"></div>
+      <div class="fsSecLabel"><span>All loops</span></div>
+      <div id="fsImpExpRow">
+        <button class="btn small ghost" id="fsExportBtn" title="Download all loops as a JSON file">⤓ Export</button>
+        <button class="btn small ghost" id="fsImportBtn" title="Import loops from a JSON file (replaces current loops)">⤒ Import</button>
+        <span class="hint" id="fsLoopsMsg"></span>
+      </div>
     </div>
     <div class="fsPage" id="fsPageAB" hidden>
       <div class="hint" id="fsEditHead">No loop selected</div>
@@ -523,8 +496,6 @@ function persist() {
 function setRate(r) {
   r = clamp(r, 0.25, 1);
   audio.playbackRate = r;
-  $("speedSlider").value = r;
-  $("speedVal").textContent = r.toFixed(2) + "x";
   document.querySelectorAll("#speedPresets button").forEach(b =>
     b.classList.toggle("on", Math.abs(parseFloat(b.dataset.r) - r) < 0.001));
   updateFSSpeedUI();
@@ -632,7 +603,7 @@ function tick() {
   loopCheck();
   if (s) {
     const t = audio.currentTime || 0, d = dur();
-    $("timeLabel").textContent = fmt(t) + " / " + fmt(d);
+    $("waveTimeBadge").textContent = fmt(t) + " / " + fmt(d);
     paintWave($("wave"), 0, d);
     if (fsOpen) {
       if (!audio.paused && d > 0 && (t < fsView.start || t > fsView.start + fsView.dur)) {
@@ -960,14 +931,7 @@ function syncABFromSelection() {
   updateABUI();
 }
 function updateABUI() {
-  $("aVal").textContent = workingA == null ? "—" : fmt(workingA);
-  $("bVal").textContent = workingB == null ? "—" : fmt(workingB);
-  const lp = selLoop();
-  $("abHint").textContent = lp ? ("Editing “" + lp.name + "” — changes save automatically") :
-    (workingA != null || workingB != null ? "New loop — set both A and B, name it, hit ＋ Add loop" : "No loop selected");
-  $("addLoopBtn").disabled = !(lp == null && workingA != null && workingB != null);
-  $("loopToggle").classList.toggle("on", looping);
-  $("loopToggle").setAttribute("aria-checked", looping ? "true" : "false");
+  // main-screen A–B UI was removed in the cleanup — the fullscreen panel owns it now
   updateFSABUI();
 }
 function setPoint(which) {
@@ -1038,73 +1002,24 @@ function renderSongs() {
     ul.appendChild(li);
   }
 }
+/* Loop UI now lives entirely in the fullscreen panel — this refreshes it,
+   plus the home screen's selected-loop badge. */
 function renderLoops() {
-  const ul = $("loopsList"); ul.innerHTML = "";
-  const s = cur(); if (!s) return;
-  const sorted = [...s.loops].sort((a, b) => a.start - b.start);
-  if (!sorted.length) {
-    const li = document.createElement("li");
-    li.innerHTML = '<span class="hint">No loops yet — set A and B above, then ＋ Add loop.</span>';
-    li.style.cursor = "default"; ul.appendChild(li); renderFS(); return;
-  }
-  for (const lp of sorted) {
-    const li = document.createElement("li");
-    if (lp.id === selectedLoopId) li.classList.add("active");
-    const top = document.createElement("div"); top.className = "looptop";
-    const nm = document.createElement("span"); nm.className = "nm"; nm.textContent = lp.name; nm.title = "Click to select · double-click to rename";
-    const rng = document.createElement("span"); rng.className = "rng"; rng.textContent = fmt(lp.start) + " → " + fmt(lp.end);
-    const ren = document.createElement("button"); ren.className = "icon"; ren.textContent = "✎"; ren.title = "Rename";
-    const del = document.createElement("button"); del.className = "icon danger"; del.textContent = "🗑"; del.title = "Delete loop";
-    ren.onclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
-    del.onclick = e => { e.stopPropagation(); deleteLoop(lp.id); };
-    top.append(nm, rng, ren, del);
-    li.appendChild(top);
-    const noteDiv = document.createElement("div");
-    noteDiv.className = "lnote" + (lp.note ? "" : " empty");
-    noteDiv.textContent = lp.note || "+ add note (key, vocal cues…)";
-    noteDiv.title = "Tap to edit note";
-    noteDiv.onclick = e => { e.stopPropagation(); if (selectedLoopId !== lp.id) selectLoop(lp.id); editNote(li, noteDiv, lp); };
-    li.appendChild(noteDiv);
-    li.onclick = () => selectLoop(lp.id);
-    nm.ondblclick = e => { e.stopPropagation(); startRename(li, lp, nm); };
-    ul.appendChild(li);
-  }
   renderFS();
+  updateMainBadge();
 }
-function startRename(li, lp, nmSpan) {
-  const input = document.createElement("input");
-  input.className = "rename"; input.value = lp.name; input.maxLength = 40;
-  nmSpan.parentNode.replaceChild(input, nmSpan);
-  input.focus(); input.select();
-  const commit = () => {
-    const v = input.value.trim();
-    if (v) { lp.name = v; persist(); }
-    renderLoops();
-  };
-  input.addEventListener("keydown", e => { if (e.key === "Enter") commit(); if (e.key === "Escape") renderLoops(); e.stopPropagation(); });
-  input.addEventListener("blur", commit);
-  input.onclick = e => e.stopPropagation();
+function updateMainBadge() {
+  const badge = $("waveLoopBadge");
+  if (!badge) return;
+  const lp = selLoop();
+  badge.hidden = !lp;
+  if (lp) badge.textContent = lp.name;
 }
-function editNote(li, noteDiv, lp) {
-  const ta = document.createElement("textarea");
-  ta.className = "noteEdit"; ta.rows = 2; ta.value = lp.note || "";
-  ta.placeholder = "e.g. key of D · sa lands on beat 3 · watch the gamaka…";
-  li.replaceChild(ta, noteDiv);
-  ta.focus();
-  const done = save => {
-    if (save) { lp.note = ta.value.trim(); persist(); }
-    renderLoops();
-  };
-  ta.addEventListener("keydown", e => {
-    e.stopPropagation();
-    if (e.key === "Escape") done(false); // Return inserts a newline; blur (tap outside / Done) saves
-  });
-  ta.addEventListener("blur", () => done(true));
-  const autogrow = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
-  ta.addEventListener("input", autogrow); autogrow();
-  ta.onclick = e => e.stopPropagation();
+function restartLoop() {
+  const lp = selLoop(); if (!lp) return;
+  seekTo(lp.start);
+  if (audio.paused) togglePlay();
 }
-
 /* ============================== song lifecycle ============================== */
 async function selectSong(id) {
   const s = songs.find(x => x.id === id); if (!s) return;
@@ -1220,7 +1135,10 @@ $("playBtn").onclick = togglePlay;
 $("backBtn").onclick = () => seekTo((audio.currentTime || 0) - 10);
 $("fwdBtn").onclick = () => seekTo((audio.currentTime || 0) + 10);
 document.querySelectorAll("#speedPresets button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
-$("speedSlider").addEventListener("input", e => setRate(parseFloat(e.target.value)));
+
+/* home now-playing wiring */
+$("expandBtn").onclick = openFullscreen;
+$("waveLoopBadge").onclick = restartLoop;
 
 /* debug log buttons */
 $("copyLogBtn").onclick = async () => {
@@ -1237,26 +1155,11 @@ $("clearLogBtn").onclick = () => { logLines.length = 0; $("debugLog").innerHTML 
 $("hideLogBtn").onclick = () => { $("debugWrap").hidden = true; $("showLogBtn").hidden = false; };
 $("showLogBtn").onclick = () => { $("debugWrap").hidden = false; $("showLogBtn").hidden = true; };
 
-$("setABtn").onclick = () => setPoint("A");
-$("setBBtn").onclick = () => setPoint("B");
-$("aMinus").onclick = () => nudge("A", -1);
-$("aPlus").onclick = () => nudge("A", 1);
-$("bMinus").onclick = () => nudge("B", -1);
-$("bPlus").onclick = () => nudge("B", 1);
-$("addLoopBtn").onclick = () => addLoop($("loopName"));
-$("loopName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop($("loopName")); e.stopPropagation(); });
-$("newLoopBtn").onclick = () => { selectedLoopId = null; looping = false; workingA = workingB = null; renderLoops(); updateABUI(); };
-$("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
-
 /* fullscreen tabbed panel wiring */
 $("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10);
 $("fsFwd").onclick = () => seekTo((audio.currentTime || 0) + 10);
 $("fsPlay").onclick = togglePlay;
-$("fsLoopBadge").onclick = () => {
-  const lp = selLoop(); if (!lp) return;
-  seekTo(lp.start);
-  if (audio.paused) togglePlay();
-};
+$("fsLoopBadge").onclick = restartLoop;
 document.querySelectorAll("#fsTabs button").forEach(b => b.onclick = () => setFSTab(b.dataset.tab));
 document.querySelectorAll("#fsSpeedSeg button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
 $("fsSpeedSlider").addEventListener("input", e => setRate(parseFloat(e.target.value)));
@@ -1289,11 +1192,12 @@ function sanitizeFilename(s) {
   return ((s || "song").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").slice(0, 60) || "song");
 }
 function loopsMessage(text) {
-  const msg = $("loopsMsg");
+  const msg = $("fsLoopsMsg");
+  if (!msg) return;
   msg.textContent = text;
   setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
 }
-$("exportLoopsBtn").onclick = () => {
+function exportLoops() {
   const s = cur(); if (!s) return;
   const data = {
     app: "RagaMentor",
@@ -1315,8 +1219,9 @@ $("exportLoopsBtn").onclick = () => {
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   loopsMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") + " as JSON.");
-};
-$("importLoopsBtn").onclick = () => $("loopsFileInput").click();
+}
+$("fsExportBtn").onclick = exportLoops;
+$("fsImportBtn").onclick = () => $("loopsFileInput").click();
 $("loopsFileInput").addEventListener("change", async e => {
   const f = e.target.files[0];
   e.target.value = "";
