@@ -276,7 +276,7 @@
   </div>
   <div id="fsWaveWrap">
     <canvas id="fsWave"></canvas>
-    <div id="fsLoopBadge" hidden title="Selected loop — tap to open the Loops tab"></div>
+    <div id="fsLoopBadge" hidden title="Restart loop"></div>
   </div>
   <div id="fsPanel">
     <div id="fsTransport">
@@ -1250,7 +1250,11 @@ $("loopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABU
 $("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10);
 $("fsFwd").onclick = () => seekTo((audio.currentTime || 0) + 10);
 $("fsPlay").onclick = togglePlay;
-$("fsLoopBadge").onclick = () => setFSTab("loops");
+$("fsLoopBadge").onclick = () => {
+  const lp = selLoop(); if (!lp) return;
+  seekTo(lp.start);
+  if (audio.paused) togglePlay();
+};
 document.querySelectorAll("#fsTabs button").forEach(b => b.onclick = () => setFSTab(b.dataset.tab));
 document.querySelectorAll("#fsSpeedSeg button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
 $("fsSpeedSlider").addEventListener("input", e => setRate(parseFloat(e.target.value)));
