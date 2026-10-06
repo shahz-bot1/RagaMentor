@@ -87,7 +87,7 @@
                       border: 1px solid var(--accent); background: var(--panel); color: var(--text);
                       font-family: inherit; resize: vertical; margin-top: 6px; box-sizing: border-box; }
   #fsNote { font-size: 13px; color: var(--muted); padding: 2px 4px; cursor: text;
-            max-height: 64px; overflow-y: auto; }
+            max-height: 64px; overflow-y: auto; white-space: pre-wrap; }
   #fsNote[hidden] { display: none; }
   #fsNote b { color: var(--text); }
   #loopsList li.active { border-color: var(--accent); background: var(--accent-soft); }
@@ -831,10 +831,11 @@ function renderFSNote() {
     const done = save => { if (save) { lp.note = ta.value.trim(); persist(); } renderLoops(); };
     ta.addEventListener("keydown", e => {
       e.stopPropagation();
-      if (e.key === "Enter" && !e.shiftKey) done(true);
-      else if (e.key === "Escape") done(false);
+      if (e.key === "Escape") done(false); // Return inserts a newline; blur (tap outside / Done) saves
     });
     ta.addEventListener("blur", () => done(true));
+    const fsAutogrow = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+    ta.addEventListener("input", fsAutogrow); fsAutogrow();
     ta.onclick = e => e.stopPropagation();
   };
 }
@@ -1088,10 +1089,11 @@ function editNote(li, noteDiv, lp) {
   };
   ta.addEventListener("keydown", e => {
     e.stopPropagation();
-    if (e.key === "Enter" && !e.shiftKey) done(true);
-    else if (e.key === "Escape") done(false);
+    if (e.key === "Escape") done(false); // Return inserts a newline; blur (tap outside / Done) saves
   });
   ta.addEventListener("blur", () => done(true));
+  const autogrow = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+  ta.addEventListener("input", autogrow); autogrow();
   ta.onclick = e => e.stopPropagation();
 }
 
