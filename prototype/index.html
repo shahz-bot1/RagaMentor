@@ -964,7 +964,7 @@ function renderFSChips() {
       else { const lp = s.loops.find(l => l.id === id); if (lp) loopChip(lp); }
     }
     chip("＋ Add", "dashed", enterChecklist, "Choose which loops and groups belong here");
-    chip("＋ New loop", "dashed", newLoopInGroup, "Define a new loop anywhere in the song — it will join this group");
+    chip("＋ New loop", "dashed", newLoop, "Define a new loop anywhere in the song — it will join this group");
     if (!parentOf(g.id)) chip("＋ New group", "dashed", newGroup, "Create a sub-group inside “" + g.name + "”");
     return;
   }
@@ -973,10 +973,11 @@ function renderFSChips() {
     if (parentOf(lp.id)) continue;   // members live inside their group
     loopChip(lp);
   }
+  chip("＋ New loop", "dashed", newLoop, "Define a new loop in the A–B tab");
   chip("＋ New group", "dashed", newGroup, "Group loops into a practicable section");
   if (!s.loops.length && !s.groups.length) {
     const sp = document.createElement("span");
-    sp.className = "hint"; sp.textContent = "No loops yet — set A/B in the A–B tab";
+    sp.className = "hint"; sp.textContent = "No loops yet — tap ＋ New loop";
     c.appendChild(sp);
   }
 }
@@ -992,13 +993,15 @@ function selectGroup(id) {
   if (r) seekTo(r.a);
   if (audio.paused) togglePlay();
 }
-/* explicit entry to new-loop mode inside a group: drop any loop being edited,
-   (re)select the open group as the working context, jump to the A–B tab where
-   the playhead roams free — the new loop will join this group */
-function newLoopInGroup() {
-  const s = cur(); if (!s || !fsGroupView) return;
-  const g = groupById(fsGroupView); if (!g) return;
-  selectedLoopId = null; selectedGroupId = g.id; workingA = workingB = null;
+/* explicit entry to new-loop mode: drop whatever is being edited, keep the open
+   group (if any) as context, jump to the A–B tab. At top level the new loop
+   stays ungrouped; inside a group it will join that group. */
+function newLoop() {
+  const s = cur(); if (!s) return;
+  const g = fsGroupView ? groupById(fsGroupView) : null;
+  selectedLoopId = null;
+  selectedGroupId = g ? g.id : null;
+  workingA = workingB = null;
   persist(); setFSTab("ab"); renderFS();
 }
 /* ‹ All: leave the group, clear selection — playback continues un-looped */
