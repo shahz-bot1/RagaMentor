@@ -964,6 +964,7 @@ function renderFSChips() {
       else { const lp = s.loops.find(l => l.id === id); if (lp) loopChip(lp); }
     }
     chip("＋ Add", "dashed", enterChecklist, "Choose which loops and groups belong here");
+    chip("＋ New loop", "dashed", newLoopInGroup, "Define a new loop anywhere in the song — it will join this group");
     if (!parentOf(g.id)) chip("＋ New group", "dashed", newGroup, "Create a sub-group inside “" + g.name + "”");
     return;
   }
@@ -990,6 +991,15 @@ function selectGroup(id) {
   const r = groupRange(g);
   if (r) seekTo(r.a);
   if (audio.paused) togglePlay();
+}
+/* explicit entry to new-loop mode inside a group: drop any loop being edited,
+   (re)select the open group as the working context, jump to the A–B tab where
+   the playhead roams free — the new loop will join this group */
+function newLoopInGroup() {
+  const s = cur(); if (!s || !fsGroupView) return;
+  const g = groupById(fsGroupView); if (!g) return;
+  selectedLoopId = null; selectedGroupId = g.id; workingA = workingB = null;
+  persist(); setFSTab("ab"); renderFS();
 }
 /* ‹ All: leave the group, clear selection — playback continues un-looped */
 function backToTop() {
