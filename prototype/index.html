@@ -344,6 +344,25 @@ function storageWarn(msg) {
   const el = document.getElementById("storageWarn");
   if (el) { el.textContent = "⚠️ " + msg; el.hidden = false; }
 }
+/* v2 song audio: raw bytes stored inline in IDB. iOS WebKit loses the files
+   backing IDB Blob references (NotFoundError on read) while keeping the
+   record metadata — inline ArrayBuffers don't have that problem. */
+function songBlob(s) {
+  if (s.data) return new Blob([s.data], { type: s.type || "audio/mpeg" });
+  return s.blob || null;   // legacy record; may be unreadable
+}
+async function sha256buf(buf) {
+  try {
+    if (crypto.subtle) {
+      const digest = await crypto.subtle.digest("SHA-256", buf);
+      return "sha256:" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+  } catch (e) {}
+  const v = new Uint8Array(buf, 0, Math.min(65536, buf.byteLength));
+  let h1 = 0x811c9dc5, h2 = 0x01000193;
+  for (const b of v) { h1 = Math.imul(h1 ^ b, 16777619) >>> 0; h2 = Math.imul(h2 + b, 31) >>> 0; }
+  return "fnv:" + buf.byteLength + ":" + h1.toString(16) + h2.toString(16);
+}
 async function idbPut(rec) {
   const db = await openDB();
   return new Promise((res, rej) => {
@@ -415,21 +434,15 @@ let lastRecovery = 0;
    The in-memory blob reference can go stale; a fresh read is the reliable one. */
 async function rebuildAudioSource() {
   const s = cur(); if (!s) { dlog("rebuild: no current song"); return false; }
-  dlog("rebuild: re-reading blob from IDB…");
-  try {
-    const fresh = await idbGet(s.id);
-    const blob = (fresh && fresh.blob) || s.blob;
-    if (!blob) { dlog("rebuild: no blob in IDB or memory"); return false; }
-    dlog("rebuild: got " + blob.size + "B type=" + (blob.type || "?"));
-    s.blob = blob;
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(blob);
-    audio.src = objectUrl;
-    audio.load();
-    dlog("rebuild: new object URL, load() called");
-    lastRecovery = Date.now();
-    return true;
-  } catch (e) { dlog("rebuild: FAIL", e && e.name, e && e.message); return false; }
+  const blob = songBlob(s);
+  if (!blob) { dlog("rebuild: no audio data available"); return false; }
+  dlog("rebuild: fresh object URL from stored bytes");
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+  objectUrl = URL.createObjectURL(blob);
+  audio.src = objectUrl;
+  audio.load();
+  lastRecovery = Date.now();
+  return true;
 }
 async function togglePlay() {
   if (!cur()) { dlog("togglePlay: no current song"); return; }
@@ -476,10 +489,10 @@ audio.addEventListener("error", async () => {
     // Distinguish corrupt stored data (waveform decode failed too) from transient staleness
     showAudioMsg(peaksOk
       ? "Audio source was stale — rebuilt. Press play again."
-      : "This song's saved audio can't be read (code 4) — delete it and re-import the file.");
+      : "This song's audio data can't be read — re-import the file to repair it (loops are kept).");
   } else {
     showAudioMsg(!peaksOk
-      ? "This song's saved audio can't be read (code " + code + ") — delete it and re-import the file."
+      ? "This song's audio data can't be read (code " + code + ") — re-import the file to repair it (loops are kept)."
       : "Audio error (code " + code + ") — tap the song in the library to reload it.");
   }
 });
@@ -839,9 +852,11 @@ function renderSongs() {
     const li = document.createElement("li");
     if (s.id === currentId) li.classList.add("active");
     const left = document.createElement("div");
-    const t = document.createElement("div"); t.textContent = s.title;
+    const t = document.createElement("div"); t.textContent = (s.broken ? "⚠️ " : "") + s.title;
     const m = document.createElement("div"); m.className = "meta";
-    m.textContent = fmt(s.duration) + " · " + s.loops.length + (s.loops.length === 1 ? " loop" : " loops");
+    m.textContent = s.broken
+      ? "audio data lost — re-import the file (loops kept)"
+      : fmt(s.duration) + " · " + s.loops.length + (s.loops.length === 1 ? " loop" : " loops");
     left.append(t, m);
     const del = document.createElement("button"); del.className = "del"; del.textContent = "×"; del.title = "Delete song";
     del.onclick = e => { e.stopPropagation(); deleteSong(s.id); };
@@ -924,12 +939,28 @@ function editNote(li, noteDiv, lp) {
 /* ============================== song lifecycle ============================== */
 async function selectSong(id) {
   const s = songs.find(x => x.id === id); if (!s) return;
-  dlog("selectSong: " + s.title + " | " + s.blob.size + "B | " + (s.blob.type || "no-type") + " | " + s.loops.length + " loops");
+  const blob = songBlob(s);
+  const sizeLabel = s.size || (s.blob && s.blob.size) || (blob && blob.size) || 0;
+  dlog("selectSong: " + s.title + " | " + sizeLabel + "B | " + (s.type || (blob && blob.type) || "no-type") + " | " + s.loops.length + " loops" + (s.broken ? " | BROKEN" : ""));
+  if (s.broken || !blob) {
+    // browser lost this song's audio bytes — keep it selectable, explain the repair
+    audio.pause();
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    currentId = id; selectedLoopId = null; looping = false;
+    workingA = workingB = null; peaks = []; peaksOk = false;
+    $("emptyPlayer").hidden = true; $("playerUI").hidden = false;
+    $("songTitle").textContent = s.title;
+    setRate(1);
+    renderSongs(); renderLoops(); updateABUI();
+    showAudioMsg("⚠️ This song's audio data was lost by the browser — re-import the same file to repair it. Your " + s.loops.length + " loops are safe.");
+    dlog("selectSong: broken record, waiting for re-import to repair");
+    return;
+  }
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   currentId = id; selectedLoopId = null; looping = false;
   workingA = workingB = null; peaks = []; peaksOk = false;
-  objectUrl = URL.createObjectURL(s.blob);
+  objectUrl = URL.createObjectURL(blob);
   audio.src = objectUrl;
   audio.load();
   audioState("selectSong: after load()");
@@ -940,57 +971,48 @@ async function selectSong(id) {
   persist();
   // waveform peaks (async, non-blocking)
   try {
-    peaks = await computePeaks(s.blob);
+    peaks = await computePeaks(blob);
     peaksOk = true;
   } catch (e) {
     dlog("peaks: decode FAIL", e && e.name, e && e.message, "— retrying once");
     await new Promise(r => setTimeout(r, 800));
     if (currentId === id) {
-      try { peaks = await computePeaks(s.blob); peaksOk = true; }
+      try { peaks = await computePeaks(blob); peaksOk = true; }
       catch (e2) { dlog("peaks: retry FAIL", e2 && e2.name, e2 && e2.message); }
     }
   }
 }
-/* content hash for dedupe: SHA-256 when available, sampled FNV-1a fallback */
-async function fileHash(blob) {
-  try {
-    if (crypto.subtle) {
-      const buf = await readBlobBytes(blob);
-      const digest = await crypto.subtle.digest("SHA-256", buf);
-      return "sha256:" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
-    }
-  } catch (e) { /* fall through to sampled hash */ }
-  const size = blob.size;
-  const head = new Uint8Array(await readBlobBytes(blob.slice(0, 65536)));
-  const tail = new Uint8Array(await readBlobBytes(blob.slice(Math.max(0, size - 65536))));
-  let h = 0x811c9dc5;
-  const mix = arr => { for (const b of arr) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } };
-  mix(head); mix(tail);
-  for (const ch of String(size)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
-  return "fnv:" + h.toString(16);
+function isAudioFile(f) {
+  return f.type.startsWith("audio/") || /\.(mp3|m4a|m4b|aac|wav|aiff|aif|caf|ogg|oga|flac|opus)$/i.test(f.name);
 }
 async function importFiles(files) {
-  let toOpen = null, dupes = 0, added = 0;
-  // lazily backfill missing content hashes here (serial, user-triggered —
-  // never concurrent with the waveform decode / player at boot)
-  for (const s of songs) {
-    if (!s.hash && s.blob) {
-      try { s.hash = await fileHash(s.blob); await idbPut(s); } catch (e) { /* keep going */ }
-    }
-  }
+  let toOpen = null, dupes = 0, added = 0, repaired = 0;
   for (const f of files) {
-    if (!f.type.startsWith("audio/") && !/\.(mp3|m4a|aac|wav|aiff|aif|caf|ogg|flac)$/i.test(f.name)) continue;
-    const hash = await fileHash(f);
-    const existing = songs.find(s => s.hash === hash);
+    if (!isAudioFile(f)) continue;
+    const title = f.name.replace(/\.[^.]+$/, "");
+    let buf;
+    try { buf = await f.arrayBuffer(); }
+    catch (e) { dlog("import: can't read " + f.name + " — " + (e && e.message)); continue; }
+    const hash = await sha256buf(buf);
+    const existing = songs.find(s => s.hash === hash && !s.broken);
     if (existing) { dupes++; if (!toOpen) toOpen = existing.id; continue; }
-    const rec = { id: uid(), title: f.name.replace(/\.[^.]+$/, ""), blob: f, duration: 0, loops: [], hash };
-    songs.push(rec);
+    // repair: a record whose audio bytes the browser lost (loops survived)
+    const broken = songs.find(s => s.broken && s.title === title && s.size === f.size);
+    let rec;
+    if (broken) {
+      broken.data = buf; broken.type = f.type || "audio/mpeg"; broken.size = f.size;
+      broken.hash = hash; broken.broken = false; delete broken.blob;
+      rec = broken; repaired++;
+      dlog("import: repaired \"" + title + "\" — " + rec.loops.length + " loops kept");
+    } else {
+      rec = { id: uid(), title, data: buf, type: f.type || "audio/mpeg", size: f.size, duration: 0, loops: [], hash };
+      songs.push(rec); added++;
+    }
     try { await idbTimeout(idbPut(rec), "save song"); dlog("import: saved " + rec.title); }
     catch (e) {
       dlog("import: SAVE FAILED — " + (e && e.message ? e.message : e));
       storageWarn("Couldn't save \"" + rec.title + "\" to browser storage — it will disappear on refresh. Free up space and reload, then import again.");
     }
-    added++;
     if (!toOpen) toOpen = rec.id;
   }
   renderSongs();
@@ -998,6 +1020,9 @@ async function importFiles(files) {
   if (dupes > 0) {
     msg.textContent = "Already in your library — opened the existing song" + (dupes > 1 ? "s" : "") + ".";
     setTimeout(() => { if (msg.textContent.startsWith("Already")) msg.textContent = ""; }, 4000);
+  } else if (repaired > 0) {
+    msg.textContent = "Repaired " + repaired + " song" + (repaired > 1 ? "s" : "") + " — loops restored.";
+    setTimeout(() => { if (msg.textContent.startsWith("Repaired")) msg.textContent = ""; }, 5000);
   }
   if (toOpen) selectSong(toOpen);
 }
@@ -1144,6 +1169,23 @@ document.addEventListener("keydown", e => {
   }
   dlog("boot: library has " + songs.length + " songs");
   try { songs.sort((a, b) => (a.title || "").localeCompare(b.title || "")); } catch (e) {}
+  // migrate legacy blob records to inline byte storage (iOS-safe); flag
+  // records whose audio bytes iOS already lost — re-import repairs them
+  for (const s of songs) {
+    if (s.data || !s.blob) continue;
+    try {
+      const bytes = await idbTimeout(readBlobBytes(s.blob), "migrate " + s.title);
+      s.data = bytes; s.type = s.blob.type || "audio/mpeg"; s.size = s.blob.size;
+      delete s.blob;
+      if (!s.hash) { try { s.hash = await sha256buf(bytes); } catch (e) {} }
+      await idbTimeout(idbPut(s), "save migrated song");
+      dlog("migrated to byte storage: " + s.title);
+    } catch (e) {
+      s.broken = true; s.size = s.blob.size;
+      dlog("storage: audio bytes lost for \"" + s.title + "\" (" + (e && e.message) + ") — re-import the file to repair; loops kept");
+      try { await idbPut(s); } catch (e2) {}
+    }
+  }
   refreshWaveColors();
   renderSongs(); updateABUI();
   let last = null;
