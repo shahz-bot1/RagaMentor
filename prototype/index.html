@@ -165,6 +165,7 @@
         <button class="tbtn" id="fwdBtn" title="Forward 10s">+10</button>
         <span id="timeLabel">0:00.0 / 0:00.0</span>
       </div>
+      <div id="audioMsg" class="hint" hidden style="color:var(--danger);min-height:18px;margin:2px 0"></div>
 
       <div class="row" id="speedRow">
         <span class="label">Speed</span>
@@ -319,10 +320,20 @@ async function togglePlay() {
   if (audio.paused) {
     try { await audio.play(); }
     catch (e) {
-      // media pipeline can wedge after long idle (e.g. overnight tab): reload and retry once
-      console.warn("play failed, reloading and retrying", e);
-      try { audio.load(); await audio.play(); }
-      catch (e2) { console.warn("play retry failed", e2); }
+      // media source can go stale (e.g. after long idle): rebuild it from the stored blob and retry once
+      console.warn("play failed, rebuilding source and retrying", e);
+      try {
+        const s = cur();
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(s.blob);
+        audio.src = objectUrl;
+        audio.load();
+        await audio.play();
+      }
+      catch (e2) {
+        console.warn("play retry failed", e2);
+        showAudioMsg("Couldn't start playback — tap the song in the library to reload it, or re-import it.");
+      }
     }
   }
   else audio.pause();
@@ -333,10 +344,21 @@ function seekTo(t) {
 }
 function updatePlayBtn() { $("playBtn").textContent = audio.paused ? "▶" : "❚❚"; }
 
-audio.addEventListener("play", updatePlayBtn);
+function showAudioMsg(t) {
+  const el = $("audioMsg");
+  el.textContent = t || "";
+  el.hidden = !t;
+  if (t) setTimeout(() => { if (el.textContent === t) { el.hidden = true; el.textContent = ""; } }, 9000);
+}
+audio.addEventListener("play", () => { updatePlayBtn(); showAudioMsg(""); });
 audio.addEventListener("pause", updatePlayBtn);
 audio.addEventListener("ended", () => { updatePlayBtn(); });
 audio.addEventListener("timeupdate", loopCheck);
+audio.addEventListener("error", () => {
+  const code = audio.error ? audio.error.code : 0;
+  console.warn("audio element error, code", code);
+  showAudioMsg("Audio error (code " + code + ") — tap the song in the library to reload it, or re-import it.");
+});
 audio.addEventListener("loadedmetadata", () => {
   const s = cur();
   if (s && (!s.duration || s.duration === 0) && isFinite(audio.duration)) {
@@ -476,7 +498,7 @@ const fsCanvas = $("fsWave");
 let fsOpen = false;
 let fsView = { start: 0, dur: 0 };
 const MIN_ZOOM = 2; // seconds — deepest zoom window
-const moveIds = ["transportRow", "speedRow", "abRow", "abBox", "loopRow"];
+const moveIds = ["transportRow", "audioMsg", "speedRow", "abRow", "abBox", "loopRow"];
 let savedSpots = [];
 
 function openFullscreen() {
