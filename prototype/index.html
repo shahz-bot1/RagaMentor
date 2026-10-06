@@ -864,6 +864,13 @@ async function fileHash(blob) {
 }
 async function importFiles(files) {
   let toOpen = null, dupes = 0, added = 0;
+  // lazily backfill missing content hashes here (serial, user-triggered —
+  // never concurrent with the waveform decode / player at boot)
+  for (const s of songs) {
+    if (!s.hash && s.blob) {
+      try { s.hash = await fileHash(s.blob); await idbPut(s); } catch (e) { /* keep going */ }
+    }
+  }
   for (const f of files) {
     if (!f.type.startsWith("audio/") && !/\.(mp3|m4a|aac|wav|aiff|aif|caf|ogg|flac)$/i.test(f.name)) continue;
     const hash = await fileHash(f);
@@ -1004,14 +1011,6 @@ document.addEventListener("keydown", e => {
     songs = await idbAll();
     songs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
   } catch (e) { console.warn("idb unavailable", e); songs = []; }
-  // backfill content hashes for songs imported before dedupe existed
-  (async () => {
-    for (const s of songs) {
-      if (!s.hash && s.blob) {
-        try { s.hash = await fileHash(s.blob); await idbPut(s); } catch (e) { /* keep going */ }
-      }
-    }
-  })();
   refreshWaveColors();
   renderSongs(); updateABUI();
   let last = null;
