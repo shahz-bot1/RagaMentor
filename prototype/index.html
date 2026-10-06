@@ -138,6 +138,7 @@
 #debugBar button{font-size:12px;padding:3px 10px;margin-left:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 #debugLog{max-height:170px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.45;padding:8px 10px;white-space:pre-wrap;word-break:break-all}
 #showLogBtn{margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.warnBanner{margin:0 0 10px;padding:8px 12px;border-radius:10px;font-size:13px;background:rgba(255,170,0,.14);border:1px solid rgba(255,170,0,.55)}
 </style>
 </head>
 <body>
@@ -152,6 +153,7 @@
 <main>
   <section class="card" id="libraryCard">
     <h2>Library</h2>
+    <div id="storageWarn" class="warnBanner" hidden></div>
     <div id="dropHint">Drop audio files here<br>or</div>
     <button class="btn" id="importBtn" style="width:100%">＋ Import audio</button>
     <div id="importMsg" class="hint" style="margin-top:8px;min-height:18px"></div>
@@ -304,16 +306,43 @@ window.addEventListener("unhandledrejection", e => {
 
 /* ============================== storage (IndexedDB) ============================== */
 const DB_NAME = "slowloop-proto", STORE = "songs";
+const IDB_TIMEOUT_MS = 8000;
 let dbPromise = null;
 function openDB() {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((res, rej) => {
-    const r = indexedDB.open(DB_NAME, 1);
-    r.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: "id" });
-    r.onsuccess = e => res(e.target.result);
-    r.onerror = () => rej(r.error);
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) {
+        done = true;
+        dbPromise = null;   // let a later call retry with a fresh open
+        rej(new Error("IndexedDB open timed out after " + IDB_TIMEOUT_MS + "ms"));
+      }
+    }, IDB_TIMEOUT_MS);
+    const fail = err => { if (!done) { done = true; clearTimeout(timer); dbPromise = null; rej(err); } };
+    try {
+      const r = indexedDB.open(DB_NAME, 1);
+      r.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: "id" });
+      r.onsuccess = e => { if (!done) { done = true; clearTimeout(timer); res(e.target.result); } };
+      r.onerror = () => fail(r.error || new Error("IDB open error"));
+      r.onblocked = () => dlog("idb: open blocked by another connection");
+    } catch (e) { fail(e); }
   });
   return dbPromise;
+}
+/* race any IDB operation against a timeout so a hung storage layer can never wedge the app */
+function idbTimeout(promise, what) {
+  let timer;
+  const loser = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error("IDB " + what + " timed out")), IDB_TIMEOUT_MS); });
+  return Promise.race([promise, loser]).then(
+    v => { clearTimeout(timer); return v; },
+    e => { clearTimeout(timer); throw e; }
+  );
+}
+function storageWarn(msg) {
+  dlog("storageWarn: " + msg);
+  const el = document.getElementById("storageWarn");
+  if (el) { el.textContent = "⚠️ " + msg; el.hidden = false; }
 }
 async function idbPut(rec) {
   const db = await openDB();
@@ -956,7 +985,11 @@ async function importFiles(files) {
     if (existing) { dupes++; if (!toOpen) toOpen = existing.id; continue; }
     const rec = { id: uid(), title: f.name.replace(/\.[^.]+$/, ""), blob: f, duration: 0, loops: [], hash };
     songs.push(rec);
-    await idbPut(rec);
+    try { await idbTimeout(idbPut(rec), "save song"); dlog("import: saved " + rec.title); }
+    catch (e) {
+      dlog("import: SAVE FAILED — " + (e && e.message ? e.message : e));
+      storageWarn("Couldn't save \"" + rec.title + "\" to browser storage — it will disappear on refresh. Free up space and reload, then import again.");
+    }
     added++;
     if (!toOpen) toOpen = rec.id;
   }
@@ -1103,10 +1136,14 @@ document.addEventListener("keydown", e => {
   dlog("boot", "ua=" + navigator.userAgent);
   dlog("boot", "cores=" + (navigator.hardwareConcurrency || "?"), "mem=" + (navigator.deviceMemory || "?") + "GB", "vis=" + document.visibilityState);
   try {
-    songs = await idbAll();
-    dlog("boot: idb loaded " + songs.length + " songs, last=" + (localStorage.getItem(LAST_KEY) || "-"));
-    songs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-  } catch (e) { console.warn("idb unavailable", e); songs = []; }
+    songs = await idbTimeout(idbAll(), "load library");
+  } catch (e) {
+    dlog("boot: IDB read failed — " + (e && e.message ? e.message : e));
+    storageWarn("Browser storage isn't responding — your library may appear empty. Reload the page; nothing was deleted.");
+    songs = [];
+  }
+  dlog("boot: library has " + songs.length + " songs");
+  try { songs.sort((a, b) => (a.title || "").localeCompare(b.title || "")); } catch (e) {}
   refreshWaveColors();
   renderSongs(); updateABUI();
   let last = null;
