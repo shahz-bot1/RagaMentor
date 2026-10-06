@@ -243,6 +243,15 @@ function fmt(t) {
   return m + ":" + s.toFixed(1).padStart(4, "0");
 }
 const MIN_LOOP = 0.3, NUDGE = 0.1;   // micro-adjust step for A/B nudging
+/* Single-flight blob reader: every arrayBuffer() read of song audio goes
+   through this chain, so two readers (waveform decode, content hash) can
+   never run concurrently on the same backing data. */
+let blobReadChain = Promise.resolve();
+function readBlobBytes(blob) {
+  const task = blobReadChain.then(() => blob.arrayBuffer());
+  blobReadChain = task.then(() => undefined, () => undefined); // chain survives failures
+  return task;
+}
 
 /* ============================== storage (IndexedDB) ============================== */
 const DB_NAME = "slowloop-proto", STORE = "songs";
@@ -429,7 +438,7 @@ function tick() {
 
 /* ============================== waveform ============================== */
 async function computePeaks(blob) {
-  const raw = await blob.arrayBuffer();
+  const raw = await readBlobBytes(blob);
   const AC = window.AudioContext || window.webkitAudioContext;
   const actx = new AC();
   try {
@@ -848,14 +857,14 @@ async function selectSong(id) {
 async function fileHash(blob) {
   try {
     if (crypto.subtle) {
-      const buf = await blob.arrayBuffer();
+      const buf = await readBlobBytes(blob);
       const digest = await crypto.subtle.digest("SHA-256", buf);
       return "sha256:" + [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
     }
   } catch (e) { /* fall through to sampled hash */ }
   const size = blob.size;
-  const head = new Uint8Array(await blob.slice(0, 65536).arrayBuffer());
-  const tail = new Uint8Array(await blob.slice(Math.max(0, size - 65536)).arrayBuffer());
+  const head = new Uint8Array(await readBlobBytes(blob.slice(0, 65536)));
+  const tail = new Uint8Array(await readBlobBytes(blob.slice(Math.max(0, size - 65536))));
   let h = 0x811c9dc5;
   const mix = arr => { for (const b of arr) { h ^= b; h = Math.imul(h, 0x01000193) >>> 0; } };
   mix(head); mix(tail);
