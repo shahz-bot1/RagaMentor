@@ -493,6 +493,7 @@ let fsGroupView = null;         // group id whose members the Loops-tab chips sh
 let fsChecklist = false;        // add-loops checklist mode inside a group
 let checkSel = null;            // staged {loopId:true} while in checklist mode
 let checkConstrain = null;      // group id whose subtree loops are offered (new sub-group); null = open
+let checkIsNew = false;         // checklist is for a brand-new group (constrained to visible items)
 const GROUP_COLORS = ["#2dd4bf", "#fbbf24", "#a78bfa", "#fb7185", "#38bdf8"];
 const escapeHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 function hexA(hex, a) {
@@ -924,14 +925,22 @@ function renderFSChips() {
   const byRangeStart = id => { const r = itemRange(id); return r ? r.a : 1e9; };
   if (fsChecklist) {
     const g = (s.groups || []).find(x => x.id === fsGroupView);
-    if (!g) { fsChecklist = false; checkConstrain = null; renderFSChips(); return; }
+    if (!g) { fsChecklist = false; checkConstrain = null; checkIsNew = false; renderFSChips(); return; }
     let items;
     if (checkConstrain) {
       // new sub-group: only loops from the parent group's own contents
       items = subtreeLoops(checkConstrain).map(id => s.loops.find(l => l.id === id)).filter(Boolean);
+    } else if (checkIsNew) {
+      // new top-level group: only items visible at top level — ungrouped loops
+      // plus flat top-level groups (never anything nested inside another group)
+      items = [
+        ...s.loops.filter(lp => !parentOf(lp.id)),
+        ...(s.groups || []).filter(gr => gr.id !== g.id && !parentOf(gr.id) && isFlatGroup(gr))
+      ];
     } else {
-      // ＋ Add: loops always eligible; groups only when the open group is
-      // top-level, and only flat groups (depth cap: sub-groups hold loops only)
+      // ＋ Add: the open reorganization tool — loops always eligible; groups
+      // only when the open group is top-level, and only flat groups
+      // (depth cap: sub-groups hold loops only)
       items = [...s.loops];
       if (!parentOf(g.id)) {
         for (const gr of (s.groups || [])) {
@@ -1052,13 +1061,15 @@ function newGroup() {
   }
   fsGroupView = g.id; selectedGroupId = null; selectedLoopId = null; looping = false;
   persist();
-  // drop straight into the checklist: constrained to the parent's loops for a sub-group
+  // drop straight into the checklist: constrained to the parent's loops for a sub-group,
+  // to top-level items for a top-level group
   checkConstrain = parentId || null;
+  checkIsNew = true;
   checkSel = {};
   fsChecklist = true;
   renderFS();
   loopsMessage(parentId ? "New sub-group — pick loops from “" + (groupById(parentId) || {}).name + "”, then Done."
-                       : "New group — tap loops to add them, then Done.");
+                       : "New group — tap top-level loops and groups to include them, then Done.");
 }
 /* the single membership editor: the checklist IS the membership */
 /* the single membership editor: ＋ Add opens it unconstrained (loops always,
@@ -1070,13 +1081,14 @@ function enterChecklist() {
   checkSel = {};
   for (const id of g.members) checkSel[id] = true;
   checkConstrain = null;
+  checkIsNew = false;   // ＋ Add is the open reorganization tool
   fsChecklist = true;
   renderFS();
 }
 function applyChecklist() {
   const s = cur();
   const g = s && (s.groups || []).find(x => x.id === fsGroupView);
-  fsChecklist = false; checkConstrain = null;
+  fsChecklist = false; checkConstrain = null; checkIsNew = false;
   if (!s || !g) { checkSel = null; renderFS(); return; }
   // checked ids may be loops or (flat) groups — eligibility was enforced by the checklist
   const sel = Object.keys(checkSel || {}).filter(id => checkSel[id])
@@ -1106,7 +1118,7 @@ function applyChecklist() {
 function cancelChecklist() {
   const s = cur();
   const g = s && (s.groups || []).find(x => x.id === fsGroupView);
-  fsChecklist = false; checkSel = null; checkConstrain = null;
+  fsChecklist = false; checkSel = null; checkConstrain = null; checkIsNew = false;
   if (g && g.members.length === 0) {   // brand-new group abandoned before picking anything
     const par = parentOf(g.id);
     s.groups = (s.groups || []).filter(x => x.id !== g.id);
@@ -1138,6 +1150,8 @@ function renderFSNote() {
     sp.className = "hint";
     sp.textContent = checkConstrain
       ? `New sub-group in “${gr ? gr.name : "group"}” — ${n} selected. Only loops from “${(groupById(checkConstrain) || {}).name || "the parent group"}” are offered. Done applies.`
+      : checkIsNew
+      ? `New group — ${n} selected. Only top-level loops and groups are offered; nested items stay where they are. Done applies.`
       : `Adding to “${gr ? gr.name : "group"}” — ${n} selected. Checking an item that's elsewhere moves it here. Groups are capped at 2 levels: sub-groups hold loops only. Done applies.`;
     el.appendChild(sp);
     return;
