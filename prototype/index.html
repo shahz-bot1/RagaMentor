@@ -129,8 +129,19 @@
                  white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
   .chip { flex: 0 0 auto; background: var(--chip); color: var(--text); border: 1px solid var(--border);
           border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer;
-          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          display: inline-flex; align-items: center; gap: 7px; }
   .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+  .chip .cnt { font-size: 11px; opacity: .65; }
+  .chip .chev { font-size: 11px; opacity: .65; }
+  .chip.dashed { border-style: dashed; background: transparent; color: var(--muted); }
+  .chip.done { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .chip .tick { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--muted);
+                display: inline-flex; align-items: center; justify-content: center;
+                font-size: 10px; flex: 0 0 auto; color: transparent; }
+  .chip.checked { border-color: var(--accent); }
+  .chip.checked .tick { background: var(--accent); border-color: var(--accent); color: #fff; }
   #fsPanel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
              padding: 12px; display: flex; flex-direction: column; gap: 10px;
              box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; min-width: 0; }
@@ -467,9 +478,19 @@ async function idbGet(id) {
 }
 
 /* ============================== state ============================== */
-let songs = [];                 // {id,title,blob,duration,loops:[{id,name,start,end}]}
+let songs = [];                 // {id,title,blob,duration,loops:[{id,name,start,end}],groups:[{id,name,color,members:[loopId]}]}
 let currentId = null;
 let selectedLoopId = null;
+let selectedGroupId = null;     // XOR with selectedLoopId: selection is one loop, one group, or nothing
+let fsGroupView = null;         // group id whose members the Loops-tab chips show; null = top level
+let fsChecklist = false;        // add-loops checklist mode inside a group
+let checkSel = null;            // staged {loopId:true} while in checklist mode
+const GROUP_COLORS = ["#2dd4bf", "#fbbf24", "#a78bfa", "#fb7185", "#38bdf8"];
+const escapeHtml = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function hexA(hex, a) {
+  const n = parseInt(String(hex).slice(1), 16) || 0;
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 let workingA = null, workingB = null;   // A/B being defined, or mirror of selected loop
 let looping = false;
 let peaks = [];
@@ -484,6 +505,28 @@ try { audio.webkitPreservesPitch = true; } catch (e) {}
 
 const cur = () => songs.find(s => s.id === currentId) || null;
 const selLoop = () => { const s = cur(); return s ? s.loops.find(l => l.id === selectedLoopId) || null : null; };
+const selGroup = () => { const s = cur(); return s ? (s.groups || []).find(g => g.id === selectedGroupId) || null : null; };
+const loopGroupOf = loopId => { const s = cur(); return s ? (s.groups || []).find(g => (g.members || []).includes(loopId)) || null : null; };
+/* a group's range is derived: earliest member start → latest member end */
+function groupRange(g) {
+  const s = cur(); if (!s || !g) return null;
+  const ms = (g.members || []).map(id => s.loops.find(l => l.id === id)).filter(Boolean);
+  if (!ms.length) return null;
+  return { a: Math.min(...ms.map(l => l.start)), b: Math.max(...ms.map(l => l.end)) };
+}
+/* what actually loops right now: the selected group section, the selected loop, or nothing */
+const activeRange = () => {
+  const g = selGroup(); if (g) return groupRange(g);
+  const lp = selLoop(); return lp ? { a: lp.start, b: lp.end } : null;
+};
+const activeName = () => { const g = selGroup(); if (g) return g.name; const lp = selLoop(); return lp ? lp.name : null; };
+/* drop dangling member ids; drop groups left with no members */
+function sanitizeGroups(s) {
+  if (!Array.isArray(s.groups)) s.groups = [];
+  const ids = new Set(s.loops.map(l => l.id));
+  for (const g of s.groups) g.members = (g.members || []).filter(id => ids.has(id));
+  s.groups = s.groups.filter(g => g.members.length > 0);
+}
 const dur = () => { const s = cur(); return s ? (s.duration || 0) : 0; };
 
 function persist() {
@@ -591,10 +634,10 @@ audio.addEventListener("loadedmetadata", () => {
    but timeupdate keeps firing while audio plays, so looping survives backgrounding
    (with a coarser ~250ms seam, a platform limit for web pages). */
 function loopCheck() {
-  const lp = selLoop();
-  if (looping && lp && !audio.paused && !audio.seeking && dur() > 0) {
-    if (audio.currentTime >= lp.end - 0.03) {
-      try { audio.currentTime = lp.start; } catch (e) {}
+  const r = activeRange();
+  if (looping && r && !audio.paused && !audio.seeking && dur() > 0) {
+    if (audio.currentTime >= r.b - 0.03) {
+      try { audio.currentTime = r.a; } catch (e) {}
     }
   }
 }
@@ -652,9 +695,17 @@ function paintWave(canvas, viewStart, viewDur) {
   const d = dur(), s = cur();
   if (!d || !s) return;
   const t2x = t => (t - viewStart) / viewDur * w;
-  // loop regions
+  // group section bands (derived range: first member start → last member end)
+  for (const g of (s.groups || [])) {
+    const r = groupRange(g); if (!r) continue;
+    ctx.fillStyle = hexA(g.color, g.id === selectedGroupId ? 0.30 : 0.13);
+    ctx.fillRect(t2x(r.a), 0, Math.max(1, t2x(r.b) - t2x(r.a)), h);
+  }
+  // loop regions (group members tinted with their group color)
   for (const lp of s.loops) {
-    ctx.fillStyle = lp.id === selectedLoopId ? "rgba(91,157,255,.30)" : "rgba(91,157,255,.12)";
+    const g = loopGroupOf(lp.id), sel = lp.id === selectedLoopId;
+    ctx.fillStyle = g ? hexA(g.color, sel ? 0.45 : 0.20)
+                      : (sel ? "rgba(91,157,255,.30)" : "rgba(91,157,255,.12)");
     ctx.fillRect(t2x(lp.start), 0, t2x(lp.end) - t2x(lp.start), h);
   }
   // peaks (per-pixel max over the high-res buckets in view)
@@ -758,40 +809,197 @@ function renderFS() {
   updateFSSpeedUI();
   updateFSTransport();
 }
+/* Loops-tab chips: three modes.
+   top:        group chips + ungrouped loop chips + ＋ New group
+   inside:     ‹ All + member chips + ＋ Add loops   (fsGroupView set)
+   checklist:  every loop as a toggle + Done/Cancel  (fsChecklist set) */
 function renderFSChips() {
   const c = $("fsChips"); if (!c) return;
   c.innerHTML = "";
   const s = cur(); if (!s) return;
-  for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
+  const chip = (html, cls, fn, title) => {
     const b = document.createElement("button");
-    b.className = "chip" + (lp.id === selectedLoopId ? " on" : "");
-    b.textContent = lp.name;
-    b.onclick = () => {
-      if (lp.id === selectedLoopId) { // tap the active chip again to deselect
-        selectedLoopId = null; looping = false; workingA = workingB = null;
-        persist(); renderLoops(); updateABUI();
-      } else selectLoop(lp.id);
-    };
+    b.className = "chip" + (cls ? " " + cls : "");
+    b.innerHTML = html;
+    if (title) b.title = title;
+    b.onclick = fn;
     c.appendChild(b);
+    return b;
+  };
+  const loopChip = lp => chip(escapeHtml(lp.name), lp.id === selectedLoopId ? "on" : "", () => {
+    if (lp.id === selectedLoopId) { // tap the active chip again to deselect
+      selectedLoopId = null; looping = false; workingA = workingB = null;
+      persist(); renderLoops(); updateABUI();
+    } else selectLoop(lp.id);
+  });
+  if (fsChecklist) {
+    const g = (s.groups || []).find(x => x.id === fsGroupView);
+    if (!g) { fsChecklist = false; renderFSChips(); return; }
+    for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
+      const on = !!(checkSel && checkSel[lp.id]);
+      const og = loopGroupOf(lp.id);
+      const tag = (og && og.id !== g.id) ? ` <span class="cnt">· ${escapeHtml(og.name)}</span>` : "";
+      chip(`<span class="tick">${on ? "✓" : ""}</span><span>${escapeHtml(lp.name)}</span>${tag}`,
+        on ? "checked" : "", () => { checkSel[lp.id] = !checkSel[lp.id]; renderFSChips(); },
+        (og && og.id !== g.id) ? `Currently in “${og.name}” — checking moves it here` : "Tap to toggle membership");
+    }
+    chip("Done", "done", applyChecklist, "Apply membership");
+    chip("Cancel", "dashed", cancelChecklist, "Discard changes");
+    return;
   }
-  if (!s.loops.length) {
+  if (fsGroupView) {
+    const g = (s.groups || []).find(x => x.id === fsGroupView);
+    if (!g) { fsGroupView = null; renderFSChips(); return; }
+    chip("‹ All", "", backToTop, "Back to all loops");
+    for (const id of g.members) {
+      const lp = s.loops.find(l => l.id === id);
+      if (lp) loopChip(lp);
+    }
+    chip("＋ Add loops", "dashed", enterChecklist, "Choose which loops belong to this group");
+    return;
+  }
+  for (const g of (s.groups || [])) {
+    chip(`<span class="dot" style="background:${g.color}"></span><span>${escapeHtml(g.name)}</span>` +
+      `<span class="chev">▸</span><span class="cnt">${g.members.length}</span>`,
+      "", () => selectGroup(g.id), "Open group and loop the whole section");
+  }
+  for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
+    if (loopGroupOf(lp.id)) continue;   // members live inside their group
+    loopChip(lp);
+  }
+  chip("＋ New group", "dashed", newGroup, "Group loops into a practicable section");
+  if (!s.loops.length && !s.groups.length) {
     const sp = document.createElement("span");
     sp.className = "hint"; sp.textContent = "No loops yet — set A/B in the A–B tab";
     c.appendChild(sp);
   }
 }
+/* tapping a group opens it AND loops the whole section (first start → last end) */
+function selectGroup(id) {
+  const s = cur(); if (!s) return;
+  const g = (s.groups || []).find(x => x.id === id); if (!g) return;
+  selectedGroupId = id; selectedLoopId = null; looping = true;
+  fsGroupView = id; fsChecklist = false; checkSel = null;
+  workingA = workingB = null;   // A–B tab edits scratch for a new loop while a group is selected
+  persist(); renderLoops(); updateABUI();
+  const r = groupRange(g);
+  if (r) seekTo(r.a);
+  if (audio.paused) togglePlay();
+}
+/* ‹ All: leave the group, clear selection — playback continues un-looped */
+function backToTop() {
+  fsGroupView = null; fsChecklist = false; checkSel = null;
+  selectedGroupId = null; selectedLoopId = null;
+  looping = false; workingA = workingB = null;
+  persist(); renderLoops(); updateABUI();
+}
+function deleteGroup(id) {
+  const s = cur(); if (!s) return;
+  const g = (s.groups || []).find(x => x.id === id);
+  const n = g ? g.members.length : 0;
+  s.groups = (s.groups || []).filter(x => x.id !== id);
+  if (selectedGroupId === id) { selectedGroupId = null; looping = false; workingA = workingB = null; }
+  if (fsGroupView === id) fsGroupView = null;
+  fsChecklist = false; checkSel = null;
+  persist(); renderLoops(); updateABUI();
+  loopsMessage(`Deleted group — kept ${n} loop${n === 1 ? "" : "s"} as ungrouped.`);
+}
+function newGroup() {
+  const s = cur(); if (!s) return;
+  const used = new Set((s.groups || []).map(g => g.name));
+  let n = (s.groups || []).length + 1;
+  while (used.has("Group " + n)) n++;
+  const g = {
+    id: uid(), name: "Group " + n,
+    color: GROUP_COLORS[(s.groups || []).length % GROUP_COLORS.length],
+    members: []
+  };
+  s.groups = [...(s.groups || []), g];
+  fsGroupView = g.id; selectedGroupId = null; selectedLoopId = null; looping = false;
+  persist(); enterChecklist();
+  loopsMessage("New group — tap loops to add them, then Done.");
+}
+/* the single membership editor: the checklist IS the membership */
+function enterChecklist() {
+  const s = cur();
+  const g = s && (s.groups || []).find(x => x.id === fsGroupView);
+  if (!g) return;
+  checkSel = {};
+  for (const id of g.members) checkSel[id] = true;
+  fsChecklist = true;
+  renderFS();
+}
+function applyChecklist() {
+  const s = cur();
+  const g = s && (s.groups || []).find(x => x.id === fsGroupView);
+  fsChecklist = false;
+  if (!s || !g) { checkSel = null; renderFS(); return; }
+  const sel = s.loops.filter(lp => checkSel && checkSel[lp.id]).map(lp => lp.id);
+  for (const o of s.groups) {           // a loop belongs to one group only — checking moves it
+    if (o.id !== g.id) o.members = o.members.filter(m => !sel.includes(m));
+  }
+  const byStart = id => { const l = s.loops.find(x => x.id === id); return l ? l.start : 0; };
+  g.members = sel.sort((a, b) => byStart(a) - byStart(b));
+  s.groups = s.groups.filter(x => x.members.length > 0);   // emptied groups vanish
+  checkSel = null;
+  if (!s.groups.find(x => x.id === g.id)) {
+    fsGroupView = null; selectedGroupId = null; looping = false; workingA = workingB = null;
+    loopsMessage("Empty group removed.");
+  } else {
+    selectedGroupId = g.id; selectedLoopId = null; looping = true;
+    const r = groupRange(g);
+    if (r) seekTo(r.a);
+    if (audio.paused) togglePlay();
+    loopsMessage(`“${g.name}” · ${g.members.length} loops · ${r ? fmt(r.a) + " – " + fmt(r.b) : ""}`);
+  }
+  persist(); renderLoops(); updateABUI();
+}
+function cancelChecklist() {
+  const s = cur();
+  const g = s && (s.groups || []).find(x => x.id === fsGroupView);
+  fsChecklist = false; checkSel = null;
+  if (g && g.members.length === 0) {   // brand-new group abandoned before picking loops
+    s.groups = s.groups.filter(x => x.id !== g.id);
+    fsGroupView = null; selectedGroupId = null;
+  }
+  persist(); renderLoops(); updateABUI();
+}
 function renderFSSel() {
-  const row = $("fsSelRow"), nameEl = $("fsLoopName"), lp = selLoop();
+  const row = $("fsSelRow"), nameEl = $("fsLoopName"), lp = selLoop(), g = selGroup();
   if (!row || !nameEl) return;
-  row.hidden = !lp;
-  if (lp && document.activeElement !== nameEl) nameEl.value = lp.name;
+  row.hidden = fsChecklist || (!lp && !g);
+  if ((lp || g) && document.activeElement !== nameEl) nameEl.value = (lp || g).name;
+  nameEl.placeholder = g ? "Group name" : "Loop name";
+  nameEl.setAttribute("aria-label", g ? "Selected group name" : "Selected loop name");
+  $("fsTrash").title = g ? "Delete group (its loops are kept as ungrouped)" : "Delete selected loop";
 }
 function renderFSNote() {
-  const el = $("fsNote"), lp = selLoop();
+  const el = $("fsNote"), lp = selLoop(), g = selGroup();
   if (!el) return;
   el.hidden = false;
   el.innerHTML = "";
   el.onclick = null;
+  if (fsChecklist) {
+    const gr = g || (cur() && (cur().groups || []).find(x => x.id === fsGroupView));
+    const n = checkSel ? Object.keys(checkSel).filter(k => checkSel[k]).length : 0;
+    const sp = document.createElement("span");
+    sp.className = "hint";
+    sp.textContent = `Adding to “${gr ? gr.name : "group"}” — ${n} selected. Checking a loop that's in another group moves it here. Done applies.`;
+    el.appendChild(sp);
+    return;
+  }
+  if (g && !lp) {
+    const r = groupRange(g);
+    const label = document.createElement("b"); label.textContent = "Section: ";
+    const body = document.createElement("span");
+    body.textContent = `${g.members.length} loop${g.members.length === 1 ? "" : "s"}` +
+      (r ? ` · ${fmt(r.a)} – ${fmt(r.b)}` : "") + " — loops continuously";
+    const hint = document.createElement("div");
+    hint.className = "hint";
+    hint.textContent = "Tap a member chip to drill that phrase; the group keeps looping the whole section.";
+    el.append(label, body, hint);
+    return;
+  }
   if (!lp) {
     const sp = document.createElement("span");
     sp.className = "hint"; sp.textContent = "No loop selected — tap a chip above.";
@@ -822,8 +1030,9 @@ function updateFSABUI() {
   if (!fsOpen) return;
   $("fsAVal").textContent = workingA == null ? "—" : fmt(workingA);
   $("fsBVal").textContent = workingB == null ? "—" : fmt(workingB);
-  const lp = selLoop();
+  const lp = selLoop(), g = selGroup();
   $("fsEditHead").textContent = lp ? ("Editing “" + lp.name + "” — changes save automatically") :
+    g ? ("“" + g.name + "” selected — A/B below starts a new loop (members untouched)") :
     (workingA != null || workingB != null ? "New loop — set both A and B, name it, hit ＋ Add" : "No loop selected");
   $("fsAddBtn").disabled = !(lp == null && workingA != null && workingB != null);
   const t = $("fsLoopToggle");
@@ -842,15 +1051,18 @@ function updateFSSpeedUI() {
 function updateFSTransport() {
   if (!fsOpen) return;
   $("fsPlay").textContent = audio.paused ? "▶" : "❚❚";
-  const lp = selLoop(), badge = $("fsLoopBadge");
-  badge.hidden = !lp;
-  if (lp) badge.textContent = lp.name;
+  const name = activeName(), badge = $("fsLoopBadge");
+  badge.hidden = !name;
+  if (name) badge.textContent = name;
   const t = audio.currentTime || 0, d = dur();
   $("fsTimeBadge").textContent = fmt(t) + " / " + fmt(d);
 }
 function deleteLoop(id) {
   const s = cur(); if (!s) return;
   s.loops = s.loops.filter(x => x.id !== id);
+  for (const g of (s.groups || [])) g.members = (g.members || []).filter(m => m !== id);
+  s.groups = (s.groups || []).filter(g => g.members.length > 0);   // no ghost groups
+  if (fsGroupView && !(s.groups || []).some(g => g.id === fsGroupView)) fsGroupView = null;
   if (selectedLoopId === id) { selectedLoopId = null; looping = false; workingA = workingB = null; }
   persist(); renderLoops(); updateABUI();
 }
@@ -969,14 +1181,21 @@ function addLoop(nameEl) {
   const name = (nameEl.value.trim() || ("Loop " + n));
   const lp = { id: uid(), name, start: a, end: b, note: "" };
   s.loops.push(lp);
+  if (fsGroupView) {   // created while inside a group → it joins that group
+    const g = (s.groups || []).find(x => x.id === fsGroupView);
+    if (g && !g.members.includes(lp.id)) {
+      g.members.push(lp.id);
+      g.members.sort((x, y) => s.loops.find(l => l.id === x).start - s.loops.find(l => l.id === y).start);
+    }
+  }
   nameEl.value = "";
-  selectedLoopId = lp.id; looping = true;
+  selectedLoopId = lp.id; selectedGroupId = null; looping = true;
   persist(); renderLoops(); syncABFromSelection();
   seekTo(lp.start);
   if (audio.paused) togglePlay();
 }
 function selectLoop(id) {
-  selectedLoopId = id; looping = true;
+  selectedLoopId = id; selectedGroupId = null; looping = true;
   const lp = selLoop();
   if (lp) seekTo(lp.start);
   persist(); renderLoops(); syncABFromSelection();
@@ -993,7 +1212,8 @@ function renderSongs() {
     const m = document.createElement("div"); m.className = "meta";
     m.textContent = s.broken
       ? "audio data lost — re-import the file (loops kept)"
-      : fmt(s.duration) + " · " + s.loops.length + (s.loops.length === 1 ? " loop" : " loops");
+      : fmt(s.duration) + " · " + s.loops.length + (s.loops.length === 1 ? " loop" : " loops") +
+        ((s.groups || []).length ? " · " + s.groups.length + (s.groups.length === 1 ? " group" : " groups") : "");
     left.append(t, m);
     const del = document.createElement("button"); del.className = "del"; del.textContent = "×"; del.title = "Delete song";
     del.onclick = e => { e.stopPropagation(); deleteSong(s.id); };
@@ -1011,13 +1231,13 @@ function renderLoops() {
 function updateMainBadge() {
   const badge = $("waveLoopBadge");
   if (!badge) return;
-  const lp = selLoop();
-  badge.hidden = !lp;
-  if (lp) badge.textContent = lp.name;
+  const name = activeName();
+  badge.hidden = !name;
+  if (name) badge.textContent = name;
 }
 function restartLoop() {
-  const lp = selLoop(); if (!lp) return;
-  seekTo(lp.start);
+  const r = activeRange(); if (!r) return;
+  seekTo(r.a);
   if (audio.paused) togglePlay();
 }
 /* ============================== song lifecycle ============================== */
@@ -1030,8 +1250,9 @@ async function selectSong(id) {
     // browser lost this song's audio bytes — keep it selectable, explain the repair
     audio.pause();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
-    currentId = id; selectedLoopId = null; looping = false;
-    workingA = workingB = null; peaks = []; peaksOk = false;
+    currentId = id; selectedLoopId = null; selectedGroupId = null;
+    fsGroupView = null; fsChecklist = false; checkSel = null;
+    looping = false; workingA = workingB = null; peaks = []; peaksOk = false;
     $("emptyPlayer").hidden = true; $("playerUI").hidden = false;
     $("songTitle").textContent = s.title;
     setRate(1);
@@ -1042,8 +1263,9 @@ async function selectSong(id) {
   }
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
-  currentId = id; selectedLoopId = null; looping = false;
-  workingA = workingB = null; peaks = []; peaksOk = false;
+  currentId = id; selectedLoopId = null; selectedGroupId = null;
+  fsGroupView = null; fsChecklist = false; checkSel = null;
+  looping = false; workingA = workingB = null; peaks = []; peaksOk = false;
   objectUrl = URL.createObjectURL(blob);
   audio.src = objectUrl;
   audio.load();
@@ -1089,7 +1311,7 @@ async function importFiles(files) {
       rec = broken; repaired++;
       dlog("import: repaired \"" + title + "\" — " + rec.loops.length + " loops kept");
     } else {
-      rec = { id: uid(), title, data: buf, type: f.type || "audio/mpeg", size: f.size, duration: 0, loops: [], hash };
+      rec = { id: uid(), title, data: buf, type: f.type || "audio/mpeg", size: f.size, duration: 0, loops: [], groups: [], hash };
       songs.push(rec); added++;
     }
     try { await idbTimeout(idbPut(rec), "save song"); dlog("import: saved " + rec.title); }
@@ -1117,7 +1339,8 @@ async function deleteSong(id) {
   if (currentId === id) {
     audio.pause(); audio.removeAttribute("src"); audio.load();
     if (objectUrl) URL.revokeObjectURL(objectUrl);
-    currentId = null; selectedLoopId = null; looping = false;
+    currentId = null; selectedLoopId = null; selectedGroupId = null;
+    fsGroupView = null; fsChecklist = false; checkSel = null; looping = false;
     $("playerUI").hidden = true; $("emptyPlayer").hidden = false;
   }
   renderSongs(); persist();
@@ -1169,13 +1392,13 @@ $("fsBMinus").onclick = () => nudge("B", -1);
 $("fsBPlus").onclick = () => nudge("B", 1);
 $("fsASet").onclick = () => setPoint("A");
 $("fsBSet").onclick = () => setPoint("B");
-$("fsLoopToggle").onclick = () => { if (selLoop()) { looping = !looping; updateABUI(); } };
+$("fsLoopToggle").onclick = () => { if (activeRange()) { looping = !looping; updateABUI(); } };
 $("fsAddBtn").onclick = () => addLoop($("fsNewName"));
 $("fsNewName").addEventListener("keydown", e => { if (e.key === "Enter") addLoop($("fsNewName")); e.stopPropagation(); });
 $("fsLoopName").addEventListener("change", () => {
-  const lp = selLoop(); if (!lp) return;
+  const lp = selLoop(), g = selGroup();
   const v = $("fsLoopName").value.trim();
-  if (v) { lp.name = v; persist(); }
+  if (v) { if (lp) lp.name = v; else if (g) g.name = v; persist(); }
   renderLoops();
 });
 $("fsLoopName").addEventListener("keydown", e => {
@@ -1183,8 +1406,12 @@ $("fsLoopName").addEventListener("keydown", e => {
   e.stopPropagation();
 });
 $("fsTrash").onclick = () => {
-  const lp = selLoop(); if (!lp) return;
-  if (confirm("Delete loop “" + lp.name + "”?")) deleteLoop(lp.id);
+  const lp = selLoop(), g = selGroup();
+  if (g && !lp) {
+    if (confirm(`Delete group “${g.name}”? Its ${g.members.length} loop${g.members.length === 1 ? "" : "s"} will be kept as ungrouped.`)) deleteGroup(g.id);
+  } else if (lp) {
+    if (confirm("Delete loop “" + lp.name + "”?")) deleteLoop(lp.id);
+  }
 };
 
 /* ---- loop list interchange: export/import JSON at song level (import replaces) ---- */
@@ -1209,6 +1436,14 @@ function exportLoops() {
       start: Math.round(lp.start * 100) / 100,
       end: Math.round(lp.end * 100) / 100,
       note: lp.note || ""
+    })),
+    groups: (s.groups || []).map(g => ({
+      name: g.name || "Group",
+      color: /^#[0-9a-fA-F]{6}$/.test(g.color) ? g.color : GROUP_COLORS[0],
+      loops: g.members.map(id => {
+        const lp = s.loops.find(l => l.id === id);
+        return lp ? (lp.name || "") : null;
+      }).filter(Boolean)
     }))
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -1218,7 +1453,8 @@ function exportLoops() {
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  loopsMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") + " as JSON.");
+  loopsMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") +
+    (data.groups.length ? " + " + data.groups.length + " group" + (data.groups.length === 1 ? "" : "s") : "") + " as JSON.");
 }
 $("fsExportBtn").onclick = exportLoops;
 $("fsImportBtn").onclick = () => $("loopsFileInput").click();
@@ -1239,9 +1475,33 @@ $("loopsFileInput").addEventListener("change", async e => {
       loops.push({ id: uid(), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
     });
     s.loops = loops;                                              // replace semantics
-    selectedLoopId = null; looping = false; workingA = workingB = null;
+    // rebuild groups: match member loops by name (fresh ids), one group per loop
+    const nameToId = {};
+    loops.forEach(lp => { if (!(lp.name in nameToId)) nameToId[lp.name] = lp.id; });
+    const byStart = id => loops.find(l => l.id === id).start;
+    const groups = [];
+    (Array.isArray(data.groups) ? data.groups : []).forEach((rg, gi) => {
+      if (!rg || typeof rg.name !== "string") return;
+      const members = [...new Set(
+        (Array.isArray(rg.loops) ? rg.loops : [])
+          .map(n => nameToId[String(n)])
+          .filter(id => id && !groups.some(g => g.members.includes(id)))
+      )].sort((a, b) => byStart(a) - byStart(b));
+      if (!members.length) return;
+      groups.push({
+        id: uid(),
+        name: String(rg.name).slice(0, 40) || ("Group " + (gi + 1)),
+        color: /^#[0-9a-fA-F]{6}$/.test(rg.color) ? rg.color : GROUP_COLORS[gi % GROUP_COLORS.length],
+        members
+      });
+    });
+    s.groups = groups;
+    selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null;
+    looping = false; workingA = workingB = null;
     persist(); renderLoops(); updateABUI();
-    loopsMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") + " — replaced previous loops.");
+    loopsMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
+      (groups.length ? " + " + groups.length + " group" + (groups.length === 1 ? "" : "s") : "") +
+      " — replaced previous loops.");
   } catch (err) {
     loopsMessage("Could not import: not a valid RagaMentor loops file.");
   }
@@ -1282,6 +1542,7 @@ document.addEventListener("keydown", e => {
   // migrate legacy blob records to inline byte storage (iOS-safe); flag
   // records whose audio bytes iOS already lost — re-import repairs them
   for (const s of songs) {
+    sanitizeGroups(s);   // drop dangling member ids / emptied groups from older records
     if (s.data || !s.blob) continue;
     try {
       const bytes = await idbTimeout(readBlobBytes(s.blob), "migrate " + s.title);
