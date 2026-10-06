@@ -133,6 +133,11 @@
                 padding: 12px; display: flex; flex-direction: column; gap: 10px;
                 box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; }
   #fsControls .transport, #fsControls .row { margin: 0; }
+#debugWrap{margin:14px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#debugBar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(128,128,128,.12);font-size:12px;font-weight:700}
+#debugBar button{font-size:12px;padding:3px 10px;margin-left:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+#debugLog{max-height:170px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.45;padding:8px 10px;white-space:pre-wrap;word-break:break-all}
+#showLogBtn{margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 </style>
 </head>
 <body>
@@ -229,6 +234,11 @@
   <div id="fsControls"></div>
 </div>
 
+<div id="debugWrap">
+  <div id="debugBar"><span>🛠 Debug log</span><span><button id="copyLogBtn">Copy</button><button id="clearLogBtn">Clear</button><button id="hideLogBtn">Hide</button></span></div>
+  <div id="debugLog"></div>
+</div>
+<button id="showLogBtn" hidden>Show debug log</button>
 <footer>Prototype only — audio &amp; loops live in this browser (IndexedDB). Same DRM rule as native: no Spotify/Apple Music streams.</footer>
 
 <script>
@@ -248,9 +258,42 @@ const MIN_LOOP = 0.3, NUDGE = 0.1;   // micro-adjust step for A/B nudging
    never run concurrently on the same backing data. */
 let blobReadChain = Promise.resolve();
 function readBlobBytes(blob) {
+  const t0 = performance.now();
   const task = blobReadChain.then(() => blob.arrayBuffer());
   blobReadChain = task.then(() => undefined, () => undefined); // chain survives failures
-  return task;
+  return task.then(
+    buf => { dlog("blobRead: OK " + buf.byteLength + "B in " + Math.round(performance.now() - t0) + "ms"); return buf; },
+    err => { dlog("blobRead: FAIL", err && err.name, err && err.message); throw err; }
+  );
+}
+/* ============================== debug log ============================== */
+const bootT0 = performance.now();
+const logLines = [];
+const MAX_LOG = 400;
+function dlog() {
+  const t = "+" + Math.round(performance.now() - bootT0) + "ms";
+  const line = t + " " + Array.prototype.map.call(arguments, function (a) {
+    try { return typeof a === "string" ? a : JSON.stringify(a); } catch (e) { return String(a); }
+  }).join(" ");
+  logLines.push(line);
+  if (logLines.length > MAX_LOG) logLines.splice(0, logLines.length - MAX_LOG);
+  const el = document.getElementById("debugLog");
+  if (el) {
+    const div = document.createElement("div");
+    div.textContent = line;
+    el.appendChild(div);
+    while (el.children.length > MAX_LOG) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  }
+  console.log("[raga]", line);
+}
+function audioState(tag) {
+  dlog(tag, "readyState=" + audio.readyState, "networkState=" + audio.networkState,
+    "paused=" + audio.paused, "t=" + audio.currentTime.toFixed(2),
+    "dur=" + (isFinite(audio.duration) ? audio.duration.toFixed(1) : "?"),
+    "err=" + (audio.error ? audio.error.code : "-"),
+    "rate=" + audio.playbackRate,
+    "src=" + (audio.currentSrc ? "…"+audio.currentSrc.slice(-24) : "-"));
 }
 
 /* ============================== storage (IndexedDB) ============================== */
@@ -336,26 +379,32 @@ let lastRecovery = 0;
 /* Rebuild the audio element's source from a FRESH storage read.
    The in-memory blob reference can go stale; a fresh read is the reliable one. */
 async function rebuildAudioSource() {
-  const s = cur(); if (!s) return false;
+  const s = cur(); if (!s) { dlog("rebuild: no current song"); return false; }
+  dlog("rebuild: re-reading blob from IDB…");
   try {
     const fresh = await idbGet(s.id);
     const blob = (fresh && fresh.blob) || s.blob;
-    if (!blob) return false;
+    if (!blob) { dlog("rebuild: no blob in IDB or memory"); return false; }
+    dlog("rebuild: got " + blob.size + "B type=" + (blob.type || "?"));
     s.blob = blob;
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(blob);
     audio.src = objectUrl;
     audio.load();
+    dlog("rebuild: new object URL, load() called");
     lastRecovery = Date.now();
     return true;
-  } catch (e) { console.warn("rebuildAudioSource failed", e); return false; }
+  } catch (e) { dlog("rebuild: FAIL", e && e.name, e && e.message); return false; }
 }
 async function togglePlay() {
-  if (!cur()) return;
+  if (!cur()) { dlog("togglePlay: no current song"); return; }
+  dlog("togglePlay: tap, paused=" + audio.paused + " vis=" + document.visibilityState);
+  audioState("togglePlay: before play()");
   if (audio.paused) {
-    try { await audio.play(); }
+    dlog("togglePlay: calling play()…");
+    try { await audio.play(); dlog("togglePlay: play() resolved"); }
     catch (e) {
-      console.warn("play failed, rebuilding source and retrying", e);
+      dlog("togglePlay: play() rejected", e && e.name, e && e.message);
       if (await rebuildAudioSource()) {
         try { await audio.play(); return; }
         catch (e2) { console.warn("play retry failed", e2); }
@@ -385,7 +434,8 @@ audio.addEventListener("ended", () => { updatePlayBtn(); });
 audio.addEventListener("timeupdate", loopCheck);
 audio.addEventListener("error", async () => {
   const code = audio.error ? audio.error.code : 0;
-  console.warn("audio element error, code", code);
+  dlog("audio ERROR code=" + code, audio.error && audio.error.message ? audio.error.message : "(no message)");
+  audioState("audio ERROR state");
   if (Date.now() - lastRecovery < 5000) return;   // a play() retry just handled this
   if (code === 4 && await rebuildAudioSource()) {
     // Distinguish corrupt stored data (waveform decode failed too) from transient staleness
@@ -399,11 +449,17 @@ audio.addEventListener("error", async () => {
   }
 });
 audio.addEventListener("loadedmetadata", () => {
+  dlog("media: loadedmetadata dur=" + (isFinite(audio.duration) ? audio.duration.toFixed(1) : "?"));
   const s = cur();
   if (s && (!s.duration || s.duration === 0) && isFinite(audio.duration)) {
     s.duration = audio.duration; persist(); renderSongs();
   }
 });
+
+/* media-event trace for the debug log (kept out of the hot tick path) */
+["loadstart","canplay","canplaythrough","play","playing","pause","waiting","stalled","suspend","abort","emptied"].forEach(ev =>
+  audio.addEventListener(ev, () => dlog("media: " + ev))
+);
 
 /* tight loop check on every animation frame (~16ms granularity) */
 /* Loop check runs on rAF (tight ~16ms seam in foreground) AND on the audio
@@ -438,11 +494,16 @@ function tick() {
 
 /* ============================== waveform ============================== */
 async function computePeaks(blob) {
+  const t0 = performance.now();
   const raw = await readBlobBytes(blob);
+  dlog("peaks: read " + raw.byteLength + "B in " + Math.round(performance.now() - t0) + "ms");
   const AC = window.AudioContext || window.webkitAudioContext;
   const actx = new AC();
+  dlog("peaks: AudioContext state=" + actx.state);
   try {
+    const d0 = performance.now();
     const buf = await actx.decodeAudioData(raw);
+    dlog("peaks: decode OK dur=" + buf.duration.toFixed(1) + "s ch=" + buf.numberOfChannels + " sr=" + buf.sampleRate + " in " + Math.round(performance.now() - d0) + "ms");
     const ch = buf.getChannelData(0), N = 6000, out = new Array(N).fill(0);
     const block = Math.max(1, Math.floor(ch.length / N));
     for (let i = 0; i < N; i++) {
@@ -828,6 +889,7 @@ function editNote(li, noteDiv, lp) {
 /* ============================== song lifecycle ============================== */
 async function selectSong(id) {
   const s = songs.find(x => x.id === id); if (!s) return;
+  dlog("selectSong: " + s.title + " | " + s.blob.size + "B | " + (s.blob.type || "no-type") + " | " + s.loops.length + " loops");
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   currentId = id; selectedLoopId = null; looping = false;
@@ -835,6 +897,7 @@ async function selectSong(id) {
   objectUrl = URL.createObjectURL(s.blob);
   audio.src = objectUrl;
   audio.load();
+  audioState("selectSong: after load()");
   $("emptyPlayer").hidden = true; $("playerUI").hidden = false;
   $("songTitle").textContent = s.title;
   setRate(1);
@@ -845,11 +908,11 @@ async function selectSong(id) {
     peaks = await computePeaks(s.blob);
     peaksOk = true;
   } catch (e) {
-    console.warn("peaks failed, retrying once", e);
+    dlog("peaks: decode FAIL", e && e.name, e && e.message, "— retrying once");
     await new Promise(r => setTimeout(r, 800));
     if (currentId === id) {
       try { peaks = await computePeaks(s.blob); peaksOk = true; }
-      catch (e2) { console.warn("peaks failed again", e2); }
+      catch (e2) { dlog("peaks: retry FAIL", e2 && e2.name, e2 && e2.message); }
     }
   }
 }
@@ -925,6 +988,21 @@ $("backBtn").onclick = () => seekTo((audio.currentTime || 0) - 10);
 $("fwdBtn").onclick = () => seekTo((audio.currentTime || 0) + 10);
 document.querySelectorAll("#speedPresets button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
 $("speedSlider").addEventListener("input", e => setRate(parseFloat(e.target.value)));
+
+/* debug log buttons */
+$("copyLogBtn").onclick = async () => {
+  const text = logLines.join("\n");
+  try { await navigator.clipboard.writeText(text); dlog("log copied (" + logLines.length + " lines)"); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); dlog("log copied via fallback"); } catch (_e) { dlog("copy failed"); }
+    ta.remove();
+  }
+};
+$("clearLogBtn").onclick = () => { logLines.length = 0; $("debugLog").innerHTML = ""; };
+$("hideLogBtn").onclick = () => { $("debugWrap").hidden = true; $("showLogBtn").hidden = false; };
+$("showLogBtn").onclick = () => { $("debugWrap").hidden = false; $("showLogBtn").hidden = true; };
 
 $("setABtn").onclick = () => setPoint("A");
 $("setBBtn").onclick = () => setPoint("B");
@@ -1016,8 +1094,11 @@ document.addEventListener("keydown", e => {
 
 /* ============================== boot ============================== */
 (async function boot() {
+  dlog("boot", "ua=" + navigator.userAgent);
+  dlog("boot", "cores=" + (navigator.hardwareConcurrency || "?"), "mem=" + (navigator.deviceMemory || "?") + "GB", "vis=" + document.visibilityState);
   try {
     songs = await idbAll();
+    dlog("boot: idb loaded " + songs.length + " songs, last=" + (localStorage.getItem(LAST_KEY) || "-"));
     songs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
   } catch (e) { console.warn("idb unavailable", e); songs = []; }
   refreshWaveColors();
