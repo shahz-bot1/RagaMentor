@@ -132,6 +132,10 @@
                  border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 600;
                  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
   #fsLoopBadge[hidden] { display: none; }
+  #fsTimeBadge { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+                 background: rgba(20,26,34,.72); color: #fff;
+                 border-radius: 999px; padding: 6px 12px; font-size: 12px;
+                 white-space: nowrap; font-variant-numeric: tabular-nums; pointer-events: none; }
   .chip { flex: 0 0 auto; background: var(--chip); color: var(--text); border: 1px solid var(--border);
           border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer;
           max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -139,11 +143,10 @@
   #fsPanel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px;
              padding: 12px; display: flex; flex-direction: column; gap: 10px;
              box-shadow: 0 10px 34px rgba(0,0,0,.4); flex: 0 0 auto; min-width: 0; }
-  #fsTransport { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  #fsTransport { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
   #fsTransport .tbtn { background: var(--chip); color: var(--text); border: 0; border-radius: 50%;
                        width: 42px; height: 42px; font-size: 15px; cursor: pointer; flex: 0 0 auto; }
   #fsTransport .tbtn.play { width: 54px; height: 54px; font-size: 20px; background: var(--accent); color: #fff; }
-  #fsTimeLabel { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); flex: 0 0 auto; }
   #fsAudioMsg { color: var(--danger); font-size: 12.5px; }
   #fsAudioMsg[hidden] { display: none; }
   #fsSpeedSeg { display: flex; }
@@ -267,7 +270,7 @@
 <div id="fsOverlay" hidden>
   <div id="fsHeader">
     <button id="fsClose" title="Close (Esc)">✕</button>
-    <div id="fsTitleWrap"><div id="fsTitle">—</div><div id="fsTime" class="hint">0:00.0 / 0:00.0</div></div>
+    <div id="fsTitleWrap"><div id="fsTitle">—</div></div>
     <div id="fsZoomBtns">
       <button id="zoomOut" title="Zoom out">−</button>
       <button id="zoomIn" title="Zoom in">+</button>
@@ -277,13 +280,13 @@
   <div id="fsWaveWrap">
     <canvas id="fsWave"></canvas>
     <div id="fsLoopBadge" hidden title="Restart loop"></div>
+    <div id="fsTimeBadge">0:00.0 / 0:00.0</div>
   </div>
   <div id="fsPanel">
     <div id="fsTransport">
       <button class="tbtn" id="fsBack" title="Back 10s">−10</button>
       <button class="tbtn play" id="fsPlay" title="Play/Pause">▶</button>
       <button class="tbtn" id="fsFwd" title="Forward 10s">+10</button>
-      <span id="fsTimeLabel">0:00.0 / 0:00.0</span>
     </div>
     <div id="fsAudioMsg" class="hint" hidden></div>
     <div class="seg" id="fsSpeedSeg">
@@ -636,8 +639,7 @@ function tick() {
         fsView.start = clamp(t - fsView.dur * 0.25, 0, Math.max(0, d - fsView.dur));
       }
       paintWave(fsCanvas, fsView.start, fsView.dur);
-      $("fsTime").textContent = fmt(t) + " / " + fmt(d);
-      $("fsTimeLabel").textContent = fmt(t) + " / " + fmt(d);
+      $("fsTimeBadge").textContent = fmt(t) + " / " + fmt(d);
     }
   }
   requestAnimationFrame(tick);
@@ -873,7 +875,7 @@ function updateFSTransport() {
   badge.hidden = !lp;
   if (lp) badge.textContent = lp.name;
   const t = audio.currentTime || 0, d = dur();
-  $("fsTimeLabel").textContent = fmt(t) + " / " + fmt(d);
+  $("fsTimeBadge").textContent = fmt(t) + " / " + fmt(d);
 }
 function deleteLoop(id) {
   const s = cur(); if (!s) return;
