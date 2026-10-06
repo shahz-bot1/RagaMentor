@@ -280,6 +280,13 @@ async function idbDel(id) {
     t.oncomplete = () => res(); t.onerror = () => rej(t.error);
   });
 }
+async function idbGet(id) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const q = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  });
+}
 
 /* ============================== state ============================== */
 let songs = [];                 // {id,title,blob,duration,loops:[{id,name,start,end}]}
@@ -288,6 +295,7 @@ let selectedLoopId = null;
 let workingA = null, workingB = null;   // A/B being defined, or mirror of selected loop
 let looping = false;
 let peaks = [];
+let peaksOk = false;   // true once the current song's audio decoded cleanly (waveform)
 let objectUrl = null;
 let waveColor = "#6f7f95", playheadColor = "#ff5d5d";
 
@@ -315,25 +323,37 @@ function setRate(r) {
   document.querySelectorAll("#speedPresets button").forEach(b =>
     b.classList.toggle("on", Math.abs(parseFloat(b.dataset.r) - r) < 0.001));
 }
+let lastRecovery = 0;
+/* Rebuild the audio element's source from a FRESH storage read.
+   The in-memory blob reference can go stale; a fresh read is the reliable one. */
+async function rebuildAudioSource() {
+  const s = cur(); if (!s) return false;
+  try {
+    const fresh = await idbGet(s.id);
+    const blob = (fresh && fresh.blob) || s.blob;
+    if (!blob) return false;
+    s.blob = blob;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(blob);
+    audio.src = objectUrl;
+    audio.load();
+    lastRecovery = Date.now();
+    return true;
+  } catch (e) { console.warn("rebuildAudioSource failed", e); return false; }
+}
 async function togglePlay() {
   if (!cur()) return;
   if (audio.paused) {
     try { await audio.play(); }
     catch (e) {
-      // media source can go stale (e.g. after long idle): rebuild it from the stored blob and retry once
       console.warn("play failed, rebuilding source and retrying", e);
-      try {
-        const s = cur();
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        objectUrl = URL.createObjectURL(s.blob);
-        audio.src = objectUrl;
-        audio.load();
-        await audio.play();
+      if (await rebuildAudioSource()) {
+        try { await audio.play(); return; }
+        catch (e2) { console.warn("play retry failed", e2); }
       }
-      catch (e2) {
-        console.warn("play retry failed", e2);
-        showAudioMsg("Couldn't start playback — tap the song in the library to reload it, or re-import it.");
-      }
+      showAudioMsg(peaksOk
+        ? "Couldn't start playback — tap the song in the library to reload it."
+        : "This song's saved audio can't be read — delete it and re-import the file.");
     }
   }
   else audio.pause();
@@ -354,10 +374,20 @@ audio.addEventListener("play", () => { updatePlayBtn(); showAudioMsg(""); });
 audio.addEventListener("pause", updatePlayBtn);
 audio.addEventListener("ended", () => { updatePlayBtn(); });
 audio.addEventListener("timeupdate", loopCheck);
-audio.addEventListener("error", () => {
+audio.addEventListener("error", async () => {
   const code = audio.error ? audio.error.code : 0;
   console.warn("audio element error, code", code);
-  showAudioMsg("Audio error (code " + code + ") — tap the song in the library to reload it, or re-import it.");
+  if (Date.now() - lastRecovery < 5000) return;   // a play() retry just handled this
+  if (code === 4 && await rebuildAudioSource()) {
+    // Distinguish corrupt stored data (waveform decode failed too) from transient staleness
+    showAudioMsg(peaksOk
+      ? "Audio source was stale — rebuilt. Press play again."
+      : "This song's saved audio can't be read (code 4) — delete it and re-import the file.");
+  } else {
+    showAudioMsg(!peaksOk
+      ? "This song's saved audio can't be read (code " + code + ") — delete it and re-import the file."
+      : "Audio error (code " + code + ") — tap the song in the library to reload it.");
+  }
 });
 audio.addEventListener("loadedmetadata", () => {
   const s = cur();
@@ -792,7 +822,7 @@ async function selectSong(id) {
   audio.pause();
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   currentId = id; selectedLoopId = null; looping = false;
-  workingA = workingB = null; peaks = [];
+  workingA = workingB = null; peaks = []; peaksOk = false;
   objectUrl = URL.createObjectURL(s.blob);
   audio.src = objectUrl;
   audio.load();
@@ -804,11 +834,12 @@ async function selectSong(id) {
   // waveform peaks (async, non-blocking)
   try {
     peaks = await computePeaks(s.blob);
+    peaksOk = true;
   } catch (e) {
     console.warn("peaks failed, retrying once", e);
     await new Promise(r => setTimeout(r, 800));
     if (currentId === id) {
-      try { peaks = await computePeaks(s.blob); }
+      try { peaks = await computePeaks(s.blob); peaksOk = true; }
       catch (e2) { console.warn("peaks failed again", e2); }
     }
   }
