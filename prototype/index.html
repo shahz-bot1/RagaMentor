@@ -295,6 +295,12 @@ function audioState(tag) {
     "rate=" + audio.playbackRate,
     "src=" + (audio.currentSrc ? "…"+audio.currentSrc.slice(-24) : "-"));
 }
+/* surface uncaught errors in the on-page log too */
+window.addEventListener("error", e => dlog("window error: " + (e.message || e.type)));
+window.addEventListener("unhandledrejection", e => {
+  const r = e.reason;
+  dlog("unhandled rejection: " + (r && r.message ? r.name + ": " + r.message : String(r)));
+});
 
 /* ============================== storage (IndexedDB) ============================== */
 const DB_NAME = "slowloop-proto", STORE = "songs";
