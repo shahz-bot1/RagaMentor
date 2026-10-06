@@ -314,9 +314,17 @@ function setRate(r) {
   document.querySelectorAll("#speedPresets button").forEach(b =>
     b.classList.toggle("on", Math.abs(parseFloat(b.dataset.r) - r) < 0.001));
 }
-function togglePlay() {
+async function togglePlay() {
   if (!cur()) return;
-  if (audio.paused) { audio.play().catch(e => console.warn("play failed", e)); }
+  if (audio.paused) {
+    try { await audio.play(); }
+    catch (e) {
+      // media pipeline can wedge after long idle (e.g. overnight tab): reload and retry once
+      console.warn("play failed, reloading and retrying", e);
+      try { audio.load(); await audio.play(); }
+      catch (e2) { console.warn("play retry failed", e2); }
+    }
+  }
   else audio.pause();
 }
 function seekTo(t) {
@@ -328,6 +336,7 @@ function updatePlayBtn() { $("playBtn").textContent = audio.paused ? "▶" : "�
 audio.addEventListener("play", updatePlayBtn);
 audio.addEventListener("pause", updatePlayBtn);
 audio.addEventListener("ended", () => { updatePlayBtn(); });
+audio.addEventListener("timeupdate", loopCheck);
 audio.addEventListener("loadedmetadata", () => {
   const s = cur();
   if (s && (!s.duration || s.duration === 0) && isFinite(audio.duration)) {
@@ -336,13 +345,21 @@ audio.addEventListener("loadedmetadata", () => {
 });
 
 /* tight loop check on every animation frame (~16ms granularity) */
-function tick() {
-  const s = cur(), lp = selLoop();
-  if (s && looping && lp && !audio.paused && !audio.seeking && dur() > 0) {
+/* Loop check runs on rAF (tight ~16ms seam in foreground) AND on the audio
+   element's timeupdate event — rAF is paused by the browser in background tabs,
+   but timeupdate keeps firing while audio plays, so looping survives backgrounding
+   (with a coarser ~250ms seam, a platform limit for web pages). */
+function loopCheck() {
+  const lp = selLoop();
+  if (looping && lp && !audio.paused && !audio.seeking && dur() > 0) {
     if (audio.currentTime >= lp.end - 0.03) {
       try { audio.currentTime = lp.start; } catch (e) {}
     }
   }
+}
+function tick() {
+  const s = cur();
+  loopCheck();
   if (s) {
     const t = audio.currentTime || 0, d = dur();
     $("timeLabel").textContent = fmt(t) + " / " + fmt(d);
@@ -765,7 +782,14 @@ async function selectSong(id) {
   // waveform peaks (async, non-blocking)
   try {
     peaks = await computePeaks(s.blob);
-  } catch (e) { console.warn("peaks failed", e); }
+  } catch (e) {
+    console.warn("peaks failed, retrying once", e);
+    await new Promise(r => setTimeout(r, 800));
+    if (currentId === id) {
+      try { peaks = await computePeaks(s.blob); }
+      catch (e2) { console.warn("peaks failed again", e2); }
+    }
+  }
 }
 /* content hash for dedupe: SHA-256 when available, sampled FNV-1a fallback */
 async function fileHash(blob) {
