@@ -553,11 +553,6 @@ function subtreeLoops(gid){
   })(gid);
   return out;
 }
-const ancestorsOf = gid => {
-  const out = []; let p = parentOf(gid), guard = 0;
-  while (p && guard++ < 8){ out.unshift(p); p = parentOf(p.id); }
-  return out;
-};
 /* what actually loops right now: the selected group section, the selected loop, or nothing */
 const activeRange = () => {
   const g = selGroup(); if (g) return groupRange(g);
@@ -967,8 +962,10 @@ function renderFSChips() {
   if (fsGroupView) {
     const g = (s.groups || []).find(x => x.id === fsGroupView);
     if (!g) { fsGroupView = null; renderFSChips(); return; }
-    chip("‹ All", "", backToTop, "Back to all loops");
-    for (const a of ancestorsOf(g.id)) groupChip(a);   // breadcrumb: tap = open + loop
+    // single back button labeled with the destination: the parent group, or All at top level
+    const par = parentOf(g.id);
+    if (par) chip("‹ " + escapeHtml(par.name), "", () => selectGroup(par.id), "Back to “" + par.name + "”");
+    else chip("‹ All", "", backToTop, "Back to all loops");
     const mem = [...g.members].sort((a, b) => byRangeStart(a) - byRangeStart(b));
     for (const id of mem) {
       if (isGroupId(id)) { const sg = groupById(id); if (sg) groupChip(sg); }
