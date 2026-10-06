@@ -963,8 +963,8 @@ function renderFSChips() {
       if (isGroupId(id)) { const sg = groupById(id); if (sg) groupChip(sg); }
       else { const lp = s.loops.find(l => l.id === id); if (lp) loopChip(lp); }
     }
-    chip("＋ Add", "dashed", enterChecklist, "Choose which loops and groups belong here");
     chip("＋ New loop", "dashed", newLoop, "Define a new loop anywhere in the song — it will join this group");
+    chip("＋ Add", "dashed", enterChecklist, "Choose which loops and groups belong here");
     if (!parentOf(g.id)) chip("＋ New group", "dashed", newGroup, "Create a sub-group inside “" + g.name + "”");
     return;
   }
