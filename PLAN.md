@@ -1,7 +1,7 @@
 # RagaMentor — iOS Music Practice App
 ## Implementation Plan (MVP)
 
-**Status:** Refined 2026-10-05 — every MVP interaction validated in the web prototype · UI redesigned 2026-10-06 (tabbed fullscreen + slim home screen, all validated in prototype) · Loop groups added 2026-10-06
+**Status:** Refined 2026-10-05 — every MVP interaction validated in the web prototype · UI redesigned 2026-10-06 (tabbed fullscreen + slim home screen, all validated in prototype) · Loop groups added 2026-10-06 · Nested sub-groups (2-level cap) added 2026-10-06
 **Repo:** shahz-bot1/RagaMentor · **Prototype (live):** https://shahz-bot1.github.io/RagaMentor/prototype/
 **Local prototype:** ~/workspace/ios-slowdown-app/prototype/index.html (single self-contained file)
 **One-liner:** Import a song, slow it to quarter speed without changing pitch, and loop any phrase as many times as you need — every loop named, annotated, and saved.
@@ -27,7 +27,7 @@ Built first as a single-file web app to de-risk UX before native work. Everythin
 | Selected-loop badge overlaid top-right on waveform (tap = restart loop); time as non-interactive badge on waveform | Same overlays in native waveform view |
 | Speed presets slowest-first (0.25x → 1x); granular slider in the Speed tab | Same ordering; slider for fine values |
 | Fixed waveform height in fullscreen (panel grows downward, no resize glitch on tab switch) | Fixed-height waveform view, scrolling sheet below |
-| Loop groups: named sets of loops (e.g. Pallavi); tap = open members + loop whole section | `LoopGroup` entity; group range derived (min start → max end); section loop via same segment scheduler |
+| Nested loop groups (2 levels): top groups hold loops + sub-groups; tap = open members + loop whole section | `LoopGroup` entity, members = loop OR group ids; group range derived bottom-up; section loop via same segment scheduler |
 | Songs keyed by SHA-256 content hash | Same (CryptoKit): re-import dedupes, loops survive |
 | IndexedDB persistence across reloads | SwiftData with identical restore semantics |
 
@@ -45,7 +45,7 @@ Decisions the prototype settled:
 - Play/pause/seek transport; ±10s skip
 - Speed 0.25x → 1.0x (presets slowest-first: 0.25x, 0.5x, 0.75x, 1x + fine slider), pitch locked
 - Multiple named A–B loops per song: Set A/B at playhead, **0.1s micro-nudge**, tap loop to select + jump, loop on/off, rename, delete
-- **Loop groups**: named sets of loops (e.g. Pallavi, Anupallavi); tapping a group opens its members and loops the whole section continuously (range derived: earliest member start → latest member end); one checklist manages all membership (add/remove/move); deleting a group keeps its loops; empty groups auto-vanish; groups color-coded on the waveform
+- **Nested loop groups (2-level cap, 2026-10-06)**: a top-level group holds loops and sub-groups (e.g. Pallavi → Opening → Varnam line 1); sub-groups hold loops only. Tapping any group opens it and loops its whole section continuously (range derived bottom-up: earliest descendant start → latest descendant end). One checklist manages membership: `＋ New group` inside a top-level group creates a sub-group and offers only that group's loops; `＋ Add` offers all loops plus other flat groups (only groups without sub-groups may be nested — cycles impossible by construction). Ancestor groups appear as tappable chips (tap = open + loop the wider section); `‹ All` returns to top and clears selection. Deleting a group promotes its children one level up (loops ungroup, sub-groups surface); empty groups auto-vanish, cascading. Waveform bands stack (parents lighter, children stronger); group detail shows `N items · a – b · in “parent”`
 - **Per-loop note field** — free text for key, swara/vocal cues
 - Waveform: inline + **fullscreen mode** (tap to expand; pinch zoom to 2s window; drag to pan; tap to seek; auto-follow playhead while playing)
 - Tabbed fullscreen panel (persistent transport + presets; Loops / A–B / Speed tabs)
@@ -76,6 +76,7 @@ Decisions the prototype settled:
 | 9 | Minimum iOS 17+ (SwiftData floor) | Locked |
 | 10 | Fullscreen = tabbed panel (Loops / A–B / Speed) with persistent transport + presets; home screen = launcher (now playing above library, no loop UI — fullscreen owns it) | Locked 2026-10-06 |
 | 11 | Loop groups: a group is a named loop-container; tap = open + loop section; range derived, never set; single checklist for membership; delete keeps loops; empty groups vanish | Locked 2026-10-06 |
+| 12 | Nested sub-groups capped at 2 levels (section → sub-section → phrases); new sub-group offers only the parent's loops; `＋ Add` stays the open reorganization tool; delete promotes children one level | Locked 2026-10-06 |
 
 ---
 
@@ -134,10 +135,12 @@ final class LoopGroup {
     @Attribute(.unique) var id: UUID
     var name: String                 // e.g. "Pallavi"
     var colorHex: String             // waveform band color
-    var memberIDs: [UUID]            // LoopRegion ids, kept sorted by start time
+    var memberIDs: [UUID]            // LoopRegion OR LoopGroup ids, kept sorted by start time
     var song: Song?
-    // range is DERIVED: min(member.start) → max(member.end); never stored
-    // invariants: a loop in at most one group; empty groups are deleted
+    // range is DERIVED bottom-up: min(descendant.start) → max(descendant.end); never stored
+    // invariants: one parent per item; DEPTH CAPPED AT 2 (sub-groups hold loops only —
+    //   cycles impossible by construction, no recursion in range/breadcrumb/delete logic);
+    //   empty groups are deleted (cascading)
 }
 
 @Model
@@ -240,15 +243,15 @@ Publish ~20 Hz. The segment-offset math is the fiddliest part — prove it in th
 - Selected-loop badge top-right on waveform (tap = restart loop: jump to loop start, play if paused); time badge bottom-center (non-interactive, taps pass through to seek)
 - Persistent mini-transport (play, ±10s) + speed presets (0.25x → 1x) below the waveform, visible on every tab
 - Tabs: **Loops** / **A–B** / **Speed**
-  - Loops: two-level chips — top level shows group chips (color dot, ▸, count) + ungrouped loop chips + dashed `＋ New group`; tapping a group opens its members (`‹ All` + member chips + `＋ Add loops`) and loops the whole section; `‹ All` returns and clears selection. `＋ Add loops` turns chips into a single checklist (✓ = member; checking a loop that's in another group moves it); Done applies, empty groups vanish. New loops created in the A–B tab while inside a group join that group. Group detail: editable name, `N loops · a – b` summary + Loop on/off toggle (mirrors the A–B tab toggle), delete (keeps loops as ungrouped)
+  - Loops: two-level chips — top level shows group chips (color dot, ▸, count) + ungrouped loop chips + dashed `＋ New group`; tapping a group opens it (`‹ All` + ancestor breadcrumb chips + mixed member chips sorted by start + `＋ Add` + `＋ New group` only in top-level groups) and loops the whole derived section; `‹ All` returns and clears selection. `＋ Add` opens the single membership checklist (✓ = member; checking an item elsewhere moves it; offers loops + flat groups only — sub-groups hold loops only). `＋ New group` inside a top-level group creates a sub-group whose checklist offers only that group's loops. Done applies; empty groups vanish (cascading). New loops created in the A–B tab while inside a group join that group. Group detail: editable name, `N items · a – b` summary + nested-in crumb + Loop on/off toggle (mirrors the A–B tab toggle), delete promotes children one level up (nothing is lost)
   - A–B: "Editing …" header; A and B stepper rows (0.1s nudge −/+, Set at playhead); loop on/off toggle; add-loop row (name + Add). With a group selected, A–B edits scratch for a new loop — member loops are never mutated
   - Speed: granular slider 0.25–1.0 for in-between values
-- Waveform overlays add per-group color bands (derived range) behind group-tinted member loop regions; the selected group highlights like a selected loop
+- Waveform overlays add per-group color bands (derived bottom-up, parents drawn first and lighter so nested bands read) behind group-tinted member loop regions; the selected group highlights like a selected loop
 - No "pitch locked" label anywhere — pitch preservation is the premise, not a mode
 
 **Loop list interchange (song level)**
-- Export JSON: `{app: "RagaMentor", version: 1, song, exportedAt, loops: [{name, start, end, note}], groups: [{name, color, loops: [loop names]}]}` — times in seconds (2dp), human-readable and hand-editable
-- Import: file picker on `.json`; validated per entry (numeric start/end, clamped to duration, min 0.3s, invalid entries skipped); groups rebuilt by matching member names to imported loops (one group per loop; empty/dangling groups skipped); **replaces** the song's existing loops and groups outright — no merge
+- Export JSON: `{app: "RagaMentor", version: 1, song, exportedAt, loops: [{name, start, end, note}], groups: [{name, color, loops: [loop names], groups: [sub-group names]}]}` — times in seconds (2dp), human-readable and hand-editable
+- Import: file picker on `.json`; validated per entry (numeric start/end, clamped to duration, min 0.3s, invalid entries skipped); groups rebuilt by matching member names to imported loops and sub-group names to imported groups (two passes, one parent per item; the 2-level cap, cycle-breaking, and empty-group cleanup enforced defensively); **replaces** the song's existing loops and groups outright — no merge
 - Native: `Codable` structs; export via share sheet (`UIActivityViewController` → Files), import via `fileImporter`
 
 **Gestures**: tap-vs-drag disambiguation on the waveform (10pt / 350ms thresholds, per prototype).
