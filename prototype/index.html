@@ -712,6 +712,11 @@ audio.addEventListener("loadedmetadata", () => {
    but timeupdate keeps firing while audio plays, so looping survives backgrounding
    (with a coarser ~250ms seam, a platform limit for web pages). */
 function loopCheck() {
+  // A–B tab with a group selected = defining a NEW loop: let the playhead roam
+  // the whole song so A/B can land outside the group's current range (the
+  // group range derives from its members, so it expands when the loop joins).
+  // Loop-edit mode (a loop selected) keeps wrapping so you can audition nudges.
+  if (fsOpen && fsTab === "ab" && selGroup() && !selLoop()) return;
   const r = activeRange();
   if (looping && r && !audio.paused && !audio.seeking && dur() > 0) {
     if (audio.currentTime >= r.b - 0.03) {
@@ -1183,7 +1188,7 @@ function updateFSABUI() {
   $("fsBVal").textContent = workingB == null ? "—" : fmt(workingB);
   const lp = selLoop(), g = selGroup();
   $("fsEditHead").textContent = lp ? ("Editing “" + lp.name + "” — changes save automatically") :
-    g ? ("“" + g.name + "” selected — A/B below starts a new loop (members untouched)") :
+    g ? ("“" + g.name + "” selected — A/B below starts a new loop anywhere in the song (members untouched)") :
     (workingA != null || workingB != null ? "New loop — set both A and B, name it, hit ＋ Add" : "No loop selected");
   $("fsAddBtn").disabled = !(lp == null && workingA != null && workingB != null);
   const t = $("fsLoopToggle");
