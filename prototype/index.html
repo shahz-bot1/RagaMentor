@@ -905,10 +905,12 @@ function renderFSChips() {
     if (!parentOf(g.id)) chip("＋ New group", "dashed", newGroup, "Create a sub-group inside “" + g.name + "”");
     return;
   }
-  for (const g of topGroups()) groupChip(g);
-  for (const lp of [...s.loops].sort((a, b) => a.start - b.start)) {
-    if (parentOf(lp.id)) continue;   // members live inside their group
-    loopChip(lp);
+  // top level: groups and ungrouped loops interleaved by time (a group sits
+  // where its earliest member starts); members live inside their group
+  const topItems = [...topGroups(), ...s.loops.filter(lp => !parentOf(lp.id))]
+    .sort((a, b) => byRangeStart(a.id) - byRangeStart(b.id));
+  for (const it of topItems) {
+    if (isGroupId(it.id)) groupChip(it); else loopChip(it);
   }
   chip("＋ New loop", "dashed", newLoop, "Define a new loop in the A–B tab");
   chip("＋ New group", "dashed", newGroup, "Group loops into a practicable section");
