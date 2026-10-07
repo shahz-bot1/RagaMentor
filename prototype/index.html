@@ -191,11 +191,6 @@
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #fsImpExpRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
   #fsLoopsMsg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#debugWrap{margin:14px 0 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
-#debugBar{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:rgba(128,128,128,.12);font-size:12px;font-weight:700}
-#debugBar button{font-size:12px;padding:3px 10px;margin-left:6px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
-#debugLog{max-height:170px;overflow-y:auto;font-family:ui-monospace,Menlo,monospace;font-size:11px;line-height:1.45;padding:8px 10px;white-space:pre-wrap;word-break:break-all}
-#showLogBtn{margin-top:10px;font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
 .warnBanner{margin:0 0 10px;padding:8px 12px;border-radius:10px;font-size:13px;background:rgba(255,170,0,.14);border:1px solid rgba(255,170,0,.55)}
 </style>
 </head>
@@ -327,11 +322,6 @@
   </div>
 </div>
 
-<div id="debugWrap">
-  <div id="debugBar"><span>🛠 Debug log</span><span><button id="copyLogBtn">Copy</button><button id="clearLogBtn">Clear</button><button id="hideLogBtn">Hide</button></span></div>
-  <div id="debugLog"></div>
-</div>
-<button id="showLogBtn" hidden>Show debug log</button>
 <footer>Prototype only — audio &amp; loops live in this browser (IndexedDB). Same DRM rule as native: no Spotify/Apple Music streams.</footer>
 
 <script>
@@ -355,56 +345,10 @@ function readBlobBytes(blob) {
   const task = blobReadChain.then(() => blob.arrayBuffer());
   blobReadChain = task.then(() => undefined, () => undefined); // chain survives failures
   return task.then(
-    buf => { dlog("blobRead: OK " + buf.byteLength + "B in " + Math.round(performance.now() - t0) + "ms"); return buf; },
-    err => { dlog("blobRead: FAIL", err && err.name, err && err.message); throw err; }
+    buf => buf,
+    err => { throw err; }
   );
 }
-/* ============================== debug log ============================== */
-const bootT0 = performance.now();
-const logLines = [];
-const MAX_LOG = 400;
-/* TEMPORARY seek-repro instrumentation (early-finish report): silence the
-   pre-existing chatter, keep only the seek trace. Revert by setting
-   LEGACY_DEBUG back to true and deleting slog calls / SEEK_DEBUG. */
-const LEGACY_DEBUG = false;
-const SEEK_DEBUG = true;
-function dlogRaw() {
-  const t = "+" + Math.round(performance.now() - bootT0) + "ms";
-  const line = t + " " + Array.prototype.map.call(arguments, function (a) {
-    try { return typeof a === "string" ? a : JSON.stringify(a); } catch (e) { return String(a); }
-  }).join(" ");
-  logLines.push(line);
-  if (logLines.length > MAX_LOG) logLines.splice(0, logLines.length - MAX_LOG);
-  const el = document.getElementById("debugLog");
-  if (el) {
-    const div = document.createElement("div");
-    div.textContent = line;
-    el.appendChild(div);
-    while (el.children.length > MAX_LOG) el.removeChild(el.firstChild);
-    el.scrollTop = el.scrollHeight;
-  }
-  console.log("[raga]", line);
-}
-function dlog() { if (LEGACY_DEBUG) dlogRaw.apply(null, arguments); }
-/* seek trace: the ONLY logs during the repro — loop/group select, manual seeks,
-   seek lifecycle, wraps. Enough to identify loop bounds, seek targets, and
-   whether a wrap fired early. */
-function slog(m) { if (SEEK_DEBUG) dlogRaw("[seek] " + m); }
-function audioState(tag) {
-  dlog(tag, "readyState=" + audio.readyState, "networkState=" + audio.networkState,
-    "paused=" + audio.paused, "t=" + audio.currentTime.toFixed(2),
-    "dur=" + (isFinite(audio.duration) ? audio.duration.toFixed(1) : "?"),
-    "err=" + (audio.error ? audio.error.code : "-"),
-    "rate=" + audio.playbackRate,
-    "src=" + (audio.currentSrc ? "…"+audio.currentSrc.slice(-24) : "-"));
-}
-/* surface uncaught errors in the on-page log too */
-window.addEventListener("error", e => dlog("window error: " + (e.message || e.type)));
-window.addEventListener("unhandledrejection", e => {
-  const r = e.reason;
-  dlog("unhandled rejection: " + (r && r.message ? r.name + ": " + r.message : String(r)));
-});
-
 /* ============================== storage (IndexedDB) ============================== */
 const DB_NAME = "slowloop-proto", STORE = "songs";
 const IDB_TIMEOUT_MS = 8000;
@@ -426,7 +370,6 @@ function openDB() {
       r.onupgradeneeded = e => e.target.result.createObjectStore(STORE, { keyPath: "id" });
       r.onsuccess = e => { if (!done) { done = true; clearTimeout(timer); res(e.target.result); } };
       r.onerror = () => fail(r.error || new Error("IDB open error"));
-      r.onblocked = () => dlog("idb: open blocked by another connection");
     } catch (e) { fail(e); }
   });
   return dbPromise;
@@ -441,7 +384,6 @@ function idbTimeout(promise, what) {
   );
 }
 function storageWarn(msg) {
-  dlog("storageWarn: " + msg);
   const el = document.getElementById("storageWarn");
   if (el) { el.textContent = "⚠️ " + msg; el.hidden = false; }
 }
@@ -619,10 +561,9 @@ let lastRecovery = 0;
 /* Rebuild the audio element's source from a FRESH storage read.
    The in-memory blob reference can go stale; a fresh read is the reliable one. */
 async function rebuildAudioSource() {
-  const s = cur(); if (!s) { dlog("rebuild: no current song"); return false; }
+  const s = cur(); if (!s) return false;
   const blob = songBlob(s);
-  if (!blob) { dlog("rebuild: no audio data available"); return false; }
-  dlog("rebuild: fresh object URL from stored bytes");
+  if (!blob) return false;
   if (objectUrl) URL.revokeObjectURL(objectUrl);
   objectUrl = URL.createObjectURL(blob);
   audio.src = objectUrl;
@@ -631,14 +572,10 @@ async function rebuildAudioSource() {
   return true;
 }
 async function togglePlay() {
-  if (!cur()) { dlog("togglePlay: no current song"); return; }
-  dlog("togglePlay: tap, paused=" + audio.paused + " vis=" + document.visibilityState);
-  audioState("togglePlay: before play()");
+  if (!cur()) return;
   if (audio.paused) {
-    dlog("togglePlay: calling play()…");
-    try { await audio.play(); dlog("togglePlay: play() resolved"); }
+    try { await audio.play(); }
     catch (e) {
-      dlog("togglePlay: play() rejected", e && e.name, e && e.message);
       if (await rebuildAudioSource()) {
         try { await audio.play(); return; }
         catch (e2) { console.warn("play retry failed", e2); }
@@ -650,11 +587,9 @@ async function togglePlay() {
   }
   else audio.pause();
 }
-function seekTo(t, why) {
+function seekTo(t) {
   if (!cur()) return;
-  const ct = clamp(t, 0, dur());
-  if (why) slog(`seek why=${why} target=${ct.toFixed(1)} paused=${audio.paused}`);
-  audio.currentTime = ct;
+  audio.currentTime = clamp(t, 0, dur());
 }
 function updatePlayBtn() { $("playBtn").textContent = audio.paused ? "▶" : "❚❚"; }
 
@@ -675,8 +610,6 @@ audio.addEventListener("ended", () => { updatePlayBtn(); updateFSTransport(); })
 audio.addEventListener("timeupdate", loopCheck);
 audio.addEventListener("error", async () => {
   const code = audio.error ? audio.error.code : 0;
-  dlog("audio ERROR code=" + code, audio.error && audio.error.message ? audio.error.message : "(no message)");
-  audioState("audio ERROR state");
   if (Date.now() - lastRecovery < 5000) return;   // a play() retry just handled this
   if (code === 4 && await rebuildAudioSource()) {
     // Distinguish corrupt stored data (waveform decode failed too) from transient staleness
@@ -690,20 +623,13 @@ audio.addEventListener("error", async () => {
   }
 });
 audio.addEventListener("loadedmetadata", () => {
-  dlog("media: loadedmetadata dur=" + (isFinite(audio.duration) ? audio.duration.toFixed(1) : "?"));
   const s = cur();
   if (s && (!s.duration || s.duration === 0) && isFinite(audio.duration)) {
     s.duration = audio.duration; persist(); renderSongs();
   }
 });
 
-/* media-event trace for the debug log (kept out of the hot tick path) */
-["loadstart","canplay","canplaythrough","play","playing","pause","waiting","stalled","suspend","abort","emptied"].forEach(ev =>
-  audio.addEventListener(ev, () => dlog("media: " + ev))
-);
 /* TEMPORARY seek lifecycle trace (part of the seek repro instrumentation) */
-audio.addEventListener("seeking", () => slog(`seeking ct=${audio.currentTime.toFixed(1)}`));
-audio.addEventListener("seeked", () => slog(`seeked ct=${audio.currentTime.toFixed(1)}`));
 
 /* tight loop check on every animation frame (~16ms granularity) */
 /* Loop check runs on rAF (tight ~16ms seam in foreground) AND on the audio
@@ -720,7 +646,6 @@ function loopCheck() {
   const r = activeRange();
   if (looping && r && !audio.paused && !audio.seeking && dur() > 0) {
     if (audio.currentTime >= r.b - 0.03) {
-      slog(`wrap ct=${audio.currentTime.toFixed(2)} loop=[${r.a.toFixed(1)},${r.b.toFixed(1)}]`);
       try { audio.currentTime = r.a; } catch (e) {}
     }
   }
@@ -747,14 +672,11 @@ function tick() {
 async function computePeaks(blob) {
   const t0 = performance.now();
   const raw = await readBlobBytes(blob);
-  dlog("peaks: read " + raw.byteLength + "B in " + Math.round(performance.now() - t0) + "ms");
   const AC = window.AudioContext || window.webkitAudioContext;
   const actx = new AC();
-  dlog("peaks: AudioContext state=" + actx.state);
   try {
     const d0 = performance.now();
     const buf = await actx.decodeAudioData(raw);
-    dlog("peaks: decode OK dur=" + buf.duration.toFixed(1) + "s ch=" + buf.numberOfChannels + " sr=" + buf.sampleRate + " in " + Math.round(performance.now() - d0) + "ms");
     const ch = buf.getChannelData(0), N = 6000, out = new Array(N).fill(0);
     const block = Math.max(1, Math.floor(ch.length / N));
     for (let i = 0; i < N; i++) {
@@ -1005,7 +927,7 @@ function selectGroup(id) {
   workingA = workingB = null;   // A–B tab edits scratch for a new loop while a group is selected
   persist(); renderLoops(); updateABUI();
   const r = groupRange(g);
-  if (r) { slog(`select group "${g.name}" a=${r.a.toFixed(1)} b=${r.b.toFixed(1)}`); seekTo(r.a, "select"); }
+  if (r) seekTo(r.a);
   // like selectLoop: move the playhead, but never change the paused/playing state
 }
 /* explicit entry to new-loop mode: drop whatever is being edited, keep the open
@@ -1114,7 +1036,7 @@ function applyChecklist() {
   } else {
     selectedGroupId = g.id; selectedLoopId = null; looping = true;
     const r = groupRange(g);
-    if (r) seekTo(r.a, "select");
+    if (r) seekTo(r.a);
     if (audio.paused) togglePlay();
     const nItems = g.members.length;
     loopsMessage(`“${g.name}” · ${nItems} item${nItems === 1 ? "" : "s"} · ${r ? fmt(r.a) + " – " + fmt(r.b) : ""}`);
@@ -1388,7 +1310,7 @@ function addLoop(nameEl) {
   nameEl.value = "";
   selectedLoopId = lp.id; selectedGroupId = null; looping = true;
   persist(); renderLoops(); syncABFromSelection();
-  seekTo(lp.start, "add");
+  seekTo(lp.start);
   if (audio.paused) togglePlay();
 }
 /* split the editing loop in two at the playhead — the first piece keeps the
@@ -1435,7 +1357,7 @@ function updateSplitBtn() {
 function selectLoop(id) {
   selectedLoopId = id; selectedGroupId = null; looping = true;
   const lp = selLoop();
-  if (lp) { slog(`select loop "${lp.name}" a=${lp.start.toFixed(1)} b=${lp.end.toFixed(1)}`); seekTo(lp.start, "select"); }
+  if (lp) seekTo(lp.start);
   persist(); renderLoops(); syncABFromSelection();
 }
 
@@ -1475,7 +1397,7 @@ function updateMainBadge() {
 }
 function restartLoop() {
   const r = activeRange(); if (!r) return;
-  seekTo(r.a, "restart");
+  seekTo(r.a);
   if (audio.paused) togglePlay();
 }
 /* ============================== song lifecycle ============================== */
@@ -1483,7 +1405,6 @@ async function selectSong(id) {
   const s = songs.find(x => x.id === id); if (!s) return;
   const blob = songBlob(s);
   const sizeLabel = s.size || (s.blob && s.blob.size) || (blob && blob.size) || 0;
-  dlog("selectSong: " + s.title + " | " + sizeLabel + "B | " + (s.type || (blob && blob.type) || "no-type") + " | " + s.loops.length + " loops" + (s.broken ? " | BROKEN" : ""));
   if (s.broken || !blob) {
     // browser lost this song's audio bytes — keep it selectable, explain the repair
     audio.pause();
@@ -1496,7 +1417,6 @@ async function selectSong(id) {
     setRate(1);
     renderSongs(); renderLoops(); updateABUI();
     showAudioMsg("⚠️ This song's audio data was lost by the browser — re-import the same file to repair it. Your " + s.loops.length + " loops are safe.");
-    dlog("selectSong: broken record, waiting for re-import to repair");
     return;
   }
   audio.pause();
@@ -1507,7 +1427,6 @@ async function selectSong(id) {
   objectUrl = URL.createObjectURL(blob);
   audio.src = objectUrl;
   audio.load();
-  audioState("selectSong: after load()");
   $("emptyPlayer").hidden = true; $("playerUI").hidden = false;
   $("songTitle").textContent = s.title;
   setRate(1);
@@ -1518,11 +1437,10 @@ async function selectSong(id) {
     peaks = await computePeaks(blob);
     peaksOk = true;
   } catch (e) {
-    dlog("peaks: decode FAIL", e && e.name, e && e.message, "— retrying once");
     await new Promise(r => setTimeout(r, 800));
     if (currentId === id) {
       try { peaks = await computePeaks(blob); peaksOk = true; }
-      catch (e2) { dlog("peaks: retry FAIL", e2 && e2.name, e2 && e2.message); }
+      catch (e2) {}
     }
   }
 }
@@ -1536,7 +1454,7 @@ async function importFiles(files) {
     const title = f.name.replace(/\.[^.]+$/, "");
     let buf;
     try { buf = await f.arrayBuffer(); }
-    catch (e) { dlog("import: can't read " + f.name + " — " + (e && e.message)); continue; }
+    catch (e) { continue; }
     const hash = await sha256buf(buf);
     const existing = songs.find(s => s.hash === hash && !s.broken);
     if (existing) { dupes++; if (!toOpen) toOpen = existing.id; continue; }
@@ -1547,14 +1465,12 @@ async function importFiles(files) {
       broken.data = buf; broken.type = f.type || "audio/mpeg"; broken.size = f.size;
       broken.hash = hash; broken.broken = false; delete broken.blob;
       rec = broken; repaired++;
-      dlog("import: repaired \"" + title + "\" — " + rec.loops.length + " loops kept");
     } else {
       rec = { id: uid(), title, data: buf, type: f.type || "audio/mpeg", size: f.size, duration: 0, loops: [], groups: [], hash };
       songs.push(rec); added++;
     }
-    try { await idbTimeout(idbPut(rec), "save song"); dlog("import: saved " + rec.title); }
+    try { await idbTimeout(idbPut(rec), "save song"); }
     catch (e) {
-      dlog("import: SAVE FAILED — " + (e && e.message ? e.message : e));
       storageWarn("Couldn't save \"" + rec.title + "\" to browser storage — it will disappear on refresh. Free up space and reload, then import again.");
     }
     if (!toOpen) toOpen = rec.id;
@@ -1600,21 +1516,6 @@ document.querySelectorAll("#speedPresets button").forEach(b => b.onclick = () =>
 /* home now-playing wiring */
 $("expandBtn").onclick = openFullscreen;
 $("waveLoopBadge").onclick = restartLoop;
-
-/* debug log buttons */
-$("copyLogBtn").onclick = async () => {
-  const text = logLines.join("\n");
-  try { await navigator.clipboard.writeText(text); dlog("log copied (" + logLines.length + " lines)"); }
-  catch (e) {
-    const ta = document.createElement("textarea");
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); dlog("log copied via fallback"); } catch (_e) { dlog("copy failed"); }
-    ta.remove();
-  }
-};
-$("clearLogBtn").onclick = () => { logLines.length = 0; $("debugLog").innerHTML = ""; };
-$("hideLogBtn").onclick = () => { $("debugWrap").hidden = true; $("showLogBtn").hidden = false; };
-$("showLogBtn").onclick = () => { $("debugWrap").hidden = false; $("showLogBtn").hidden = true; };
 
 /* fullscreen tabbed panel wiring */
 $("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10, "10s");
@@ -1806,16 +1707,12 @@ document.addEventListener("keydown", e => {
 
 /* ============================== boot ============================== */
 (async function boot() {
-  dlog("boot", "ua=" + navigator.userAgent);
-  dlog("boot", "cores=" + (navigator.hardwareConcurrency || "?"), "mem=" + (navigator.deviceMemory || "?") + "GB", "vis=" + document.visibilityState);
   try {
     songs = await idbTimeout(idbAll(), "load library");
   } catch (e) {
-    dlog("boot: IDB read failed — " + (e && e.message ? e.message : e));
     storageWarn("Browser storage isn't responding — your library may appear empty. Reload the page; nothing was deleted.");
     songs = [];
   }
-  dlog("boot: library has " + songs.length + " songs");
   try { songs.sort((a, b) => (a.title || "").localeCompare(b.title || "")); } catch (e) {}
   // migrate legacy blob records to inline byte storage (iOS-safe); flag
   // records whose audio bytes iOS already lost — re-import repairs them
@@ -1828,10 +1725,8 @@ document.addEventListener("keydown", e => {
       delete s.blob;
       if (!s.hash) { try { s.hash = await sha256buf(bytes); } catch (e) {} }
       await idbTimeout(idbPut(s), "save migrated song");
-      dlog("migrated to byte storage: " + s.title);
     } catch (e) {
       s.broken = true; s.size = s.blob.size;
-      dlog("storage: audio bytes lost for \"" + s.title + "\" (" + (e && e.message) + ") — re-import the file to repair; loops kept");
       try { await idbPut(s); } catch (e2) {}
     }
   }
