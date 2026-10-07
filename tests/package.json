@@ -1,0 +1,1 @@
+{"description":"jsdom regression suites for the RagaMentor web prototype","devDependencies":{"jsdom":"^30.1.2"},"name":"ragamentor-tests","private":true,"scripts":{"test":"node run-all.js"}}
