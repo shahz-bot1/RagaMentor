@@ -363,7 +363,12 @@ function readBlobBytes(blob) {
 const bootT0 = performance.now();
 const logLines = [];
 const MAX_LOG = 400;
-function dlog() {
+/* TEMPORARY seek-repro instrumentation (early-finish report): silence the
+   pre-existing chatter, keep only the seek trace. Revert by setting
+   LEGACY_DEBUG back to true and deleting slog calls / SEEK_DEBUG. */
+const LEGACY_DEBUG = false;
+const SEEK_DEBUG = true;
+function dlogRaw() {
   const t = "+" + Math.round(performance.now() - bootT0) + "ms";
   const line = t + " " + Array.prototype.map.call(arguments, function (a) {
     try { return typeof a === "string" ? a : JSON.stringify(a); } catch (e) { return String(a); }
@@ -380,6 +385,11 @@ function dlog() {
   }
   console.log("[raga]", line);
 }
+function dlog() { if (LEGACY_DEBUG) dlogRaw.apply(null, arguments); }
+/* seek trace: the ONLY logs during the repro — loop/group select, manual seeks,
+   seek lifecycle, wraps. Enough to identify loop bounds, seek targets, and
+   whether a wrap fired early. */
+function slog(m) { if (SEEK_DEBUG) dlogRaw("[seek] " + m); }
 function audioState(tag) {
   dlog(tag, "readyState=" + audio.readyState, "networkState=" + audio.networkState,
     "paused=" + audio.paused, "t=" + audio.currentTime.toFixed(2),
@@ -640,9 +650,11 @@ async function togglePlay() {
   }
   else audio.pause();
 }
-function seekTo(t) {
+function seekTo(t, why) {
   if (!cur()) return;
-  audio.currentTime = clamp(t, 0, dur());
+  const ct = clamp(t, 0, dur());
+  if (why) slog(`seek why=${why} target=${ct.toFixed(1)} paused=${audio.paused}`);
+  audio.currentTime = ct;
 }
 function updatePlayBtn() { $("playBtn").textContent = audio.paused ? "▶" : "❚❚"; }
 
@@ -689,6 +701,9 @@ audio.addEventListener("loadedmetadata", () => {
 ["loadstart","canplay","canplaythrough","play","playing","pause","waiting","stalled","suspend","abort","emptied"].forEach(ev =>
   audio.addEventListener(ev, () => dlog("media: " + ev))
 );
+/* TEMPORARY seek lifecycle trace (part of the seek repro instrumentation) */
+audio.addEventListener("seeking", () => slog(`seeking ct=${audio.currentTime.toFixed(1)}`));
+audio.addEventListener("seeked", () => slog(`seeked ct=${audio.currentTime.toFixed(1)}`));
 
 /* tight loop check on every animation frame (~16ms granularity) */
 /* Loop check runs on rAF (tight ~16ms seam in foreground) AND on the audio
@@ -705,6 +720,7 @@ function loopCheck() {
   const r = activeRange();
   if (looping && r && !audio.paused && !audio.seeking && dur() > 0) {
     if (audio.currentTime >= r.b - 0.03) {
+      slog(`wrap ct=${audio.currentTime.toFixed(2)} loop=[${r.a.toFixed(1)},${r.b.toFixed(1)}]`);
       try { audio.currentTime = r.a; } catch (e) {}
     }
   }
@@ -827,7 +843,7 @@ function refreshWaveColors() {
   });
   c.addEventListener("pointermove", e => {
     if (!wDown) return;
-    if (Math.hypot(e.clientX - wDown.x, e.clientY - wDown.y) > 10) { wDown.moved = true; seekTo(toTime(e)); }
+    if (Math.hypot(e.clientX - wDown.x, e.clientY - wDown.y) > 10) { wDown.moved = true; seekTo(toTime(e), "scrub"); }
   });
   c.addEventListener("pointerup", e => {
     if (wDown && !wDown.moved && performance.now() - wDown.t < 400) openFullscreen();
@@ -989,7 +1005,7 @@ function selectGroup(id) {
   workingA = workingB = null;   // A–B tab edits scratch for a new loop while a group is selected
   persist(); renderLoops(); updateABUI();
   const r = groupRange(g);
-  if (r) seekTo(r.a);
+  if (r) { slog(`select group "${g.name}" a=${r.a.toFixed(1)} b=${r.b.toFixed(1)}`); seekTo(r.a, "select"); }
   // like selectLoop: move the playhead, but never change the paused/playing state
 }
 /* explicit entry to new-loop mode: drop whatever is being edited, keep the open
@@ -1098,7 +1114,7 @@ function applyChecklist() {
   } else {
     selectedGroupId = g.id; selectedLoopId = null; looping = true;
     const r = groupRange(g);
-    if (r) seekTo(r.a);
+    if (r) seekTo(r.a, "select");
     if (audio.paused) togglePlay();
     const nItems = g.members.length;
     loopsMessage(`“${g.name}” · ${nItems} item${nItems === 1 ? "" : "s"} · ${r ? fmt(r.a) + " – " + fmt(r.b) : ""}`);
@@ -1293,7 +1309,7 @@ fsCanvas.addEventListener("pointermove", e => {
       const r = fsCanvas.getBoundingClientRect();   // pan when zoomed in
       fsView.start = clamp(fsView.start - dx / r.width * fsView.dur, 0, Math.max(0, d - fsView.dur));
     } else {
-      seekTo(fsTimeAt(e.clientX));                  // scrub when fully zoomed out
+      seekTo(fsTimeAt(e.clientX), "scrub");                  // scrub when fully zoomed out
     }
   }
 });
@@ -1301,7 +1317,7 @@ function fsUp(e) {
   const pt = fsPtrs.get(e.pointerId);
   fsPtrs.delete(e.pointerId);
   if (fsPtrs.size < 2) pinch = null;
-  if (pt && !pt.moved && fsPtrs.size === 0 && !suppressTap) seekTo(fsTimeAt(e.clientX)); // tap = seek
+  if (pt && !pt.moved && fsPtrs.size === 0 && !suppressTap) seekTo(fsTimeAt(e.clientX), "tap"); // tap = seek
   if (fsPtrs.size === 0) suppressTap = false;
 }
 fsCanvas.addEventListener("pointerup", fsUp);
@@ -1372,7 +1388,7 @@ function addLoop(nameEl) {
   nameEl.value = "";
   selectedLoopId = lp.id; selectedGroupId = null; looping = true;
   persist(); renderLoops(); syncABFromSelection();
-  seekTo(lp.start);
+  seekTo(lp.start, "add");
   if (audio.paused) togglePlay();
 }
 /* split the editing loop in two at the playhead — the first piece keeps the
@@ -1419,7 +1435,7 @@ function updateSplitBtn() {
 function selectLoop(id) {
   selectedLoopId = id; selectedGroupId = null; looping = true;
   const lp = selLoop();
-  if (lp) seekTo(lp.start);
+  if (lp) { slog(`select loop "${lp.name}" a=${lp.start.toFixed(1)} b=${lp.end.toFixed(1)}`); seekTo(lp.start, "select"); }
   persist(); renderLoops(); syncABFromSelection();
 }
 
@@ -1459,7 +1475,7 @@ function updateMainBadge() {
 }
 function restartLoop() {
   const r = activeRange(); if (!r) return;
-  seekTo(r.a);
+  seekTo(r.a, "restart");
   if (audio.paused) togglePlay();
 }
 /* ============================== song lifecycle ============================== */
@@ -1577,8 +1593,8 @@ const hint = $("dropHint");
 hint.addEventListener("drop", e => importFiles([...e.dataTransfer.files]));
 
 $("playBtn").onclick = togglePlay;
-$("backBtn").onclick = () => seekTo((audio.currentTime || 0) - 10);
-$("fwdBtn").onclick = () => seekTo((audio.currentTime || 0) + 10);
+$("backBtn").onclick = () => seekTo((audio.currentTime || 0) - 10, "10s");
+$("fwdBtn").onclick = () => seekTo((audio.currentTime || 0) + 10, "10s");
 document.querySelectorAll("#speedPresets button").forEach(b => b.onclick = () => setRate(parseFloat(b.dataset.r)));
 
 /* home now-playing wiring */
@@ -1601,8 +1617,8 @@ $("hideLogBtn").onclick = () => { $("debugWrap").hidden = true; $("showLogBtn").
 $("showLogBtn").onclick = () => { $("debugWrap").hidden = false; $("showLogBtn").hidden = true; };
 
 /* fullscreen tabbed panel wiring */
-$("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10);
-$("fsFwd").onclick = () => seekTo((audio.currentTime || 0) + 10);
+$("fsBack").onclick = () => seekTo((audio.currentTime || 0) - 10, "10s");
+$("fsFwd").onclick = () => seekTo((audio.currentTime || 0) + 10, "10s");
 $("fsPlay").onclick = togglePlay;
 $("fsLoopBadge").onclick = restartLoop;
 document.querySelectorAll("#fsTabs button").forEach(b => b.onclick = () => setFSTab(b.dataset.tab));
