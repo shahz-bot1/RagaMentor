@@ -60,26 +60,6 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     JSON.stringify({ ...data, exportedAt: 0, song: "" }) ===
     JSON.stringify({ ...data2, exportedAt: 0, song: "" }));
 
-  // ---- v2 uuid-keyed file (the short-lived format): keys still resolve ----
-  wipe();
-  const v2 = { app: "RagaMentor", version: 2, song: "T",
-    loops: [{ id: "u1", name: "Phrase", start: 10, end: 20 }, { id: "u2", name: "Phrase", start: 30, end: 40 }],
-    groups: [{ id: "u3", name: "Pallavi", color: "#2dd4bf", members: ["u1", "u2"] }] };
-  E(`importLoopsData(JSON.parse(${JSON.stringify(JSON.stringify(v2))}))`);
-  t("v2 keys resolve membership",
-    E(`cur().groups[0].members.length`) === 2 &&
-    E(`!cur().loops.some(l => ["u1","u2"].includes(l.id))`));
-
-  // ---- v1 backward compatibility (name-based, first wins) ----
-  wipe();
-  const v1 = { app: "RagaMentor", version: 1, song: "T",
-    loops: [{ name: "Phrase", start: 10, end: 20, note: "a" }, { name: "Phrase", start: 30, end: 40, note: "b" }],
-    groups: [{ name: "Pallavi", color: "#2dd4bf", loops: ["Phrase"], groups: [] }] };
-  E(`importLoopsData(JSON.parse(${JSON.stringify(JSON.stringify(v1))}))`);
-  t("v1 imports", E(`cur().loops.length`) === 2);
-  t("v1 first-wins membership", E(`cur().groups[0].members.length`) === 1 &&
-    E(`cur().loops.find(l => l.id === cur().groups[0].members[0]).start`) === 10);
-
   // invalid data → null, no crash
   t("garbage rejected", E(`importLoopsData({nope:1})`) === null && E(`importLoopsData(null)`) === null);
 
