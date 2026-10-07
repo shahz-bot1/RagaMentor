@@ -50,7 +50,7 @@ Decisions the prototype settled:
 - Waveform: inline + **fullscreen mode** (tap to expand; pinch zoom to 2s window; drag to pan; tap to seek; auto-follow playhead while playing)
 - Tabbed fullscreen panel (persistent transport + presets; Loops / A–B / More tabs)
 - Loops, notes, last position, last selected loop persist across launches
-- Song-level loop list interchange: export/import JSON v3 (file-local serial ids + names + notes + ordered member lists; round-trips exactly even with duplicate names; the file never carries database ids — import mints fresh ones; v2 uuid-keyed and v1 name-based files still import via fallback); import replaces existing loops
+- Song-level loop list interchange: export/import JSON (file-local serial ids + names + notes + ordered member lists; round-trips exactly even with duplicate names; the file never carries database ids — import mints fresh ones); import replaces existing loops (no legacy format support — prototype)
 - Background audio; pause on phone-call interruption / headphone disconnect
 
 **Out of scope (v2 parking lot)**
