@@ -26,4 +26,4 @@ Or run one suite directly: `node split-test.js`.
 | `split-test.js` | Split at playhead (naming, note copy, group slot, eligibility); `addLoop` mixed-member sort fix |
 | `backbtn-test.js` | Single destination-labeled back button (`‹ Pallavi` / `‹ All`); no breadcrumb chips |
 | `pause-tap-test.js` | Tapping a group while paused moves the playhead without changing paused/playing state |
-| `roundtrip-test.js` | Export → import round-trip incl. duplicate names (v3 file-local serials, v2 uuid-key fallback, v1 name-based fallback), db/file id decoupling, idempotency |
+| `roundtrip-test.js` | Export → import round-trip incl. duplicate names (file-local serial ids, db/file decoupling), idempotency |
