@@ -1654,29 +1654,33 @@ function songMessage(text) {
   msg.textContent = text;
   setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
 }
-/* export payload builder (v2: ids are exported; group membership is an ordered
-   list of member ids, so duplicates round-trip exactly; names stay for humans) */
+/* export payload builder (v3: the file uses its own serial numbers as ids —
+   file-local only, never database ids; group membership is an ordered list of
+   member serials, so duplicates round-trip exactly; names stay for humans) */
 function buildExportData() {
   const s = cur(); if (!s) return null;
+  let serial = 0;
+  const toSerial = new Map();   // internal id -> file serial
+  const sortedLoops = [...s.loops].sort((a, b) => a.start - b.start);
+  for (const lp of sortedLoops) toSerial.set(lp.id, ++serial);
+  for (const g of (s.groups || [])) toSerial.set(g.id, ++serial);
   return {
     app: "RagaMentor",
-    version: 2,
+    version: 3,
     song: s.title,
     exportedAt: new Date().toISOString(),
-    loops: [...s.loops].sort((a, b) => a.start - b.start).map((lp, i) => ({
-      id: lp.id,
+    loops: sortedLoops.map((lp, i) => ({
+      id: toSerial.get(lp.id),
       name: lp.name || ("Loop " + (i + 1)),
       start: Math.round(lp.start * 100) / 100,
       end: Math.round(lp.end * 100) / 100,
       note: lp.note || ""
     })),
     groups: (s.groups || []).map(g => ({
-      id: g.id,
+      id: toSerial.get(g.id),
       name: g.name || "Group",
       color: /^#[0-9a-fA-F]{6}$/.test(g.color) ? g.color : GROUP_COLORS[0],
-      members: (g.members || []).filter(id =>
-        s.loops.some(l => l.id === id) ||
-        (s.groups || []).some(x => x.id === id && x.id !== g.id))
+      members: (g.members || []).map(id => toSerial.get(id)).filter(v => v != null)
     }))
   };
 }
@@ -1693,29 +1697,35 @@ function exportLoops() {
     (data.groups.length ? " + " + data.groups.length + " group" + (data.groups.length === 1 ? "" : "s") : "") + " as JSON.");
 }
 /* import core: returns the status message, or null when the data is unusable.
-   v2 matches group members by id (faithful even with duplicate names);
-   v1 / id-less files fall back to legacy name matching. Import replaces. */
+   v2/v3 match group members by the file's own id keys (faithful even with
+   duplicate names) and mint fresh internal ids — the file never carries
+   database ids; v1 / id-less files fall back to legacy name matching.
+   Import replaces. */
 function importLoopsData(data) {
   if (!data || !Array.isArray(data.loops)) return null;
   const s = cur(); if (!s) return null;
   const d = dur(), loops = [];
-  const seenIds = new Set();
-  const claimId = rawId => {
-    if (typeof rawId === "string" && rawId && !seenIds.has(rawId)) { seenIds.add(rawId); return rawId; }
-    let id = uid(); while (seenIds.has(id)) id = uid();
-    seenIds.add(id); return id;
+  const usedIds = new Set(), keyToId = new Map();
+  const freshId = () => { let id = uid(); while (usedIds.has(id)) id = uid(); usedIds.add(id); return id; };
+  const idForKey = key => {
+    const k = "k:" + String(key);
+    if (!keyToId.has(k)) keyToId.set(k, freshId());
+    return keyToId.get(k);
   };
+  const hasKey = raw => raw != null &&
+    (typeof raw.id === "string" ? raw.id !== "" : typeof raw.id === "number");
+  const keyed = data.version >= 2;
   data.loops.forEach((raw, i) => {
     const st = parseFloat(raw.start), en = parseFloat(raw.end);
     if (!isFinite(st) || !isFinite(en)) return;                 // skip invalid entries
     const start = clamp(st, 0, d), end = clamp(en, 0, d);
     if (end - start < MIN_LOOP) return;                         // skip degenerate
-    loops.push({ id: claimId(raw.id), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
+    loops.push({ id: (keyed && hasKey(raw)) ? idForKey(raw.id) : freshId(),
+      name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
   });
   s.loops = loops;                                              // replace semantics
   const loopById = {}, groupById = {};
   loops.forEach(lp => { loopById[lp.id] = lp; });
-  const v2 = data.version >= 2;
   const groups = [];
   // legacy v1: match members by name (first wins on duplicates)
   const nameToLoopId = {};
@@ -1724,14 +1734,14 @@ function importLoopsData(data) {
   (Array.isArray(data.groups) ? data.groups : []).forEach((rg, gi) => {
     if (!rg || typeof rg.name !== "string") return;
     const gname = String(rg.name).slice(0, 40) || ("Group " + (gi + 1));
-    if (!v2 && (gname in nameToGroupId)) return;   // v1 duplicate group names: first wins
+    if (!keyed && (gname in nameToGroupId)) return;   // v1 duplicate group names: first wins
     const g = {
-      id: claimId(rg.id),
+      id: (keyed && hasKey(rg)) ? idForKey(rg.id) : freshId(),
       name: gname,
       color: /^#[0-9a-fA-F]{6}$/.test(rg.color) ? rg.color : GROUP_COLORS[gi % GROUP_COLORS.length],
       members: []
     };
-    if (v2 && Array.isArray(rg.members)) g._memberIds = rg.members.map(String);
+    if (keyed && Array.isArray(rg.members)) g._memberKeys = rg.members.map(k => "k:" + String(k));
     else {
       g._loopNames = (Array.isArray(rg.loops) ? rg.loops : []).map(String);
       g._groupNames = (Array.isArray(rg.groups) ? rg.groups : []).map(String);
@@ -1745,12 +1755,15 @@ function importLoopsData(data) {
     g.members.push(id); taken.add(id);
   };
   for (const g of groups) {
-    if (g._memberIds) { for (const mid of g._memberIds) tryAdd(g, mid); delete g._memberIds; continue; }
+    if (g._memberKeys) {
+      for (const k of g._memberKeys) { const id = keyToId.get(k); if (id) tryAdd(g, id); }
+      delete g._memberKeys; continue;
+    }
     for (const n of (g._loopNames || [])) { const id = nameToLoopId[n]; if (id) tryAdd(g, id); }
     for (const n of (g._groupNames || [])) { const id = nameToGroupId[n]; if (id) tryAdd(g, id); }
     delete g._loopNames; delete g._groupNames;
   }
-  if (!v2) {
+  if (!keyed) {
     // v1 had no stored order: restore the old start-sorted approximation
     const rStart = id => {
       const l = loopById[id]; if (l) return l.start;
