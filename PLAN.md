@@ -1,8 +1,8 @@
 # RagaMentor — iOS Music Practice App
 ## Implementation Plan (MVP)
 
-**Status:** Refined 2026-10-05 — every MVP interaction validated in the web prototype · UI redesigned 2026-10-06 (tabbed fullscreen + slim home screen, all validated in prototype) · Loop groups added 2026-10-06 · Nested sub-groups (2-level cap) added 2026-10-06
-**Repo:** shahz-bot1/RagaMentor · **Prototype (live):** https://shahz-bot1.github.io/RagaMentor/prototype/
+**Status:** Refined 2026-10-05 — every MVP interaction validated in the web prototype · UI redesigned 2026-10-06 (tabbed fullscreen + slim home screen, all validated in prototype) · Loop groups added 2026-10-06 · Nested sub-groups (2-level cap) added 2026-10-06 · **Super-app framing 2026-10-07: RagaMentor is the home/launcher; LoopLab (slow-down + phrase loops, the current prototype) is the first sub-app**
+**Repo:** shahz-bot1/RagaMentor · **Prototype (live):** https://shahz-bot1.github.io/RagaMentor/prototype/ · **Home (live):** https://shahz-bot1.github.io/RagaMentor/
 **Local prototype:** ~/workspace/ios-slowdown-app/prototype/index.html (single self-contained file)
 **One-liner:** Import a song, slow it to quarter speed without changing pitch, and loop any phrase as many times as you need — every loop named, annotated, and saved.
 
