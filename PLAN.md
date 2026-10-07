@@ -25,7 +25,7 @@ Built first as a single-file web app to de-risk UX before native work. Everythin
 | A/B stepper rows: 0.1s micro-nudge + Set buttons; loop toggle + add-loop in the A–B tab | Stepper rows at 0.1s; coarse moves via tap-seek + Set A/B |
 | Per-loop note field (key, vocal cues), multiline — Return = newline, blur/Done saves | `note` on `LoopRegion`; multiline inline editing |
 | Selected-loop badge overlaid top-right on waveform (tap = restart loop); time as non-interactive badge on waveform | Same overlays in native waveform view |
-| Speed presets slowest-first (0.25x → 1x); granular slider in the Speed tab | Same ordering; slider for fine values |
+| Speed presets slowest-first (0.25x → 1x); granular slider 0.1x–1x in the Speed tab | Same ordering; slider for fine values |
 | Fixed waveform height in fullscreen (panel grows downward, no resize glitch on tab switch) | Fixed-height waveform view, scrolling sheet below |
 | Nested loop groups (2 levels): top groups hold loops + sub-groups; tap = open members + loop whole section | `LoopGroup` entity, members = loop OR group ids; group range derived bottom-up; section loop via same segment scheduler |
 | Songs keyed by SHA-256 content hash | Same (CryptoKit): re-import dedupes, loops survive |
@@ -43,7 +43,7 @@ Decisions the prototype settled:
 - Import audio from the Files app (MP3, M4A/AAC, WAV, AIFF, CAF); **content-hash dedupe** — re-importing a file opens the existing song, loops intact
 - Song library, fully on-device
 - Play/pause/seek transport; ±10s skip
-- Speed 0.25x → 1.0x (presets slowest-first: 0.25x, 0.5x, 0.75x, 1x + fine slider), pitch locked
+- Speed 0.1x → 1.0x (presets slowest-first: 0.25x, 0.5x, 0.75x, 1x + fine slider down to 0.1x), pitch locked
 - Multiple named A–B loops per song: Set A/B at playhead, **0.1s micro-nudge**, tap loop to select + jump, loop on/off, rename, delete
 - **Nested loop groups (2-level cap, 2026-10-06)**: a top-level group holds loops and sub-groups (e.g. Pallavi → Opening → Varnam line 1); sub-groups hold loops only. Tapping any group opens it and arms its whole section for looping (range derived bottom-up: earliest descendant start → latest descendant end); like tapping a loop, it moves the playhead to the section start without changing the paused/playing state. One checklist manages membership: `＋ New group` inside a top-level group creates a sub-group and offers only that group's loops; `＋ Add` offers all loops plus other flat groups (only groups without sub-groups may be nested — cycles impossible by construction). A single back button labeled with the destination (`‹ Pallavi` inside a sub-group, `‹ All` inside a top-level group) goes up one level — no breadcrumb trail, so nav chips can't be mistaken for groups. Deleting a group promotes its children one level up (loops ungroup, sub-groups surface); empty groups auto-vanish, cascading. Waveform bands stack (parents lighter, children stronger); group detail shows `N items · a – b · in “parent”`
 - **Per-loop note field** — free text for key, swara/vocal cues
