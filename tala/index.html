@@ -30,31 +30,38 @@
   .lltitle p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
   #themeBtn { justify-self: end; font-size: 13px; padding: 6px 10px; border-radius: 8px;
               border: 1px solid var(--border); background: transparent; color: var(--text); }
-  main { max-width: 560px; margin: 0 auto; padding: 16px 20px 60px; display: grid; gap: 16px; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 20px 140px; display: grid; gap: 16px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
   .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-  .seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
-                font-size: 13px; padding: 8px 4px; border-radius: 8px; }
-  .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
-  .seg button small { display: block; font-size: 10px; color: var(--muted); }
-  .seg button.on small { color: var(--accent); }
-  .beats { display: flex; align-items: flex-start; justify-content: center; flex-wrap: wrap;
-           margin: 6px 0 2px; padding-bottom: 20px; }
-  .agroup { display: flex; gap: 10px; padding: 0 14px; position: relative; }
-  .agroup + .agroup { border-left: 1px dashed var(--border); }
-  .beat { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-  .dot { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--muted);
-         transition: background .05s, border-color .05s; }
-  .dot.samam { border-color: var(--samam); background: var(--samam); }
-  .dot.now { border-color: var(--accent); background: var(--accent); }
-  .dot.samam.now { border-color: var(--samam); background: var(--samam);
-                   box-shadow: 0 0 10px var(--samam); transform: scale(1.15); }
-  .dot.now:not(.samam) { transform: scale(1.15); }
-  .alabel { font-size: 10px; color: var(--muted); text-align: center; min-height: 12px; }
-  .glabel { position: absolute; bottom: -18px; left: 0; right: 0; text-align: center;
-            font-size: 10px; color: var(--muted); }
-  .cycleinfo { text-align: center; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .card h2 .tag { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; }
+  /* wheel */
+  .wheelwrap { position: relative; width: 280px; height: 280px; margin: 4px auto; }
+  .wheelwrap svg { display: block; }
+  .wheelcenter { position: absolute; inset: 0; display: flex; flex-direction: column;
+                 align-items: center; justify-content: center; text-align: center; pointer-events: none;
+                 padding: 0 60px; }
+  .wheelcenter .combo { font-size: 24px; font-weight: 700; }
+  .wheelcenter .combo .alias { color: var(--samam); }
+  .cycleline { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px;
+               font-variant-numeric: tabular-nums; }
+  /* tala grid */
+  .tgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .tgrid button { border: 1px solid var(--border); background: var(--panel2); color: var(--muted);
+                  font: inherit; font-size: 13px; padding: 10px 4px; border-radius: 10px; }
+  .tgrid button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+  .chapurow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .chapurow button { border: 1px dashed var(--border); background: transparent; color: var(--muted);
+                    font: inherit; font-size: 13px; padding: 10px 4px; border-radius: 10px; }
+  .chapurow button.on { background: var(--accent-soft); border: 1px solid var(--accent); color: var(--text); }
+  /* jati chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { border: 1px solid var(--border); background: var(--panel2); color: var(--muted);
+                  font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 999px; }
+  .chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+  .chips button small { color: var(--muted); margin-left: 4px; }
+  .chips button.on small { color: var(--accent); }
+  .chips.disabled { opacity: .35; pointer-events: none; }
+  /* tempo */
   .temprow { display: flex; align-items: center; gap: 12px; }
   .temprow input[type=range] { flex: 1; min-width: 0; }
   .bpm { font-size: 20px; font-weight: 600; min-width: 86px; text-align: right; font-variant-numeric: tabular-nums; }
@@ -63,12 +70,21 @@
             border: 1px solid var(--border); background: transparent; color: var(--text); }
   .tapbtn:active { background: var(--panel2); }
   .nadairow { margin-top: 14px; }
+  .seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
+                font-size: 13px; padding: 8px 4px; border-radius: 8px; }
+  .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .seg button small { display: block; font-size: 10px; color: var(--muted); }
+  .seg button.on small { color: var(--accent); }
+  /* floating start bar */
+  .bottombar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+               padding: 20px 20px calc(14px + env(safe-area-inset-bottom));
+               background: linear-gradient(to top, var(--bg) 55%, transparent); }
+  .bottombar-inner { max-width: 600px; margin: 0 auto; }
   .bigplay { border: 0; border-radius: 16px; padding: 18px; font-size: 18px; font-weight: 700;
-             background: var(--accent); color: #fff; }
+             background: var(--accent); color: #fff; width: 100%; }
   .bigplay.playing { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
   .hint { text-align: center; font-size: 12px; color: var(--muted); margin: 0; }
-  footer { max-width: 560px; margin: 0 auto; padding: 0 20px 24px; font-size: 11px;
-           color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -85,14 +101,25 @@
 
 <main>
   <section class="card">
-    <h2>Tala</h2>
-    <div class="seg" id="talaSeg"></div>
+    <h2>Tala cycle</h2>
+    <div class="wheelwrap">
+      <svg id="wheel" width="280" height="280" viewBox="0 0 280 280" aria-hidden="true"></svg>
+      <div class="wheelcenter">
+        <div class="combo" id="comboName"></div>
+      </div>
+    </div>
+    <div class="cycleline" id="cycleLine"></div>
   </section>
 
   <section class="card">
-    <h2>Beat</h2>
-    <div class="beats" id="beats"></div>
-    <div class="cycleinfo" id="cycleInfo"></div>
+    <h2>Tala <span class="tag">· suladi sapta</span></h2>
+    <div class="tgrid" id="talaGrid"></div>
+    <div class="chapurow" id="chapuRow"></div>
+  </section>
+
+  <section class="card">
+    <h2>Jati <span class="tag">· laghu length — n/a for chapu</span></h2>
+    <div class="chips" id="jatiChips"></div>
   </section>
 
   <section class="card">
@@ -103,7 +130,7 @@
       <button class="tapbtn" id="tapBtn" title="Tap the beat to set tempo">Tap</button>
     </div>
     <div class="nadairow">
-      <h2>Nadai</h2>
+      <h2>Nadai · subdivision</h2>
       <div class="seg" id="nadaiSeg">
         <button data-n="4" class="on">Chatusra<small>4 / beat</small></button>
         <button data-n="3">Tisra<small>3 / beat</small></button>
@@ -111,11 +138,14 @@
     </div>
   </section>
 
-  <button class="bigplay" id="playBtn">▶ Start</button>
-  <p class="hint">Samam (beat 1) glows gold · dashed lines mark anga boundaries</p>
+  <p class="hint">Samam glows gold · gaps mark anga boundaries</p>
 </main>
 
-<footer>Prototype only — timing via Web Audio lookahead scheduling.</footer>
+<div class="bottombar">
+  <div class="bottombar-inner">
+    <button class="bigplay" id="playBtn">▶ Start</button>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -137,76 +167,136 @@
   };
   $("homeBtn").onclick = () => { location.href = "../"; };
 
-  /* ---------- tala definitions ---------- */
+  /* ---------- tala + jati data ---------- */
+  // anga codes: L = laghu (jati-dependent), D = drutam (2), A = anudrutam (1)
   const TALAS = {
-    adi:    { name: "Adi",          beats: 8, groups: [{ n: 4, label: "laghu" }, { n: 2, label: "drutam" }, { n: 2, label: "drutam" }] },
-    rupaka: { name: "Rupaka",       beats: 6, groups: [{ n: 2, label: "drutam" }, { n: 4, label: "laghu" }] },
-    misra:  { name: "Misra Chapu",  beats: 7, groups: [{ n: 3, label: "" }, { n: 4, label: "" }] },
-    khanda: { name: "Khanda Chapu", beats: 5, groups: [{ n: 2, label: "" }, { n: 3, label: "" }] },
+    dhruva:  { name: "Dhruva",  angas: [["L","laghu"],["D","drutam"],["L","laghu"],["L","laghu"]] },
+    matya:   { name: "Matya",   angas: [["L","laghu"],["D","drutam"],["L","laghu"]] },
+    rupaka:  { name: "Rupaka",  angas: [["D","drutam"],["L","laghu"]] },
+    jhampa:  { name: "Jhampa",  angas: [["L","laghu"],["A","anudrutam"],["D","drutam"]] },
+    triputa: { name: "Triputa", angas: [["L","laghu"],["D","drutam"],["D","drutam"]] },
+    ata:     { name: "Ata",     angas: [["L","laghu"],["L","laghu"],["D","drutam"],["D","drutam"]] },
+    eka:     { name: "Eka",     angas: [["L","laghu"]] },
   };
-  let talaId = "adi", bpm = 60, nadai = 4;
+  const CHAPU = {
+    misraChapu:  { name: "Misra Chapu",  n: 7 },
+    khandaChapu: { name: "Khanda Chapu", n: 5 },
+  };
+  const JATIS = [
+    { id: "tisra", name: "Tisra", v: 3 }, { id: "chatusra", name: "Chatusra", v: 4 },
+    { id: "khanda", name: "Khanda", v: 5 }, { id: "misra", name: "Misra", v: 7 },
+    { id: "sankeerna", name: "Sankeerna", v: 9 },
+  ];
+  const isChapu = () => !!CHAPU[talaId];
+  const jatiV = () => JATIS.find(j => j.id === jatiId).v;
+  const isAdi = () => talaId === "triputa" && jatiId === "chatusra";
+
+  let talaId = "triputa", jatiId = "chatusra", bpm = 60, nadai = 4;
   try {
     const s = JSON.parse(localStorage.getItem("tala-settings") || "{}");
-    if (s.talaId && TALAS[s.talaId]) talaId = s.talaId;
+    if (s.talaId === "adi") { talaId = "triputa"; jatiId = "chatusra"; }  // v1 migration
+    else if (s.talaId && (TALAS[s.talaId] || CHAPU[s.talaId])) talaId = s.talaId;
+    if (s.jatiId && JATIS.some(j => j.id === s.jatiId)) jatiId = s.jatiId;
     if (s.bpm >= 30 && s.bpm <= 120) bpm = s.bpm;
     if (s.nadai === 3 || s.nadai === 4) nadai = s.nadai;
   } catch (e) {}
   const saveSettings = () => {
-    try { localStorage.setItem("tala-settings", JSON.stringify({ talaId, bpm, nadai })); } catch (e) {}
+    try { localStorage.setItem("tala-settings", JSON.stringify({ talaId, jatiId, bpm, nadai })); } catch (e) {}
   };
 
-  /* ---------- beat display ---------- */
-  const talaSeg = $("talaSeg"), beatsEl = $("beats"), cycleInfo = $("cycleInfo");
-  let dotEls = [];
-  function renderTalas() {
-    talaSeg.innerHTML = "";
+  function groupsFor() {
+    if (isChapu()) return [{ n: CHAPU[talaId].n, label: "chapu" }];
+    return TALAS[talaId].angas.map(([code, label]) => ({
+      n: code === "L" ? jatiV() : code === "D" ? 2 : 1, label
+    }));
+  }
+  const totalBeats = () => groupsFor().reduce((a, g) => a + g.n, 0);
+  const comboName = () => {
+    if (isChapu()) return CHAPU[talaId].name;
+    if (isAdi()) return "Adi";
+    return JATIS.find(j => j.id === jatiId).name + " " + TALAS[talaId].name;
+  };
+
+  /* ---------- selectors ---------- */
+  function renderTalalist() {
+    const tg = $("talaGrid");
+    tg.innerHTML = "";
     Object.entries(TALAS).forEach(([id, t]) => {
       const b = document.createElement("button");
-      b.innerHTML = t.name + "<small>" + t.beats + " aksharas</small>";
+      b.textContent = t.name;
       if (id === talaId) b.classList.add("on");
-      b.onclick = () => { talaId = id; saveSettings(); renderTalas(); renderBeats(); restartCycle(); };
-      talaSeg.appendChild(b);
+      b.onclick = () => { talaId = id; saveSettings(); renderAll(); restartCycle(); };
+      tg.appendChild(b);
+    });
+    const cr = $("chapuRow");
+    cr.innerHTML = "";
+    Object.entries(CHAPU).forEach(([id, t]) => {
+      const b = document.createElement("button");
+      b.textContent = t.name + " · " + t.n;
+      if (id === talaId) b.classList.add("on");
+      b.onclick = () => { talaId = id; saveSettings(); renderAll(); restartCycle(); };
+      cr.appendChild(b);
     });
   }
-  function renderBeats() {
-    const t = TALAS[talaId];
-    beatsEl.innerHTML = "";
+  function renderJati() {
+    const jc = $("jatiChips");
+    jc.innerHTML = "";
+    jc.classList.toggle("disabled", isChapu());
+    JATIS.forEach(j => {
+      const b = document.createElement("button");
+      b.innerHTML = j.name + "<small>" + j.v + "</small>";
+      if (j.id === jatiId) b.classList.add("on");
+      b.onclick = () => { jatiId = j.id; saveSettings(); renderAll(); restartCycle(); };
+      jc.appendChild(b);
+    });
+  }
+
+  /* ---------- wheel ---------- */
+  const NS = "http://www.w3.org/2000/svg";
+  let dotEls = [];
+  function renderWheel() {
+    const svg = $("wheel");
+    svg.innerHTML = "";
     dotEls = [];
+    const groups = groupsFor(), N = totalBeats();
+    const cx = 140, cy = 140, R = 108;
+    const gapAngle = 0.10;
+    const span = Math.PI * 2 - gapAngle * groups.length;
+    let a = -Math.PI / 2;
+    const dotR = Math.max(4.5, Math.min(11, 300 / N));
     let idx = 0;
-    t.groups.forEach(g => {
-      const gr = document.createElement("div");
-      gr.className = "agroup";
+    groups.forEach(g => {
       for (let i = 0; i < g.n; i++) {
-        const b = document.createElement("div");
-        b.className = "beat";
-        const d = document.createElement("div");
-        d.className = "dot" + (idx === 0 ? " samam" : "");
-        b.appendChild(d);
-        dotEls.push(d);
-        const l = document.createElement("div");
-        l.className = "alabel";
-        l.textContent = idx === 0 ? "samam" : (idx + 1);
-        b.appendChild(l);
-        gr.appendChild(b);
+        const ang = a + ((i + 0.5) / g.n) * (span * (g.n / N));
+        const x = cx + R * Math.cos(ang), y = cy + R * Math.sin(ang);
+        const c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", x.toFixed(1));
+        c.setAttribute("cy", y.toFixed(1));
+        c.setAttribute("r", dotR.toFixed(1));
+        const samam = idx === 0;
+        paintDot(c, samam, false);
+        svg.appendChild(c);
+        dotEls.push({ el: c, samam });
         idx++;
       }
-      if (g.label) {
-        const lab = document.createElement("div");
-        lab.className = "glabel";
-        lab.textContent = g.label;
-        gr.appendChild(lab);
-      }
-      beatsEl.appendChild(gr);
+      a += span * (g.n / N) + gapAngle;
     });
-    cycleInfo.textContent = t.beats + " aksharas per cycle" +
-      (t.groups[0].label ? " · " + t.groups.map(g => g.label + " " + g.n).join(" + ") : "");
+    $("comboName").innerHTML = isAdi() ? '<span class="alias">Adi</span>' : comboName();
+    const formula = groups.map(g => g.n).join(" + ");
+    const aks = N + " aksharas / cycle";
+    $("cycleLine").textContent = isChapu() ? formula + " · " + aks
+      : isAdi() ? "Chatusra Triputa · " + formula + " · " + aks
+      : formula + " · " + aks;
   }
-  function setBeat(i) {
-    dotEls.forEach((d, j) => d.classList.toggle("now", j === i));
+  function paintDot(c, samam, on) {
+    c.setAttribute("fill", on ? "var(--accent)" : samam ? "var(--samam)" : "none");
+    c.setAttribute("stroke", on ? "var(--accent)" : samam ? "var(--samam)" : "var(--muted)");
+    c.setAttribute("stroke-width", on || samam ? "2.5" : "2");
   }
-  function clearBeats() {
-    dotEls.forEach(d => d.classList.remove("now"));
+  function highlightBeat(i) {
+    dotEls.forEach((d, j) => paintDot(d.el, d.samam, j === i));
   }
+  function renderAll() { renderTalalist(); renderJati(); renderWheel(); }
 
   /* ---------- audio engine: lookahead scheduler ---------- */
   let actx = null, timerID = null, nextTime = 0, beatIdx = 0, subIdx = 0;
@@ -229,10 +319,10 @@
     else if (s === 0) click(t, F_BEAT, 0.45);
     else click(t, F_SUB, 0.22);
     const delayMs = Math.max(0, (t - actx.currentTime) * 1000);
-    setTimeout(() => { if (timerID) setBeat(b); }, delayMs);
+    setTimeout(() => { if (timerID) highlightBeat(b); }, delayMs);
   }
   function scheduler() {
-    const beats = TALAS[talaId].beats;
+    const beats = totalBeats();
     const subDur = (60 / bpm) / nadai;
     while (nextTime < actx.currentTime + LOOKAHEAD) {
       scheduleSub(beatIdx, subIdx, nextTime);
@@ -255,7 +345,7 @@
   function stop() {
     if (timerID) clearTimeout(timerID);
     timerID = null;
-    clearBeats();
+    dotEls.forEach(d => paintDot(d.el, d.samam, false));
     updatePlayBtn();
   }
   function restartCycle() {
@@ -276,16 +366,15 @@
   bpmVal.textContent = bpm;
   tempoEl.oninput = () => { bpm = parseInt(tempoEl.value, 10); bpmVal.textContent = bpm; saveSettings(); };
   document.querySelectorAll("#nadaiSeg button").forEach(b => {
-    if (parseInt(b.dataset.n, 10) === nadai) b.classList.add("on");
-    else b.classList.remove("on");
+    const on = parseInt(b.dataset.n, 10) === nadai;
+    b.classList.toggle("on", on);
     b.onclick = () => {
       nadai = parseInt(b.dataset.n, 10);
       document.querySelectorAll("#nadaiSeg button").forEach(x => x.classList.toggle("on", x === b));
       saveSettings();
-      subIdx = 0;   // re-phase subdivisions, keep the beat
+      subIdx = 0;
     };
   });
-  // tap tempo: average of last few taps
   let taps = [];
   $("tapBtn").onclick = () => {
     const now = performance.now();
@@ -294,16 +383,14 @@
     if (taps.length >= 2) {
       let sum = 0;
       for (let i = 1; i < taps.length; i++) sum += taps[i] - taps[i - 1];
-      const avg = sum / (taps.length - 1);
-      bpm = Math.round(Math.min(120, Math.max(30, 60000 / avg)));
+      bpm = Math.round(Math.min(120, Math.max(30, 60000 / (sum / (taps.length - 1)))));
       tempoEl.value = bpm;
       bpmVal.textContent = bpm;
       saveSettings();
     }
   };
 
-  renderTalas();
-  renderBeats();
+  renderAll();
   updatePlayBtn();
 })();
 </script>
