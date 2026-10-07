@@ -990,7 +990,7 @@ function selectGroup(id) {
   persist(); renderLoops(); updateABUI();
   const r = groupRange(g);
   if (r) seekTo(r.a);
-  if (audio.paused) togglePlay();
+  // like selectLoop: move the playhead, but never change the paused/playing state
 }
 /* explicit entry to new-loop mode: drop whatever is being edited, keep the open
    group (if any) as context, jump to the A–B tab. At top level the new loop
