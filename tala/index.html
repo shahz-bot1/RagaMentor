@@ -130,10 +130,12 @@
       <button class="tapbtn" id="tapBtn" title="Tap the beat to set tempo">Tap</button>
     </div>
     <div class="nadairow">
-      <h2>Nadai · subdivision</h2>
+      <h2>Subdivision</h2>
       <div class="seg" id="nadaiSeg">
-        <button data-n="4" class="on">Chatusra<small>4 / beat</small></button>
+        <button data-n="1">1st speed<small>1 / beat</small></button>
+        <button data-n="2">2nd speed<small>2 / beat</small></button>
         <button data-n="3">Tisra<small>3 / beat</small></button>
+        <button data-n="4" class="on">Chatusra<small>4 / beat</small></button>
       </div>
     </div>
   </section>
@@ -198,7 +200,7 @@
     else if (s.talaId && (TALAS[s.talaId] || CHAPU[s.talaId])) talaId = s.talaId;
     if (s.jatiId && JATIS.some(j => j.id === s.jatiId)) jatiId = s.jatiId;
     if (s.bpm >= 30 && s.bpm <= 120) bpm = s.bpm;
-    if (s.nadai === 3 || s.nadai === 4) nadai = s.nadai;
+    if (s.nadai === 1 || s.nadai === 2 || s.nadai === 3 || s.nadai === 4) nadai = s.nadai;
   } catch (e) {}
   const saveSettings = () => {
     try { localStorage.setItem("tala-settings", JSON.stringify({ talaId, jatiId, bpm, nadai })); } catch (e) {}
