@@ -1654,41 +1654,120 @@ function songMessage(text) {
   msg.textContent = text;
   setTimeout(() => { if (msg.textContent === text) msg.textContent = ""; }, 5000);
 }
-function exportLoops() {
-  const s = cur(); if (!s) return;
-  const data = {
+/* export payload builder (v2: ids are exported; group membership is an ordered
+   list of member ids, so duplicates round-trip exactly; names stay for humans) */
+function buildExportData() {
+  const s = cur(); if (!s) return null;
+  return {
     app: "RagaMentor",
-    version: 1,
+    version: 2,
     song: s.title,
     exportedAt: new Date().toISOString(),
     loops: [...s.loops].sort((a, b) => a.start - b.start).map((lp, i) => ({
+      id: lp.id,
       name: lp.name || ("Loop " + (i + 1)),
       start: Math.round(lp.start * 100) / 100,
       end: Math.round(lp.end * 100) / 100,
       note: lp.note || ""
     })),
     groups: (s.groups || []).map(g => ({
+      id: g.id,
       name: g.name || "Group",
       color: /^#[0-9a-fA-F]{6}$/.test(g.color) ? g.color : GROUP_COLORS[0],
-      loops: g.members.map(id => {
-        const lp = s.loops.find(l => l.id === id);
-        return lp ? (lp.name || "") : null;
-      }).filter(Boolean),
-      groups: g.members.map(id => {
-        const sg = (s.groups || []).find(x => x.id === id);
-        return sg ? (sg.name || "") : null;
-      }).filter(Boolean)
+      members: (g.members || []).filter(id =>
+        s.loops.some(l => l.id === id) ||
+        (s.groups || []).some(x => x.id === id && x.id !== g.id))
     }))
   };
+}
+function exportLoops() {
+  const data = buildExportData(); if (!data) return;
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = sanitizeFilename(s.title) + "-loops.json";
+  a.download = sanitizeFilename(cur().title) + "-loops.json";
   document.body.appendChild(a);
   a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
   songMessage("Exported " + data.loops.length + " loop" + (data.loops.length === 1 ? "" : "s") +
     (data.groups.length ? " + " + data.groups.length + " group" + (data.groups.length === 1 ? "" : "s") : "") + " as JSON.");
+}
+/* import core: returns the status message, or null when the data is unusable.
+   v2 matches group members by id (faithful even with duplicate names);
+   v1 / id-less files fall back to legacy name matching. Import replaces. */
+function importLoopsData(data) {
+  if (!data || !Array.isArray(data.loops)) return null;
+  const s = cur(); if (!s) return null;
+  const d = dur(), loops = [];
+  const seenIds = new Set();
+  const claimId = rawId => {
+    if (typeof rawId === "string" && rawId && !seenIds.has(rawId)) { seenIds.add(rawId); return rawId; }
+    let id = uid(); while (seenIds.has(id)) id = uid();
+    seenIds.add(id); return id;
+  };
+  data.loops.forEach((raw, i) => {
+    const st = parseFloat(raw.start), en = parseFloat(raw.end);
+    if (!isFinite(st) || !isFinite(en)) return;                 // skip invalid entries
+    const start = clamp(st, 0, d), end = clamp(en, 0, d);
+    if (end - start < MIN_LOOP) return;                         // skip degenerate
+    loops.push({ id: claimId(raw.id), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
+  });
+  s.loops = loops;                                              // replace semantics
+  const loopById = {}, groupById = {};
+  loops.forEach(lp => { loopById[lp.id] = lp; });
+  const v2 = data.version >= 2;
+  const groups = [];
+  // legacy v1: match members by name (first wins on duplicates)
+  const nameToLoopId = {};
+  loops.forEach(lp => { if (!(lp.name in nameToLoopId)) nameToLoopId[lp.name] = lp.id; });
+  const nameToGroupId = {};
+  (Array.isArray(data.groups) ? data.groups : []).forEach((rg, gi) => {
+    if (!rg || typeof rg.name !== "string") return;
+    const gname = String(rg.name).slice(0, 40) || ("Group " + (gi + 1));
+    if (!v2 && (gname in nameToGroupId)) return;   // v1 duplicate group names: first wins
+    const g = {
+      id: claimId(rg.id),
+      name: gname,
+      color: /^#[0-9a-fA-F]{6}$/.test(rg.color) ? rg.color : GROUP_COLORS[gi % GROUP_COLORS.length],
+      members: []
+    };
+    if (v2 && Array.isArray(rg.members)) g._memberIds = rg.members.map(String);
+    else {
+      g._loopNames = (Array.isArray(rg.loops) ? rg.loops : []).map(String);
+      g._groupNames = (Array.isArray(rg.groups) ? rg.groups : []).map(String);
+    }
+    groups.push(g); groupById[g.id] = g; nameToGroupId[gname] = g.id;
+  });
+  const taken = new Set();   // one parent per item
+  const tryAdd = (g, id) => {
+    if (!id || id === g.id || taken.has(id)) return;
+    if (!loopById[id] && !groupById[id]) return;
+    g.members.push(id); taken.add(id);
+  };
+  for (const g of groups) {
+    if (g._memberIds) { for (const mid of g._memberIds) tryAdd(g, mid); delete g._memberIds; continue; }
+    for (const n of (g._loopNames || [])) { const id = nameToLoopId[n]; if (id) tryAdd(g, id); }
+    for (const n of (g._groupNames || [])) { const id = nameToGroupId[n]; if (id) tryAdd(g, id); }
+    delete g._loopNames; delete g._groupNames;
+  }
+  if (!v2) {
+    // v1 had no stored order: restore the old start-sorted approximation
+    const rStart = id => {
+      const l = loopById[id]; if (l) return l.start;
+      const gg = groupById[id]; if (!gg) return 1e9;
+      const starts = gg.members.map(m => loopById[m] ? loopById[m].start : 1e9);
+      return starts.length ? Math.min(...starts) : 1e9;
+    };
+    for (const g of groups) g.members.sort((a, b) => rStart(a) - rStart(b));
+  }
+  s.groups = groups;
+  sanitizeGroups(s);   // enforce depth cap, break cycles, drop empties
+  selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
+  looping = false; workingA = workingB = null;
+  persist(); renderLoops(); updateABUI();
+  return "Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
+    (s.groups.length ? " + " + s.groups.length + " group" + (s.groups.length === 1 ? "" : "s") : "") +
+    " — replaced previous loops.";
 }
 $("songExportBtn").onclick = exportLoops;
 $("songImportBtn").onclick = () => $("loopsFileInput").click();
@@ -1697,67 +1776,8 @@ $("loopsFileInput").addEventListener("change", async e => {
   e.target.value = "";
   if (!f) return;
   try {
-    const data = JSON.parse(await f.text());
-    if (!data || !Array.isArray(data.loops)) throw new Error("bad format");
-    const s = cur(); if (!s) return;
-    const d = dur(), loops = [];
-    data.loops.forEach((raw, i) => {
-      const st = parseFloat(raw.start), en = parseFloat(raw.end);
-      if (!isFinite(st) || !isFinite(en)) return;                 // skip invalid entries
-      const start = clamp(st, 0, d), end = clamp(en, 0, d);
-      if (end - start < MIN_LOOP) return;                         // skip degenerate
-      loops.push({ id: uid(), name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
-    });
-    s.loops = loops;                                              // replace semantics
-    // rebuild groups: match members by name (fresh ids), one parent per item.
-    // two passes so sub-groups resolve regardless of order in the file.
-    const nameToId = {};
-    loops.forEach(lp => { if (!(lp.name in nameToId)) nameToId[lp.name] = lp.id; });
-    const groups = [], groupNameToId = {};
-    (Array.isArray(data.groups) ? data.groups : []).forEach((rg, gi) => {
-      if (!rg || typeof rg.name !== "string") return;
-      const gname = String(rg.name).slice(0, 40) || ("Group " + (gi + 1));
-      if (gname in groupNameToId) return;   // duplicate names: first wins
-      const g = {
-        id: uid(), name: gname,
-        color: /^#[0-9a-fA-F]{6}$/.test(rg.color) ? rg.color : GROUP_COLORS[gi % GROUP_COLORS.length],
-        members: []
-      };
-      g._loopNames = (Array.isArray(rg.loops) ? rg.loops : []).map(String);
-      g._groupNames = (Array.isArray(rg.groups) ? rg.groups : []).map(String);
-      groups.push(g); groupNameToId[gname] = g.id;
-    });
-    const taken = new Set();   // one parent per item
-    for (const g of groups){
-      for (const n of g._loopNames){
-        const id = nameToId[n];
-        if (id && !taken.has(id)){ g.members.push(id); taken.add(id); }
-      }
-      delete g._loopNames;
-    }
-    for (const g of groups){
-      for (const n of g._groupNames){
-        const id = groupNameToId[n];
-        if (id && id !== g.id && !taken.has(id)){ g.members.push(id); taken.add(id); }
-      }
-      delete g._groupNames;
-    }
-    const rStart = id => {
-      const l = loops.find(x => x.id === id); if (l) return l.start;
-      const gg = groups.find(x => x.id === id);
-      if (!gg) return 1e9;
-      const starts = gg.members.map(m => { const ll = loops.find(x => x.id === m); return ll ? ll.start : 1e9; });
-      return starts.length ? Math.min(...starts) : 1e9;
-    };
-    for (const g of groups) g.members.sort((a, b) => rStart(a) - rStart(b));
-    s.groups = groups;
-    sanitizeGroups(s);   // enforce depth cap, break cycles, drop empties
-    selectedLoopId = null; selectedGroupId = null; fsGroupView = null; fsChecklist = false; checkSel = null; checkConstrain = null;
-    looping = false; workingA = workingB = null;
-    persist(); renderLoops(); updateABUI();
-    songMessage("Imported " + loops.length + " loop" + (loops.length === 1 ? "" : "s") +
-      (s.groups.length ? " + " + s.groups.length + " group" + (s.groups.length === 1 ? "" : "s") : "") +
-      " — replaced previous loops.");
+    const msg = importLoopsData(JSON.parse(await f.text()));
+    songMessage(msg || "Could not import: not a valid RagaMentor loops file.");
   } catch (err) {
     songMessage("Could not import: not a valid RagaMentor loops file.");
   }
