@@ -36,15 +36,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   // ---- v2 round-trip with duplicate names ----
   seed();
   const data = E(`buildExportData()`);
-  t("export is version 2", data.version === 2);
-  t("ids exported", data.loops.every(l => typeof l.id === "string") && data.groups.every(g => typeof g.id === "string"));
-  t("members are id lists", data.groups.every(g => Array.isArray(g.members)));
+  t("export is version 3", data.version === 3);
+  t("ids are file-local serials",
+    JSON.stringify(data.loops.map(l => l.id)) === "[1,2,3]" &&
+    JSON.stringify(data.groups.map(g => g.id)) === "[4,5]");
+  t("members are serial lists", data.groups.every(g => Array.isArray(g.members)));
   const before = snap();
   wipe();
   const msg = E(`importLoopsData(JSON.parse(${JSON.stringify(JSON.stringify(data))}))`);
   t("import reports success", typeof msg === "string" && msg.includes("Imported 3 loops"));
   t("loops restored", E(`cur().loops.length`) === 3);
-  t("ids preserved", E(`cur().loops.some(l => l.id === "l1") && cur().groups.some(g => g.id === "g1")`));
+  t("decoupled: db ids are fresh, not file serials",
+    E(`cur().loops.every(l => typeof l.id === "string" && l.id.includes("-"))`) &&
+    E(`!cur().loops.some(l => ["l1","l2","l3"].includes(l.id))`));
   t("duplicate names all survive", E(`cur().loops.filter(l => l.name === "Phrase").length`) === 2);
   t("both same-named groups survive", E(`cur().groups.filter(g => g.name === "Pallavi").length`) === 2);
   const after = snap();
@@ -55,6 +59,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   t("export stable across round-trip (loops/groups identical)",
     JSON.stringify({ ...data, exportedAt: 0, song: "" }) ===
     JSON.stringify({ ...data2, exportedAt: 0, song: "" }));
+
+  // ---- v2 uuid-keyed file (the short-lived format): keys still resolve ----
+  wipe();
+  const v2 = { app: "RagaMentor", version: 2, song: "T",
+    loops: [{ id: "u1", name: "Phrase", start: 10, end: 20 }, { id: "u2", name: "Phrase", start: 30, end: 40 }],
+    groups: [{ id: "u3", name: "Pallavi", color: "#2dd4bf", members: ["u1", "u2"] }] };
+  E(`importLoopsData(JSON.parse(${JSON.stringify(JSON.stringify(v2))}))`);
+  t("v2 keys resolve membership",
+    E(`cur().groups[0].members.length`) === 2 &&
+    E(`!cur().loops.some(l => ["u1","u2"].includes(l.id))`));
 
   // ---- v1 backward compatibility (name-based, first wins) ----
   wipe();
