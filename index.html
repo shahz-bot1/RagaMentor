@@ -56,6 +56,14 @@
       </span>
       <span class="chev">›</span>
     </button>
+    <button class="appcard" id="talaCard">
+      <span class="appicon">🥁</span>
+      <span class="appmeta">
+        <b>Tala Studio</b>
+        <p>Keep time for your practice.</p>
+      </span>
+      <span class="chev">›</span>
+    </button>
   </div>
   <p class="coming">More studios coming</p>
 </div>
@@ -76,6 +84,7 @@
     try { localStorage.setItem("slowloop-theme", next); } catch (e) {}
   };
   document.getElementById("loopLabCard").onclick = function () { location.href = "prototype/"; };
+  document.getElementById("talaCard").onclick = function () { location.href = "tala/"; };
   // live counts from the shared song library
   try {
     var req = indexedDB.open("slowloop-proto", 1);
