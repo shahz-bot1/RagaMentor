@@ -159,6 +159,7 @@
     </div>
     <p class="note" style="margin:10px 0 0">Sa = C · prototype synth; vocal is clearly synthetic, good enough to hear sthanas</p>
     <p class="note" style="margin:6px 0 0">🔇 No sound on iPhone? Turn off silent mode.</p>
+    <p class="note" style="margin:6px 0 0">Harmonium samples: tonejs-instruments · CC-BY 3.0</p>
   </section>
   <section class="card">
     <h2>Allied ragas <span class="tag">· sounds like</span></h2>
@@ -318,6 +319,47 @@
     const up = s.includes("'") ? 12 : 0;
     return SA_FREQ * Math.pow(2, (SEMI[norm(s)] + up) / 12);
   }
+
+  /* ---------- sampled harmonium (CC-BY 3.0, tonejs-instruments) ---------- */
+  const SAMPLE_BASE = "https://raw.githubusercontent.com/makefully-studios/tonejs-instruments/main/samples/harmonium/mp3/";
+  const NOTE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
+  const sampleBufs = {};
+  let samplesLoading = null;
+  function swaraToSample(s) {
+    const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
+    let file = NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3";
+    let rate = 1;
+    if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); } // Fs4 missing upstream
+    return { file, rate };
+  }
+  function ensureSamples() {
+    if (!samplesLoading) {
+      samplesLoading = (async () => {
+        const files = ["C4","Cs4","D4","Ds4","E4","F4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3");
+        await Promise.all(files.map(async f => {
+          const res = await fetch(SAMPLE_BASE + f);
+          if (!res.ok) throw new Error("sample " + f);
+          sampleBufs[f] = await actx.decodeAudioData(await res.arrayBuffer());
+        }));
+      })();
+    }
+    return samplesLoading;
+  }
+  function playSampledNote(t, swara, dur) {
+    const { file, rate } = swaraToSample(swara);
+    const buf = sampleBufs[file];
+    if (!buf) return false;
+    const src = actx.createBufferSource();
+    src.buffer = buf; src.playbackRate.value = rate;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+    g.gain.setValueAtTime(0.9, t + Math.max(0.02, dur - 0.12));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
+    src.connect(g); g.connect(actx.destination);
+    src.start(t); src.stop(t + dur + 0.2);
+    return true;
+  }
   function noteNode(t, f, dur, timbre) {
     const o = actx.createOscillator();
     o.type = "sawtooth"; o.frequency.value = f;
@@ -361,11 +403,17 @@
     pb.textContent = "▶ Play arohana + avarohana";
     pb.classList.remove("playing");
   }
-  document.getElementById("playBtn").onclick = () => {
+  document.getElementById("playBtn").onclick = async () => {
     if (playing) { stopPlayback(); return; }
     ensureAudio();
-    playing = true; playTimer = [];
     const pb = document.getElementById("playBtn");
+    let useSamples = false;
+    if (timbre === "harmonium") {
+      pb.textContent = "⏳ Loading harmonium…";
+      try { await ensureSamples(); useSamples = true; }
+      catch (e) { useSamples = false; } // fall back to synth
+    }
+    playing = true; playTimer = [];
     pb.textContent = "■ Stop";
     pb.classList.add("playing");
     const seq = [...cur.aro.map(s => ["dAro", s]), ...cur.ava.map(s => ["dAva", s])];
@@ -375,7 +423,8 @@
       dAva: [...document.getElementById("dAva").children],
     };
     seq.forEach(([box, s], i) => {
-      noteNode(t0 + i * step, freqOf(s), step * 0.96, timbre);
+      if (useSamples) playSampledNote(t0 + i * step, s, step * 0.96);
+      else noteNode(t0 + i * step, freqOf(s), step * 0.96, timbre);
       const idx = box === "dAro" ? i : i - cur.aro.length;
       playTimer.push(setTimeout(() => {
         if (!playing) return;
