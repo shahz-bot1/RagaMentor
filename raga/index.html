@@ -180,7 +180,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v8</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v9</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -681,7 +681,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 8;
+  const PIANO_VER = 9;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
@@ -696,8 +696,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
         swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
     // Build continuous strip in piano coordinates: start one semitone before Sa
-    // White width chosen so Sa(0) to Sa'(12) spans exactly 100% after offset
-    const ww = 100 / 7.62, bw = ww * 0.62; // 7 whites + black overhang
+    // White width: Sa(0) to Sa'(12) must span exactly 100%
+    const mainWhiteCount = (() => { let c = 0; for (let r = 0; r <= 12; r++) if (isWhite(pc(r))) c++; return c; })();
+    const ww = isWhite(pc(0)) ? 100 / mainWhiteCount : 100 / (mainWhiteCount + 0.62);
+    const bw = ww * 0.62;
     // Map rel -> x position (left edge) in % of container
     // We lay out starting at rel=-1 (neighbor), then offset so rel=0 left edge = 0%
     const whiteX = {}; // rel -> left%
