@@ -87,7 +87,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
 .pianostrip { display: none; }
-.piano-wrap { overflow: hidden; margin-bottom: 12px; border-radius: 8px; }
+.piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; }
 .piano { position: relative; height: 110px; user-select: none; }
 .piano .wk { position: absolute; top: 0; bottom: 0; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; }
 .piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 10px; color: #999; }
@@ -724,16 +724,9 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       b.style.width = bw + "%";
       let prevW = -1;
       for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-      if (prevW < 0) {
-        // Sa is black: align left edge to container (fully visible)
-        b.style.left = "0%"; b.style.marginLeft = "0";
-      } else if (rel === 12 && !isWhite(pc(12))) {
-        // S' is black: align right edge to container (fully visible)
-        b.style.left = "100%"; b.style.marginLeft = (-bw) + "%";
-      } else {
-        b.style.left = ((prevW + 1) * ww) + "%";
-        b.style.marginLeft = (-bw / 2) + "%";
-      }
+      // uniform: center on the white-key boundary (edge keys clip slightly = slice look)
+      b.style.left = ((prevW + 1) * ww) + "%";
+      b.style.marginLeft = (-bw / 2) + "%";
       el.appendChild(b);
     }
   }
