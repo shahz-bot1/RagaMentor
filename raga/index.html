@@ -180,7 +180,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v10</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v11</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -190,9 +190,9 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
     <div class="sliderow">
-      <label for="speedSlider">Speed</label>
-      <input type="range" id="speedSlider" min="0.25" max="2" step="0.05" value="0.5">
-      <span id="speedVal">0.50s / note</span>
+      <label for="speedSlider">Tempo</label>
+      <input type="range" id="speedSlider" min="30" max="240" step="10" value="120">
+      <span id="speedVal">120 BPM</span>
     </div>
     <p class="note" id="audioStatus" style="margin:10px 0 0">Audio: not started — tap Test beep below</p>
     <div class="playrow">
@@ -681,7 +681,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 10;
+  const PIANO_VER = 11;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
@@ -792,13 +792,14 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     homeView.style.display = "";
   };
   const speedSlider = document.getElementById("speedSlider"), speedVal = document.getElementById("speedVal");
-  const updateSpeedLabel = () => { speedVal.textContent = parseFloat(speedSlider.value).toFixed(2) + "s / note"; };
+  const updateSpeedLabel = () => { speedVal.textContent = speedSlider.value + " BPM"; };
   try {
-    const savedSpeed = localStorage.getItem("raga-speed");
-    if (savedSpeed && parseFloat(savedSpeed) >= 0.25 && parseFloat(savedSpeed) <= 2) speedSlider.value = savedSpeed;
+    const savedTempo = localStorage.getItem("raga-tempo");
+    if (savedTempo && parseInt(savedTempo) >= 30 && parseInt(savedTempo) <= 240) speedSlider.value = savedTempo;
+    updateSpeedLabel();
   } catch (e) {}
   speedSlider.oninput = () => { updateSpeedLabel();
-    try { localStorage.setItem("raga-speed", speedSlider.value); } catch (e) {} };
+    try { localStorage.setItem("raga-tempo", speedSlider.value); } catch (e) {} };
   updateSpeedLabel();
   // iOS suspends Web Audio in background — stop playback on hide, resume ctx on show
   document.addEventListener("visibilitychange", () => {
@@ -997,7 +998,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     pb.textContent = "■ Stop";
     pb.classList.add("playing");
     const seq = [...cur.aro.map(s => ["dAro", s]), ...cur.ava.map(s => ["dAva", s])];
-    const step = parseFloat(document.getElementById("speedSlider").value) || 0.5;
+    const step = 60 / (parseInt(document.getElementById("speedSlider").value) || 120);
     const t0 = actx.currentTime + 0.08;
     const chips = {
       dAro: [...document.getElementById("dAro").children],
