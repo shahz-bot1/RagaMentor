@@ -55,6 +55,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .seg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 3px; margin-bottom: 12px; }
 .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 9px 4px; border-radius: 9px; }
 .seg button.on { background: var(--panel); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.seg.small { margin: 0; padding: 2px; }
+.seg.small button { font-size: 11px; padding: 4px 8px; flex: none; }
 .seg button small { display: block; font-size: 10.5px; font-weight: 400; opacity: .75; }
 .chakra { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
 .chead { width: 100%; text-align: left; background: none; border: 0; color: var(--text); padding: 13px 14px;
@@ -130,11 +132,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     </div>
     <div id="chakraList"></div>
   </section>
+  <section class="view" id="view-hin">
+    <div id="thaatList"></div>
+  </section>
 </main>
 <nav class="tabbar" id="tabbar">
   <button data-v="view-search" class="on"><span class="ic">🔍</span>Search</button>
   <button data-v="view-fav"><span class="ic">⭐</span>Favourites</button>
   <button data-v="view-mel"><span class="ic">🎼</span>Melakartas</button>
+  <button data-v="view-hin"><span class="ic">🎵</span>Hindustani</button>
 </nav>
 
 <main id="detailView">
@@ -144,7 +150,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     <button class="star" id="dStar" title="Favourite">☆</button>
   </div>
   <section class="card">
-    <h2>Arohana · ascending</h2>
+    <h2>Arohana · ascending
+      <span class="seg small" id="notationSeg" style="float:right">
+        <button data-n="carnatic">Carnatic</button><button data-n="hindustani">Hindustani</button>
+      </span>
+    </h2>
     <div class="swararow" id="dAro"></div>
     <div class="scalelabel">Avarohana · descending</div>
     <div class="swararow" id="dAva"></div>
@@ -409,6 +419,31 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     { id:"hindolam", name:"Hindolam", mel:"Natabhairavi (20)", jati:"Audava",
       aro:["S","G2","M1","D1","N2","S'"], ava:["S'","N2","D1","M1","G2","S"],
       allied:["Abhogi"] },
+    // Hindustani ragas
+    { id:"desh", name:"Desh", sys:"H", thaat:"Khamaj",
+      aro:["S","R2","M1","P","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R2","S"],
+      allied:[] },
+    { id:"yaman", name:"Yaman", sys:"H", thaat:"Yaman",
+      aro:["S","R2","G3","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G3","R2","S"],
+      allied:[] },
+    { id:"bhairavi_h", name:"Bhairavi", sys:"H", thaat:"Bhairavi",
+      aro:["S","R1","G2","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G2","R1","S"],
+      allied:[] },
+    { id:"bhimpalasi", name:"Bhimpalasi", sys:"H", thaat:"Kafi",
+      aro:["S","G2","M1","P","N2","S'"], ava:["S'","N2","D2","P","M1","G2","R2","S"],
+      allied:[] },
+    { id:"malkauns", name:"Malkauns", sys:"H", thaat:"Bhairavi",
+      aro:["S","G2","M1","D1","N2","S'"], ava:["S'","N2","D1","M1","G2","S"],
+      allied:["Hindolam"] },
+    { id:"bhairav_h", name:"Bhairav", sys:"H", thaat:"Bhairav",
+      aro:["S","R1","G3","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G3","R1","S"],
+      allied:[] },
+    { id:"kafi", name:"Kafi", sys:"H", thaat:"Kafi",
+      aro:["S","R2","G2","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G2","R2","S"],
+      allied:[] },
+    { id:"darbari", name:"Darbari Kanada", sys:"H", thaat:"Asavari",
+      aro:["S","R2","G2","M1","P","D1","N2","S'"], ava:["S'","D1","N2","P","M1","P","G2","M1","R2","S"],
+      allied:[] },
   ];
   const byId = id => RAGAS.find(r => r.id === id);
 
@@ -422,7 +457,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     b.title = "Favourite";
     b.onclick = e => { e.stopPropagation();
       favs.has(r.id) ? favs.delete(r.id) : favs.add(r.id);
-      saveFavs(); renderList(); renderFav(); renderChakras(); updateDetailStar();
+      saveFavs(); renderList(); renderFav(); renderChakras(); renderHindustani(); updateDetailStar();
     };
     return b;
   }
@@ -436,6 +471,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     document.querySelectorAll("#homeView .view").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
     document.getElementById(b.dataset.v).classList.add("on");
+    if (b.dataset.v === "view-hin") renderHindustani();
   });
   document.getElementById("homeBtn").onclick = () => { location.href = "../"; };
 
@@ -451,9 +487,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   function renderChakras() {
     const list = document.getElementById("chakraList");
     list.innerHTML = "";
+    if (mFilter === "all") {
+      // flat list ordered by melakarta number
+      RAGAS.filter(r => r.num).sort((a, b) => a.num - b.num)
+        .forEach(r => list.appendChild(ragaCard(r)));
+      return;
+    }
     for (let ci = 0; ci < 12; ci++) {
       const m = ci < 6 ? "M1" : "M2";
-      if (mFilter !== "all" && m !== mFilter) continue;
+      if (m !== mFilter) continue;
       const ragas = RAGAS.filter(r => r.num && chakraIdx(r) === ci);
       if (!ragas.length) continue;
       const d = document.createElement("div");
@@ -469,6 +511,24 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       d.appendChild(head); d.appendChild(body);
       list.appendChild(d);
     }
+  }
+  function renderHindustani() {
+    const list = document.getElementById("thaatList");
+    list.innerHTML = "";
+    const hr = RAGAS.filter(r => r.sys === "H");
+    const thaats = [...new Set(hr.map(r => r.thaat))].sort();
+    thaats.forEach(t => {
+      const d = document.createElement("div");
+      d.className = "chakra open";
+      const head = document.createElement("div");
+      head.className = "chead";
+      head.innerHTML = '<span class="nm">' + t + ' thaat</span>';
+      const body = document.createElement("div");
+      body.className = "cbody";
+      hr.filter(r => r.thaat === t).forEach(r => body.appendChild(ragaCard(r)));
+      d.appendChild(head); d.appendChild(body);
+      list.appendChild(d);
+    });
   }
   document.querySelectorAll("#mSeg button").forEach(b => b.onclick = () => {
     document.querySelectorAll("#mSeg button").forEach(x => x.classList.remove("on"));
@@ -506,8 +566,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   function ragaCard(r) {
     const b = document.createElement("button");
     b.className = "ragacard";
+    const sub = r.sys === "H" ? r.thaat + " thaat"
+      : (r.num ? "#" + r.num + " · " + r.chakra + " chakra" : r.mel) + (r.jati ? " · " + r.jati : "");
     b.innerHTML = '<span class="chev">›</span><b>' + r.name + '</b>' +
-      '<div class="sub">' + (r.num ? "#" + r.num + " · " + r.chakra + " chakra" : r.mel) + ' · ' + r.jati + '</div>' +
+      '<div class="sub">' + sub + '</div>' +
       '<div class="scale">' + r.aro.join(" ") + '</div>';
     b.appendChild(starBtn(r));
     b.onclick = () => openDetail(r.id);
@@ -556,10 +618,22 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   function swaraChip(s) {
     const d = document.createElement("div");
     d.className = "swara" + (norm(s) === "S" ? " sa" : "");
-    d.textContent = s;
+    d.textContent = notation === "hindustani" ? toHindustani(s) : s;
     d.dataset.swara = s;
     return d;
   }
+  let notation = "carnatic";
+  function renderSwaraChips() {
+    const aro = document.getElementById("dAro"), ava = document.getElementById("dAva");
+    aro.innerHTML = ""; ava.innerHTML = "";
+    cur.aro.forEach(s => aro.appendChild(swaraChip(s)));
+    cur.ava.forEach(s => ava.appendChild(swaraChip(s)));
+    document.querySelectorAll("#notationSeg button").forEach(b =>
+      b.classList.toggle("on", b.dataset.n === notation));
+  }
+  document.querySelectorAll("#notationSeg button").forEach(b => {
+    b.onclick = () => { notation = b.dataset.n; renderSwaraChips(); };
+  });
   function openDetail(id) {
     cur = byId(id);
     stopPlayback();
@@ -567,16 +641,17 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     updateDetailStar();
     document.getElementById("dStar").onclick = () => {
       favs.has(cur.id) ? favs.delete(cur.id) : favs.add(cur.id);
-      saveFavs(); updateDetailStar(); renderList(); renderFav(); renderChakras();
+      saveFavs(); updateDetailStar(); renderList(); renderFav(); renderChakras(); renderHindustani();
     };
     document.getElementById("dMeta").innerHTML =
-      cur.num
-        ? "Melakarta <b>#" + cur.num + " · " + cur.chakra + " chakra</b> · " + cur.jati
-        : "Melakarta <b>" + cur.mel + "</b> · " + cur.jati;
+      cur.sys === "H"
+        ? "Hindustani · <b>" + cur.thaat + " thaat</b>"
+        : cur.num
+          ? "Melakarta <b>#" + cur.num + " · " + cur.chakra + " chakra</b> · " + cur.jati
+          : "Melakarta <b>" + cur.mel + "</b> · " + cur.jati;
     const aro = document.getElementById("dAro"), ava = document.getElementById("dAva");
-    aro.innerHTML = ""; ava.innerHTML = "";
-    cur.aro.forEach(s => aro.appendChild(swaraChip(s)));
-    cur.ava.forEach(s => ava.appendChild(swaraChip(s)));
+    notation = cur.sys === "H" ? "hindustani" : "carnatic";
+    renderSwaraChips();
     const al = document.getElementById("dAllied");
     al.innerHTML = "";
     cur.allied.forEach(nm => {
@@ -678,6 +753,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   /* ---------- sampled timbres ---------- */
   const NOTE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
   const SHARP_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  // Carnatic -> Hindustani notation (komal lowercase, M = tivra Ma)
+  const TO_HINDUSTANI = { S:"S", R1:"r", R2:"R", R3:"R", G1:"g", G2:"g", G3:"G",
+                          M1:"m", M2:"M", P:"P", D1:"d", D2:"D", D3:"D", N1:"n", N2:"n", N3:"N" };
+  const toHindustani = s => { const hi = s.endsWith("'"); const base = norm(s);
+    return (TO_HINDUSTANI[base] || base) + (hi ? "'" : ""); };
   const SAMPLE_SETS = {
     harmonium: {
       base: "samples/harmonium/",
