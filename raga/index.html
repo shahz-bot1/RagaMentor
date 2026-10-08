@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock: RagaBrowser v1</title>
+<style>
+  :root, [data-theme="dark"] {
+    --bg: #101318; --panel: #171c24; --panel2: #1f2631;
+    --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
+    --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
+    --samam: #ffd166;
+  }
+  [data-theme="light"] {
+    --bg: #f4f6f9; --panel: #ffffff; --panel2: #eef1f5;
+    --text: #1b2330; --muted: #5d6b7d; --border: #dde3ea;
+    --accent: #2f6fe4; --accent-soft: rgba(47,111,228,.12);
+    --samam: #d99a17;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Segoe UI, sans-serif;
+         background: var(--bg); color: var(--text); }
+  .mockbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px;
+             background: var(--panel2); border-bottom: 1px solid var(--border);
+             font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 30; }
+  .mockbar button { font-size: 12px; padding: 4px 12px; border-radius: 8px;
+                    border: 1px solid var(--border); background: transparent; color: var(--text); }
+  header.apphead { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); }
+  .llrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 12px; }
+  #homeBtn { justify-self: start; font-size: 13px; padding: 6px 10px; border-radius: 8px;
+             border: 1px solid var(--border); background: transparent; color: var(--accent); }
+  .lltitle { justify-self: center; text-align: center; min-width: 0; }
+  .lltitle h1 { margin: 0; font-size: 20px; letter-spacing: .2px; white-space: nowrap; }
+  .lltitle h1 span { color: var(--accent); }
+  .lltitle p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+  #themeBtn { justify-self: end; font-size: 13px; padding: 6px 10px; border-radius: 8px;
+              border: 1px solid var(--border); background: transparent; color: var(--text); }
+  main { max-width: 640px; margin: 0 auto; padding: 16px 20px 60px; display: grid; gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  .card h2 .tag { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; }
+  .searchbar { display: flex; gap: 8px; }
+  .searchbar input { flex: 1; font: inherit; font-size: 15px; padding: 10px 14px; border-radius: 10px;
+                     border: 1px solid var(--border); background: var(--panel2); color: var(--text); }
+  .searchbar input::placeholder { color: var(--muted); }
+  .clearbtn { font-size: 13px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+              background: transparent; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { border: 1px solid var(--border); background: var(--panel2); color: var(--muted);
+                  font: inherit; font-size: 14px; padding: 8px 13px; border-radius: 999px; min-width: 44px; }
+  .chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
+  .mchips button { font-size: 12px; padding: 7px 12px; }
+  .ragalist { display: grid; gap: 10px; }
+  .ragacard { width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--border);
+              border-radius: 14px; padding: 14px 16px; color: var(--text); font: inherit; }
+  .ragacard b { font-size: 16px; }
+  .ragacard .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .ragacard .scale { font-size: 13px; color: var(--accent); margin-top: 6px; font-variant-numeric: tabular-nums; }
+  .ragacard .chev { float: right; color: var(--muted); font-size: 18px; }
+  .count { font-size: 12px; color: var(--muted); }
+  /* detail */
+  #detailView { display: none; }
+  .backbtn { font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
+             background: transparent; color: var(--accent); margin-bottom: 4px; justify-self: start; }
+  .hero { text-align: center; padding: 8px 0 2px; }
+  .hero h2 { font-size: 26px; margin: 0; }
+  .hero .meta { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .hero .meta b { color: var(--samam); font-weight: 600; }
+  .swararow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .swara { font-size: 14px; font-weight: 600; padding: 9px 0; border-radius: 10px; min-width: 46px; text-align: center;
+           background: var(--panel2); border: 1px solid var(--border); }
+  .swara.sa { border-color: var(--samam); color: var(--samam); }
+  .swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .scalelabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin: 12px 0 2px; }
+  .scalelabel:first-child { margin-top: 0; }
+  .seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
+                font-size: 13px; padding: 9px 4px; border-radius: 8px; }
+  .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .seg button small { display: block; font-size: 10px; color: var(--muted); }
+  .seg button.on small { color: var(--accent); }
+  .playrow { display: flex; gap: 10px; margin-top: 12px; }
+  .bigplay { flex: 1; border: 0; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 700;
+             background: var(--accent); color: #fff; }
+  .bigplay.playing { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
+  .allied { display: flex; flex-wrap: wrap; gap: 8px; }
+  .allied button { border: 1px solid var(--border); background: var(--panel2); color: var(--text);
+                   font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 999px; }
+  .note { font-size: 12px; color: var(--muted); }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 18px; }
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <span>MOCK — RagaBrowser v1 · 8-raga sample data · audio is real synth</span>
+  <button id="mockTheme">◐ Light</button>
+</div>
+
+<header class="apphead">
+  <div class="llrow">
+    <button id="homeBtn">‹ RagaMentor</button>
+    <div class="lltitle">
+      <h1>🔍 Raga<span>Browser</span></h1>
+      <p>Find your raga</p>
+    </div>
+    <button id="themeBtn">◐ Theme</button>
+  </div>
+</header>
+
+<main id="homeView">
+  <section class="card">
+    <h2>Search by name</h2>
+    <div class="searchbar">
+      <input id="nameSearch" type="search" placeholder="e.g. mohanam…" autocomplete="off">
+      <button class="clearbtn" id="clearBtn">Clear</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Search by swaras <span class="tag">· ragas containing all selected</span></h2>
+    <div class="chips" id="swaraChips"></div>
+  </section>
+
+  <section class="card">
+    <h2>Browse by melakarta <span class="tag">· parent of the sample set</span></h2>
+    <div class="chips mchips" id="melChips"></div>
+  </section>
+
+  <section>
+    <div class="count" id="resultCount"></div>
+    <div class="ragalist" id="ragaList" style="margin-top:10px"></div>
+  </section>
+</main>
+
+<main id="detailView">
+  <button class="backbtn" id="detailBack">‹ Search</button>
+  <div class="hero">
+    <h2 id="dName"></h2>
+    <div class="meta" id="dMeta"></div>
+  </div>
+  <section class="card">
+    <h2>Arohana · ascending</h2>
+    <div class="swararow" id="dAro"></div>
+    <div class="scalelabel">Avarohana · descending</div>
+    <div class="swararow" id="dAva"></div>
+  </section>
+  <section class="card">
+    <h2>Listen <span class="tag">· timbre</span></h2>
+    <div class="seg" id="timbreSeg">
+      <button data-t="harmonium" class="on">Harmonium<small>reed organ</small></button>
+      <button data-t="vocal">Vocal<small>"ah" synth</small></button>
+      <button data-t="choir">Choir<small>“ah” voices</small></button>
+      <button data-t="ai_voice">AI Voice<small>experimental</small></button>
+    </div>
+    <div class="playrow">
+      <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
+    </div>
+    <p class="note" id="audioStatus" style="margin:10px 0 0">Audio: not started — tap Test beep below</p>
+    <div class="playrow">
+      <button class="clearbtn" id="beepBtn" style="flex:1">🔔 Test beep</button>
+    </div>
+    <p class="note" style="margin:10px 0 0">Sa = C · prototype synth; vocal is clearly synthetic, good enough to hear sthanas</p>
+    <p class="note" style="margin:6px 0 0">🔇 No sound on iPhone? Turn off silent mode.</p>
+    <p class="note" style="margin:6px 0 0">Harmonium: tonejs-instruments · CC-BY 3.0 · Choir: Sonatina · CC Sampling+ 1.0 · AI voice: DiffSinger TIGER (experimental, non-commercial voicebank)</p>
+  </section>
+  <section class="card">
+    <h2>Allied ragas <span class="tag">· sounds like</span></h2>
+    <div class="allied" id="dAllied"></div>
+  </section>
+  <section class="card">
+    <h2>Lakshana <span class="tag">· curated in v1</span></h2>
+    <p class="note" style="margin:0">Vadi / samvadi, anya swaras, jeeva swaras and compositions land here once the dataset is curated.</p>
+  </section>
+</main>
+
+<script>
+  const SEMI = { S:0, R1:1, R2:2, G2:3, G3:4, M1:5, M2:6, P:7, D1:8, D2:9, N2:10, N3:11 };
+  const SWARAS12 = ["S","R1","R2","G2","G3","M1","M2","P","D1","D2","N2","N3"];
+  const RAGAS = [
+    { id:"mel001", name:"Kanakangi", mel:"Melakarta", num:1, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G1","R1","S"],
+      allied:["Ratnangi","Ganamurti","Vanaspati","Manavati","Tanarupi"] },
+    { id:"mel002", name:"Ratnangi", mel:"Melakarta", num:2, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G1","R1","S"],
+      allied:["Kanakangi","Ganamurti","Vanaspati","Manavati","Tanarupi"] },
+    { id:"mel003", name:"Ganamurti", mel:"Melakarta", num:3, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G1","R1","S"],
+      allied:["Kanakangi","Ratnangi","Vanaspati","Manavati","Tanarupi"] },
+    { id:"mel004", name:"Vanaspati", mel:"Melakarta", num:4, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G1","R1","S"],
+      allied:["Kanakangi","Ratnangi","Ganamurti","Manavati","Tanarupi"] },
+    { id:"mel005", name:"Manavati", mel:"Melakarta", num:5, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G1","R1","S"],
+      allied:["Kanakangi","Ratnangi","Ganamurti","Vanaspati","Tanarupi"] },
+    { id:"mel006", name:"Tanarupi", mel:"Melakarta", num:6, chakra:"Indu", jati:"Sampurna",
+      aro:["S","R1","G1","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G1","R1","S"],
+      allied:["Kanakangi","Ratnangi","Ganamurti","Vanaspati","Manavati"] },
+    { id:"mel007", name:"Senavati", mel:"Melakarta", num:7, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G2","R1","S"],
+      allied:["Hanumatodi","Dhenuka","Natakapriya","Kokilapriya","Rupavati"] },
+    { id:"mel008", name:"Hanumatodi", mel:"Melakarta", num:8, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G2","R1","S"],
+      allied:["Senavati","Dhenuka","Natakapriya","Kokilapriya","Rupavati"] },
+    { id:"mel009", name:"Dhenuka", mel:"Melakarta", num:9, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G2","R1","S"],
+      allied:["Senavati","Hanumatodi","Natakapriya","Kokilapriya","Rupavati"] },
+    { id:"mel010", name:"Natakapriya", mel:"Melakarta", num:10, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G2","R1","S"],
+      allied:["Senavati","Hanumatodi","Dhenuka","Kokilapriya","Rupavati"] },
+    { id:"mel011", name:"Kokilapriya", mel:"Melakarta", num:11, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G2","R1","S"],
+      allied:["Senavati","Hanumatodi","Dhenuka","Natakapriya","Rupavati"] },
+    { id:"mel012", name:"Rupavati", mel:"Melakarta", num:12, chakra:"Netra", jati:"Sampurna",
+      aro:["S","R1","G2","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G2","R1","S"],
+      allied:["Senavati","Hanumatodi","Dhenuka","Natakapriya","Kokilapriya"] },
+    { id:"mel013", name:"Gayakapriya", mel:"Melakarta", num:13, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G3","R1","S"],
+      allied:["Vakulabharanam","Mayamalavagowla","Chakravakam","Suryakantam","Hatakambari"] },
+    { id:"mel014", name:"Vakulabharanam", mel:"Melakarta", num:14, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G3","R1","S"],
+      allied:["Gayakapriya","Mayamalavagowla","Chakravakam","Suryakantam","Hatakambari"] },
+    { id:"mel015", name:"Mayamalavagowla", mel:"Melakarta", num:15, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G3","R1","S"],
+      allied:["Gayakapriya","Vakulabharanam","Chakravakam","Suryakantam","Hatakambari"] },
+    { id:"mel016", name:"Chakravakam", mel:"Melakarta", num:16, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G3","R1","S"],
+      allied:["Gayakapriya","Vakulabharanam","Mayamalavagowla","Suryakantam","Hatakambari"] },
+    { id:"mel017", name:"Suryakantam", mel:"Melakarta", num:17, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R1","S"],
+      allied:["Gayakapriya","Vakulabharanam","Mayamalavagowla","Chakravakam","Hatakambari"] },
+    { id:"mel018", name:"Hatakambari", mel:"Melakarta", num:18, chakra:"Agni", jati:"Sampurna",
+      aro:["S","R1","G3","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G3","R1","S"],
+      allied:["Gayakapriya","Vakulabharanam","Mayamalavagowla","Chakravakam","Suryakantam"] },
+    { id:"mel019", name:"Jhankaradhvani", mel:"Melakarta", num:19, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G2","R2","S"],
+      allied:["Natabhairavi","Keeravani","Kharaharapriya","Gourimanohari","Varunapriya"] },
+    { id:"mel020", name:"Natabhairavi", mel:"Melakarta", num:20, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G2","R2","S"],
+      allied:["Jhankaradhvani","Keeravani","Kharaharapriya","Gourimanohari","Varunapriya"] },
+    { id:"mel021", name:"Keeravani", mel:"Melakarta", num:21, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G2","R2","S"],
+      allied:["Jhankaradhvani","Natabhairavi","Kharaharapriya","Gourimanohari","Varunapriya"] },
+    { id:"mel022", name:"Kharaharapriya", mel:"Melakarta", num:22, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G2","R2","S"],
+      allied:["Jhankaradhvani","Natabhairavi","Keeravani","Gourimanohari","Varunapriya"] },
+    { id:"mel023", name:"Gourimanohari", mel:"Melakarta", num:23, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G2","R2","S"],
+      allied:["Jhankaradhvani","Natabhairavi","Keeravani","Kharaharapriya","Varunapriya"] },
+    { id:"mel024", name:"Varunapriya", mel:"Melakarta", num:24, chakra:"Veda", jati:"Sampurna",
+      aro:["S","R2","G2","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G2","R2","S"],
+      allied:["Jhankaradhvani","Natabhairavi","Keeravani","Kharaharapriya","Gourimanohari"] },
+    { id:"mel025", name:"Mararanjani", mel:"Melakarta", num:25, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G3","R2","S"],
+      allied:["Charukesi","Sarasangi","Harikambhoji","Dheerasankarabharanam","Naganandini"] },
+    { id:"mel026", name:"Charukesi", mel:"Melakarta", num:26, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G3","R2","S"],
+      allied:["Mararanjani","Sarasangi","Harikambhoji","Dheerasankarabharanam","Naganandini"] },
+    { id:"mel027", name:"Sarasangi", mel:"Melakarta", num:27, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G3","R2","S"],
+      allied:["Mararanjani","Charukesi","Harikambhoji","Dheerasankarabharanam","Naganandini"] },
+    { id:"mel028", name:"Harikambhoji", mel:"Melakarta", num:28, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G3","R2","S"],
+      allied:["Mararanjani","Charukesi","Sarasangi","Dheerasankarabharanam","Naganandini"] },
+    { id:"mel029", name:"Dheerasankarabharanam", mel:"Melakarta", num:29, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R2","S"],
+      allied:["Mararanjani","Charukesi","Sarasangi","Harikambhoji","Naganandini"] },
+    { id:"mel030", name:"Naganandini", mel:"Melakarta", num:30, chakra:"Bana", jati:"Sampurna",
+      aro:["S","R2","G3","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G3","R2","S"],
+      allied:["Mararanjani","Charukesi","Sarasangi","Harikambhoji","Dheerasankarabharanam"] },
+    { id:"mel031", name:"Yagapriya", mel:"Melakarta", num:31, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D1","N1","S'"], ava:["S'","N1","D1","P","M1","G3","R3","S"],
+      allied:["Ragavardhini","Gangeyabhushani","Vagadheeswari","Shulini","Chalanata"] },
+    { id:"mel032", name:"Ragavardhini", mel:"Melakarta", num:32, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G3","R3","S"],
+      allied:["Yagapriya","Gangeyabhushani","Vagadheeswari","Shulini","Chalanata"] },
+    { id:"mel033", name:"Gangeyabhushani", mel:"Melakarta", num:33, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D1","N3","S'"], ava:["S'","N3","D1","P","M1","G3","R3","S"],
+      allied:["Yagapriya","Ragavardhini","Vagadheeswari","Shulini","Chalanata"] },
+    { id:"mel034", name:"Vagadheeswari", mel:"Melakarta", num:34, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D2","N2","S'"], ava:["S'","N2","D2","P","M1","G3","R3","S"],
+      allied:["Yagapriya","Ragavardhini","Gangeyabhushani","Shulini","Chalanata"] },
+    { id:"mel035", name:"Shulini", mel:"Melakarta", num:35, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R3","S"],
+      allied:["Yagapriya","Ragavardhini","Gangeyabhushani","Vagadheeswari","Chalanata"] },
+    { id:"mel036", name:"Chalanata", mel:"Melakarta", num:36, chakra:"Rutu", jati:"Sampurna",
+      aro:["S","R3","G3","M1","P","D3","N3","S'"], ava:["S'","N3","D3","P","M1","G3","R3","S"],
+      allied:["Yagapriya","Ragavardhini","Gangeyabhushani","Vagadheeswari","Shulini"] },
+    { id:"mel037", name:"Salagam", mel:"Melakarta", num:37, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G1","R1","S"],
+      allied:["Jalarnavam","Jhalavarali","Navaneetam","Pavani","Raghupriya"] },
+    { id:"mel038", name:"Jalarnavam", mel:"Melakarta", num:38, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G1","R1","S"],
+      allied:["Salagam","Jhalavarali","Navaneetam","Pavani","Raghupriya"] },
+    { id:"mel039", name:"Jhalavarali", mel:"Melakarta", num:39, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G1","R1","S"],
+      allied:["Salagam","Jalarnavam","Navaneetam","Pavani","Raghupriya"] },
+    { id:"mel040", name:"Navaneetam", mel:"Melakarta", num:40, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G1","R1","S"],
+      allied:["Salagam","Jalarnavam","Jhalavarali","Pavani","Raghupriya"] },
+    { id:"mel041", name:"Pavani", mel:"Melakarta", num:41, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G1","R1","S"],
+      allied:["Salagam","Jalarnavam","Jhalavarali","Navaneetam","Raghupriya"] },
+    { id:"mel042", name:"Raghupriya", mel:"Melakarta", num:42, chakra:"Rishi", jati:"Sampurna",
+      aro:["S","R1","G1","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G1","R1","S"],
+      allied:["Salagam","Jalarnavam","Jhalavarali","Navaneetam","Pavani"] },
+    { id:"mel043", name:"Gavambhodi", mel:"Melakarta", num:43, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G2","R1","S"],
+      allied:["Bhavapriya","Shubhapantuvarali","Shadvidhamargini","Suvarnangi","Divyamani"] },
+    { id:"mel044", name:"Bhavapriya", mel:"Melakarta", num:44, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G2","R1","S"],
+      allied:["Gavambhodi","Shubhapantuvarali","Shadvidhamargini","Suvarnangi","Divyamani"] },
+    { id:"mel045", name:"Shubhapantuvarali", mel:"Melakarta", num:45, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G2","R1","S"],
+      allied:["Gavambhodi","Bhavapriya","Shadvidhamargini","Suvarnangi","Divyamani"] },
+    { id:"mel046", name:"Shadvidhamargini", mel:"Melakarta", num:46, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G2","R1","S"],
+      allied:["Gavambhodi","Bhavapriya","Shubhapantuvarali","Suvarnangi","Divyamani"] },
+    { id:"mel047", name:"Suvarnangi", mel:"Melakarta", num:47, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G2","R1","S"],
+      allied:["Gavambhodi","Bhavapriya","Shubhapantuvarali","Shadvidhamargini","Divyamani"] },
+    { id:"mel048", name:"Divyamani", mel:"Melakarta", num:48, chakra:"Vasu", jati:"Sampurna",
+      aro:["S","R1","G2","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G2","R1","S"],
+      allied:["Gavambhodi","Bhavapriya","Shubhapantuvarali","Shadvidhamargini","Suvarnangi"] },
+    { id:"mel049", name:"Dhavalambari", mel:"Melakarta", num:49, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G3","R1","S"],
+      allied:["Namanarayani","Kamavardhani","Ramapriya","Gamanashrama","Vishwambari"] },
+    { id:"mel050", name:"Namanarayani", mel:"Melakarta", num:50, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G3","R1","S"],
+      allied:["Dhavalambari","Kamavardhani","Ramapriya","Gamanashrama","Vishwambari"] },
+    { id:"mel051", name:"Kamavardhani", mel:"Melakarta", num:51, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G3","R1","S"],
+      allied:["Dhavalambari","Namanarayani","Ramapriya","Gamanashrama","Vishwambari"] },
+    { id:"mel052", name:"Ramapriya", mel:"Melakarta", num:52, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G3","R1","S"],
+      allied:["Dhavalambari","Namanarayani","Kamavardhani","Gamanashrama","Vishwambari"] },
+    { id:"mel053", name:"Gamanashrama", mel:"Melakarta", num:53, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G3","R1","S"],
+      allied:["Dhavalambari","Namanarayani","Kamavardhani","Ramapriya","Vishwambari"] },
+    { id:"mel054", name:"Vishwambari", mel:"Melakarta", num:54, chakra:"Brahma", jati:"Sampurna",
+      aro:["S","R1","G3","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G3","R1","S"],
+      allied:["Dhavalambari","Namanarayani","Kamavardhani","Ramapriya","Gamanashrama"] },
+    { id:"mel055", name:"Shyamalangi", mel:"Melakarta", num:55, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G2","R2","S"],
+      allied:["Shanmukhapriya","Simhendramadhyamam","Hemavati","Dharmavati","Neetimati"] },
+    { id:"mel056", name:"Shanmukhapriya", mel:"Melakarta", num:56, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G2","R2","S"],
+      allied:["Shyamalangi","Simhendramadhyamam","Hemavati","Dharmavati","Neetimati"] },
+    { id:"mel057", name:"Simhendramadhyamam", mel:"Melakarta", num:57, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G2","R2","S"],
+      allied:["Shyamalangi","Shanmukhapriya","Hemavati","Dharmavati","Neetimati"] },
+    { id:"mel058", name:"Hemavati", mel:"Melakarta", num:58, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G2","R2","S"],
+      allied:["Shyamalangi","Shanmukhapriya","Simhendramadhyamam","Dharmavati","Neetimati"] },
+    { id:"mel059", name:"Dharmavati", mel:"Melakarta", num:59, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G2","R2","S"],
+      allied:["Shyamalangi","Shanmukhapriya","Simhendramadhyamam","Hemavati","Neetimati"] },
+    { id:"mel060", name:"Neetimati", mel:"Melakarta", num:60, chakra:"Disi", jati:"Sampurna",
+      aro:["S","R2","G2","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G2","R2","S"],
+      allied:["Shyamalangi","Shanmukhapriya","Simhendramadhyamam","Hemavati","Dharmavati"] },
+    { id:"mel061", name:"Kantamani", mel:"Melakarta", num:61, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G3","R2","S"],
+      allied:["Rishabhapriya","Latangi","Vachaspati","Mechakalyani","Chitrambari"] },
+    { id:"mel062", name:"Rishabhapriya", mel:"Melakarta", num:62, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G3","R2","S"],
+      allied:["Kantamani","Latangi","Vachaspati","Mechakalyani","Chitrambari"] },
+    { id:"mel063", name:"Latangi", mel:"Melakarta", num:63, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G3","R2","S"],
+      allied:["Kantamani","Rishabhapriya","Vachaspati","Mechakalyani","Chitrambari"] },
+    { id:"mel064", name:"Vachaspati", mel:"Melakarta", num:64, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G3","R2","S"],
+      allied:["Kantamani","Rishabhapriya","Latangi","Mechakalyani","Chitrambari"] },
+    { id:"mel065", name:"Mechakalyani", mel:"Melakarta", num:65, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G3","R2","S"],
+      allied:["Kantamani","Rishabhapriya","Latangi","Vachaspati","Chitrambari"] },
+    { id:"mel066", name:"Chitrambari", mel:"Melakarta", num:66, chakra:"Rudra", jati:"Sampurna",
+      aro:["S","R2","G3","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G3","R2","S"],
+      allied:["Kantamani","Rishabhapriya","Latangi","Vachaspati","Mechakalyani"] },
+    { id:"mel067", name:"Sucharitra", mel:"Melakarta", num:67, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D1","N1","S'"], ava:["S'","N1","D1","P","M2","G3","R3","S"],
+      allied:["Jyotiswarupini","Dhatuvardhani","Nasikabhushani","Kosalam","Rasikapriya"] },
+    { id:"mel068", name:"Jyotiswarupini", mel:"Melakarta", num:68, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D1","N2","S'"], ava:["S'","N2","D1","P","M2","G3","R3","S"],
+      allied:["Sucharitra","Dhatuvardhani","Nasikabhushani","Kosalam","Rasikapriya"] },
+    { id:"mel069", name:"Dhatuvardhani", mel:"Melakarta", num:69, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D1","N3","S'"], ava:["S'","N3","D1","P","M2","G3","R3","S"],
+      allied:["Sucharitra","Jyotiswarupini","Nasikabhushani","Kosalam","Rasikapriya"] },
+    { id:"mel070", name:"Nasikabhushani", mel:"Melakarta", num:70, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D2","N2","S'"], ava:["S'","N2","D2","P","M2","G3","R3","S"],
+      allied:["Sucharitra","Jyotiswarupini","Dhatuvardhani","Kosalam","Rasikapriya"] },
+    { id:"mel071", name:"Kosalam", mel:"Melakarta", num:71, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G3","R3","S"],
+      allied:["Sucharitra","Jyotiswarupini","Dhatuvardhani","Nasikabhushani","Rasikapriya"] },
+    { id:"mel072", name:"Rasikapriya", mel:"Melakarta", num:72, chakra:"Aditya", jati:"Sampurna",
+      aro:["S","R3","G3","M2","P","D3","N3","S'"], ava:["S'","N3","D3","P","M2","G3","R3","S"],
+      allied:["Sucharitra","Jyotiswarupini","Dhatuvardhani","Nasikabhushani","Kosalam"] },
+    { id:"mohanam", name:"Mohanam", mel:"Harikambhoji (28)", jati:"Audava",
+      aro:["S","R2","G3","P","D2","S'"], ava:["S'","D2","P","G3","R2","S"],
+      allied:["Hamsadhvani","Dheerasankarabharanam"] },
+    { id:"hamsadhvani", name:"Hamsadhvani", mel:"Dheerasankarabharanam (29)", jati:"Audava",
+      aro:["S","R2","G3","P","N3","S'"], ava:["S'","N3","P","G3","R2","S"],
+      allied:["Mohanam","Dheerasankarabharanam"] },
+    { id:"abhogi", name:"Abhogi", mel:"Kharaharapriya (22)", jati:"Audava",
+      aro:["S","R2","G2","M1","D2","S'"], ava:["S'","D2","M1","G2","R2","S"],
+      allied:["Hindolam"] },
+    { id:"hindolam", name:"Hindolam", mel:"Natabhairavi (20)", jati:"Audava",
+      aro:["S","G2","M1","D1","N2","S'"], ava:["S'","N2","D1","M1","G2","S"],
+      allied:["Abhogi"] },
+  ];
+  const byId = id => RAGAS.find(r => r.id === id);
+  const norm = s => s.replace("'","");
+  const noteSet = r => new Set([...r.aro, ...r.ava].map(norm));
+
+  let q = "", selSwaras = new Set(), selMel = null;
+
+  /* ---------- home: filters ---------- */
+  const nameSearch = document.getElementById("nameSearch");
+  nameSearch.oninput = () => { q = nameSearch.value.trim().toLowerCase(); renderList(); };
+  document.getElementById("clearBtn").onclick = () => {
+    q = ""; nameSearch.value = ""; selSwaras.clear(); selMel = null;
+    renderChips(); renderList();
+  };
+  function renderChips() {
+    const sc = document.getElementById("swaraChips");
+    sc.innerHTML = "";
+    SWARAS12.forEach(s => {
+      const b = document.createElement("button");
+      b.textContent = s;
+      if (selSwaras.has(s)) b.classList.add("on");
+      b.onclick = () => { selSwaras.has(s) ? selSwaras.delete(s) : selSwaras.add(s); renderChips(); renderList(); };
+      sc.appendChild(b);
+    });
+    const mc = document.getElementById("melChips");
+    mc.innerHTML = "";
+    [...new Set(RAGAS.map(r => r.mel))].sort().forEach(m => {
+      const b = document.createElement("button");
+      b.textContent = m;
+      if (selMel === m) b.classList.add("on");
+      b.onclick = () => { selMel = selMel === m ? null : m; renderChips(); renderList(); };
+      mc.appendChild(b);
+    });
+  }
+  function matches(r) {
+    if (q && !r.name.toLowerCase().includes(q)) return false;
+    if (selMel && r.mel !== selMel) return false;
+    const ns = noteSet(r);
+    for (const s of selSwaras) if (!ns.has(s)) return false;
+    return true;
+  }
+  function renderList() {
+    const list = document.getElementById("ragaList");
+    const res = RAGAS.filter(matches);
+    document.getElementById("resultCount").textContent =
+      res.length + " raga" + (res.length === 1 ? "" : "s") + (RAGAS.length > res.length ? " · " + RAGAS.length + " total" : "");
+    list.innerHTML = "";
+    if (!res.length) {
+      list.innerHTML = '<div class="empty">No ragas match — try fewer swaras.</div>';
+      return;
+    }
+    res.forEach(r => {
+      const b = document.createElement("button");
+      b.className = "ragacard";
+      b.innerHTML = '<span class="chev">›</span><b>' + r.name + '</b>' +
+        '<div class="sub">' + (r.num ? "#" + r.num + " · " + r.chakra + " chakra" : r.mel) + ' · ' + r.jati + '</div>' +
+        '<div class="scale">' + r.aro.join(" ") + '</div>';
+      b.onclick = () => openDetail(r.id);
+      list.appendChild(b);
+    });
+  }
+
+  /* ---------- detail ---------- */
+  const homeView = document.getElementById("homeView"), detailView = document.getElementById("detailView");
+  let cur = null, timbre = "harmonium";
+  function swaraChip(s) {
+    const d = document.createElement("div");
+    d.className = "swara" + (norm(s) === "S" ? " sa" : "");
+    d.textContent = s;
+    d.dataset.swara = s;
+    return d;
+  }
+  function openDetail(id) {
+    cur = byId(id);
+    stopPlayback();
+    document.getElementById("dName").textContent = cur.name;
+    document.getElementById("dMeta").innerHTML =
+      cur.num
+        ? "Melakarta <b>#" + cur.num + " · " + cur.chakra + " chakra</b> · " + cur.jati
+        : "Melakarta <b>" + cur.mel + "</b> · " + cur.jati;
+    const aro = document.getElementById("dAro"), ava = document.getElementById("dAva");
+    aro.innerHTML = ""; ava.innerHTML = "";
+    cur.aro.forEach(s => aro.appendChild(swaraChip(s)));
+    cur.ava.forEach(s => ava.appendChild(swaraChip(s)));
+    const al = document.getElementById("dAllied");
+    al.innerHTML = "";
+    cur.allied.forEach(nm => {
+      const r = RAGAS.find(x => x.name === nm);
+      if (!r) return;
+      const b = document.createElement("button");
+      b.textContent = r.name;
+      b.onclick = () => openDetail(r.id);
+      al.appendChild(b);
+    });
+    homeView.style.display = "none";
+    detailView.style.display = "grid";
+    detailView.style.gap = "16px";
+    window.scrollTo(0, 0);
+  }
+  document.getElementById("detailBack").onclick = () => {
+    stopPlayback();
+    detailView.style.display = "none";
+    homeView.style.display = "grid";
+  };
+  document.querySelectorAll("#timbreSeg button").forEach(b => {
+    b.onclick = () => {
+      timbre = b.dataset.t;
+      document.querySelectorAll("#timbreSeg button").forEach(x => x.classList.toggle("on", x === b));
+    };
+  });
+
+  /* ---------- synth: harmonium vs vocal "ah" ---------- */
+  let actx = null, playTimer = null, playing = false;
+  const SA_FREQ = 261.63; // C4
+  function ensureAudio() {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+  }
+  function freqOf(s) {
+    const up = s.includes("'") ? 12 : 0;
+    return SA_FREQ * Math.pow(2, (SEMI[norm(s)] + up) / 12);
+  }
+
+  /* ---------- vocal "ah": formant synthesis ---------- */
+  let _noiseBuf = null;
+  function getNoiseBuffer() {
+    if (!_noiseBuf) {
+      _noiseBuf = actx.createBuffer(1, actx.sampleRate, actx.sampleRate);
+      const d = _noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    return _noiseBuf;
+  }
+  function noteVocal(t, f, dur) {
+    // glottal-ish source: detuned sawtooth pair with spectral tilt
+    const o1 = actx.createOscillator(); o1.type = "sawtooth"; o1.frequency.value = f;
+    const o2 = actx.createOscillator(); o2.type = "sawtooth"; o2.frequency.value = f; o2.detune.value = 6;
+    const tilt = actx.createBiquadFilter();
+    tilt.type = "lowpass"; tilt.frequency.value = 3800; tilt.Q.value = 0.4;
+    o1.connect(tilt); o2.connect(tilt);
+    // "ah" vowel: parallel formant resonators with per-formant weight
+    const g = actx.createGain();
+    const FORMANTS = [
+      [730, 9, 1.0], [1090, 12, 0.65], [2440, 18, 0.45], [3000, 22, 0.28], [3350, 22, 0.18]
+    ];
+    FORMANTS.forEach(([fr, q, fg]) => {
+      const bp = actx.createBiquadFilter();
+      bp.type = "bandpass"; bp.frequency.value = fr; bp.Q.value = q;
+      const fgain = actx.createGain(); fgain.gain.value = fg;
+      tilt.connect(bp); bp.connect(fgain); fgain.connect(g);
+    });
+    // aspiration / breath noise
+    const ns = actx.createBufferSource(); ns.buffer = getNoiseBuffer(); ns.loop = true;
+    const nf = actx.createBiquadFilter(); nf.type = "bandpass"; nf.frequency.value = 2800; nf.Q.value = 0.8;
+    const ng = actx.createGain(); ng.gain.value = 0.045;
+    ns.connect(nf); nf.connect(ng); ng.connect(g);
+    g.connect(actx.destination);
+    // vibrato, eased in like a real singer (starts straight)
+    const lfo = actx.createOscillator(); lfo.frequency.value = 5.8;
+    const lg = actx.createGain();
+    lg.gain.setValueAtTime(0.0001, t);
+    lg.gain.exponentialRampToValueAtTime(Math.max(0.0002, f * 0.006), t + 0.4);
+    lfo.connect(lg); lg.connect(o1.frequency); lg.connect(o2.frequency);
+    // amplitude envelope
+    const atk = 0.09;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + atk);
+    g.gain.setValueAtTime(0.5, t + Math.max(atk, dur - 0.15));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.2);
+    [o1, o2, lfo].forEach(o => { o.start(t); o.stop(t + dur + 0.25); });
+    ns.start(t); ns.stop(t + dur + 0.25);
+  }
+
+  /* ---------- sampled timbres ---------- */
+  const NOTE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
+  const SHARP_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const SAMPLE_SETS = {
+    harmonium: {
+      base: "samples/harmonium/",
+      files: ["C4","Cs4","D4","Ds4","E4","F4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3"),
+      map: (s) => {
+        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
+        let file = NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3";
+        let rate = 1;
+        if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); } // Fs4 missing upstream
+        return { file, rate };
+      }
+    },
+    choir: {
+      base: "samples/choir/",
+      files: ["chorus-male-c4.mp3","chorus-male-cs4.mp3","chorus-male-d4.mp3","chorus-male-ds4.mp3","chorus-male-e4.mp3","chorus-male-f4.mp3","chorus-male-fs4.mp3","chorus-female-gs4.mp3","chorus-female-a4.mp3","chorus-female-as4.mp3","chorus-female-b4.mp3","chorus-female-c5.mp3"],
+      map: (s) => {
+        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
+        const nm = SHARP_NAMES[semi % 12].toLowerCase().replace("#", "s");
+        if (semi <= 6) return { file: "chorus-male-" + nm + "4.mp3", rate: 1 };
+        if (semi === 7) return { file: "chorus-male-fs4.mp3", rate: Math.pow(2, 1 / 12) }; // P: nearest male sample
+        if (semi <= 11) return { file: "chorus-female-" + nm + "4.mp3", rate: 1 };
+        return { file: "chorus-female-c5.mp3", rate: 1 };
+      }
+    },
+    ai_voice: {
+      base: "samples/ai_voice/",
+      files: ["C4","Cs4","D4","Ds4","E4","F4","Fs4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3"),
+      map: (s) => {
+        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
+        return { file: NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3", rate: 1 };
+      }
+    }
+  };
+  const sampleBufs = {};    // "set/file" -> AudioBuffer
+  const samplesLoading = {}; // set -> promise
+  function ensureSamples(setName) {
+    if (!samplesLoading[setName]) {
+      samplesLoading[setName] = (async () => {
+        const set = SAMPLE_SETS[setName];
+        await Promise.all(set.files.map(async f => {
+          const key = setName + "/" + f;
+          if (sampleBufs[key]) return;
+          const res = await fetch(set.base + f);
+          if (!res.ok) throw new Error("sample " + f);
+          sampleBufs[key] = await actx.decodeAudioData(await res.arrayBuffer());
+        }));
+      })();
+    }
+    return samplesLoading[setName];
+  }
+  function playSampledNote(setName, t, swara, dur) {
+    const { file, rate } = SAMPLE_SETS[setName].map(swara);
+    const buf = sampleBufs[setName + "/" + file];
+    if (!buf) return false;
+    const src = actx.createBufferSource();
+    src.buffer = buf; src.playbackRate.value = rate;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
+    g.gain.setValueAtTime(0.9, t + Math.max(0.02, dur - 0.12));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
+    src.connect(g); g.connect(actx.destination);
+    src.start(t); src.stop(t + dur + 0.2);
+    return true;
+  }
+  function noteNode(t, f, dur, timbre) {
+    const o = actx.createOscillator();
+    o.type = "sawtooth"; o.frequency.value = f;
+    const g = actx.createGain();
+    if (timbre === "harmonium") {
+      const o2 = actx.createOscillator();
+      o2.type = "sawtooth"; o2.frequency.value = f * 1.004;
+      const lp = actx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.5;
+      o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(actx.destination);
+      o2.start(t); o2.stop(t + dur + 0.15);
+    } else {
+      // vocal "ah": formant bandpasses + vibrato
+      [[730, 7], [1090, 9], [2440, 11]].forEach(([fr, qq]) => {
+        const bp = actx.createBiquadFilter();
+        bp.type = "bandpass"; bp.frequency.value = fr; bp.Q.value = qq;
+        o.connect(bp); bp.connect(g);
+      });
+      g.connect(actx.destination);
+      const lfo = actx.createOscillator(); lfo.frequency.value = 5.5;
+      const lg = actx.createGain(); lg.gain.value = f * 0.012;
+      lfo.connect(lg); lg.connect(o.frequency);
+      lfo.start(t); lfo.stop(t + dur + 0.15);
+    }
+    const atk = timbre === "harmonium" ? 0.03 : 0.09;
+    const vol = timbre === "harmonium" ? 0.4 : 0.55;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + atk);
+    g.gain.setValueAtTime(vol, t + Math.max(atk, dur - 0.09));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+    o.start(t); o.stop(t + dur + 0.15);
+  }
+  function clearPlaying() {
+    document.querySelectorAll(".swara.playing").forEach(x => x.classList.remove("playing"));
+  }
+  function stopPlayback() {
+    playing = false;
+    if (playTimer) { playTimer.forEach(clearTimeout); playTimer = null; }
+    clearPlaying();
+    const pb = document.getElementById("playBtn");
+    pb.textContent = "▶ Play arohana + avarohana";
+    pb.classList.remove("playing");
+  }
+  document.getElementById("playBtn").onclick = async () => {
+    if (playing) { stopPlayback(); return; }
+    ensureAudio();
+    const pb = document.getElementById("playBtn");
+    let sampleSet = null;
+    if (timbre === "harmonium" || timbre === "choir" || timbre === "ai_voice") {
+      pb.textContent = "⏳ Loading " + timbre + "…";
+      try { await ensureSamples(timbre); sampleSet = timbre; }
+      catch (e) { sampleSet = null; } // fall back to synth
+    }
+    playing = true; playTimer = [];
+    pb.textContent = "■ Stop";
+    pb.classList.add("playing");
+    const seq = [...cur.aro.map(s => ["dAro", s]), ...cur.ava.map(s => ["dAva", s])];
+    const t0 = actx.currentTime + 0.08, step = 0.5;
+    const chips = {
+      dAro: [...document.getElementById("dAro").children],
+      dAva: [...document.getElementById("dAva").children],
+    };
+    seq.forEach(([box, s], i) => {
+      if (sampleSet) playSampledNote(sampleSet, t0 + i * step, s, step * 0.96);
+      else if (timbre === "harmonium") noteNode(t0 + i * step, freqOf(s), step * 0.96, timbre);
+      else noteVocal(t0 + i * step, freqOf(s), step * 0.96); // vocal, or choir fallback
+      const idx = box === "dAro" ? i : i - cur.aro.length;
+      playTimer.push(setTimeout(() => {
+        if (!playing) return;
+        clearPlaying();
+        chips[box][idx].classList.add("playing");
+      }, (t0 + i * step - actx.currentTime) * 1000));
+    });
+    playTimer.push(setTimeout(stopPlayback, (t0 + seq.length * step - actx.currentTime) * 1000 + 300));
+  };
+
+  /* ---------- sound check ---------- */
+  document.getElementById("beepBtn").onclick = () => {
+    ensureAudio();
+    const st = document.getElementById("audioStatus");
+    st.textContent = "AudioContext: " + actx.state + " · " + actx.sampleRate + " Hz — beep playing…";
+    const t = actx.currentTime + 0.05;
+    const o = actx.createOscillator(); o.type = "sine"; o.frequency.value = 880;
+    const g = actx.createGain();
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t); o.stop(t + 0.45);
+    setTimeout(() => { st.textContent = "AudioContext: " + actx.state + " · beep done."; }, 700);
+  };
+
+  /* ---------- theme ---------- */
+  const mt = document.getElementById("mockTheme");
+  const apply = th => {
+    document.documentElement.dataset.theme = th;
+    mt.textContent = th === "dark" ? "◐ Light" : "◐ Dark";
+  };
+  mt.onclick = () => apply(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  apply("dark");
+
+  renderChips();
+  renderList();
+</script>
+</body>
+</html>
