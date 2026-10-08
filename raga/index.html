@@ -87,8 +87,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
 .pianostrip { display: none; }
-.piano { position: relative; height: 110px; margin-bottom: 12px; user-select: none; }
-.piano .wk { position: absolute; top: 0; bottom: 0; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; }
+.piano { position: relative; height: 110px; margin-bottom: 12px; user-select: none; display: flex; }
+.piano .wk { flex: 1; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; position: relative; min-width: 0; }
 .piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 10px; color: #999; }
 .piano .wk.in-scale { background: #dbeafe; }
 .piano .wk.in-scale span { color: var(--accent); font-weight: 700; font-size: 11px; }
@@ -682,7 +682,6 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
     if (!cur) return;
-    const W = el.clientWidth || 600;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
     // map relative semitone -> swara label
     const swaraAt = {};
@@ -694,11 +693,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     const whites = [];
     for (let rel = 0; rel <= 12; rel++)
       if (isWhite((saOffset + rel) % 12)) whites.push(rel);
-    const ww = W / whites.length;
-    whites.forEach((rel, wi) => {
+    const nw = whites.length;
+    whites.forEach(rel => {
       const k = document.createElement("div");
       k.className = "wk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
-      k.style.left = (wi * ww) + "px"; k.style.width = ww + "px";
       k.dataset.semi = rel;
       if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(k);
@@ -706,12 +704,14 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     for (let rel = 0; rel <= 12; rel++) {
       if (isWhite((saOffset + rel) % 12)) continue;
       let leftWi = -1;
-      for (let wi = 0; wi < whites.length; wi++) if (whites[wi] < rel) leftWi = wi;
+      for (let wi = 0; wi < nw; wi++) if (whites[wi] < rel) leftWi = wi;
       if (leftWi < 0) continue;
       const b = document.createElement("div");
       b.className = "bk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
-      b.style.left = ((leftWi + 1) * ww - ww * 0.28) + "px";
-      b.style.width = (ww * 0.56) + "px";
+      // position: boundary after leftWi white key, centered
+      b.style.left = ((leftWi + 1) / nw * 100) + "%";
+      b.style.width = (100 / nw * 0.6) + "%";
+      b.style.marginLeft = (-100 / nw * 0.3) + "%";
       b.dataset.semi = rel;
       if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(b);
