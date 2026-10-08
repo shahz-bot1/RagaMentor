@@ -704,16 +704,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(k);
     });
-    if (!isWhite(pc(0))) {
-      const k = document.createElement("div");
-      k.className = "wk"; k.style.left = "0%"; k.style.width = (ww * 0.25) + "%";
-      k.dataset.semi = -1; el.appendChild(k);
-    }
-    if (!isWhite(pc(12))) {
-      const k = document.createElement("div");
-      k.className = "wk"; k.style.left = (100 - ww * 0.25) + "%"; k.style.width = (ww * 0.25) + "%";
-      k.dataset.semi = 13; el.appendChild(k);
-    }
+    // (no partial white slivers - the half-clipped edge black key gives the slice look)
     const bw = ww * 0.62;
     for (let rel = 0; rel <= 12; rel++) {
       if (isWhite(pc(rel))) continue;
@@ -725,7 +716,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       let prevW = -1;
       for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
       // center on the white-key boundary for uniform spacing (slice look)
-      // left edge: allow half-clip, the partial white sliver provides context
+      // edges: allow half-clip, partial white slivers provide context
       let lpct = (prevW + 1) * ww - bw / 2;
       if (rel === 12 && !isWhite(pc(12))) lpct = Math.min(100 - bw, lpct); // right edge: keep inside
       b.style.left = lpct + "%";
