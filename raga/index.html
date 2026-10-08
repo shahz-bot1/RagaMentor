@@ -690,10 +690,14 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       if (rel >= 0 && rel <= 12 && !swaraAt[rel])
         swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
+    // extend range if last note (S') is black: include next white key
+    let maxRel = 12;
+    while (!isWhite((saOffset + maxRel) % 12) && maxRel < 14) maxRel++;
     const whites = [];
-    for (let rel = 0; rel <= 12; rel++)
+    for (let rel = 0; rel <= maxRel; rel++)
       if (isWhite((saOffset + rel) % 12)) whites.push(rel);
     const nw = whites.length;
+    // white keys via flex
     whites.forEach(rel => {
       const k = document.createElement("div");
       k.className = "wk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
@@ -701,19 +705,25 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(k);
     });
-    for (let rel = 0; rel <= 12; rel++) {
+    // black keys absolutely positioned
+    for (let rel = 0; rel <= maxRel; rel++) {
       if (isWhite((saOffset + rel) % 12)) continue;
-      let leftWi = -1;
-      for (let wi = 0; wi < nw; wi++) if (whites[wi] < rel) leftWi = wi;
-      if (leftWi < 0) continue;
       const b = document.createElement("div");
       b.className = "bk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
-      // position: boundary after leftWi white key, centered
-      b.style.left = ((leftWi + 1) / nw * 100) + "%";
-      b.style.width = (100 / nw * 0.6) + "%";
-      b.style.marginLeft = (-100 / nw * 0.3) + "%";
       b.dataset.semi = rel;
       if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      if (rel === 0) {
+        // Sa is black: pin to left edge
+        b.style.left = "0%";
+        b.style.width = (100 / nw * 0.6) + "%";
+      } else {
+        let leftWi = -1;
+        for (let wi = 0; wi < nw; wi++) if (whites[wi] < rel) leftWi = wi;
+        if (leftWi < 0) continue;
+        b.style.left = ((leftWi + 1) / nw * 100) + "%";
+        b.style.width = (100 / nw * 0.6) + "%";
+        b.style.marginLeft = (-100 / nw * 0.3) + "%";
+      }
       el.appendChild(b);
     }
   }
