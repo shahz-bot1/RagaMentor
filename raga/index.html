@@ -153,7 +153,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     <h2>Listen <span class="tag">· timbre</span></h2>
     <div class="seg" id="timbreSeg">
       <button data-t="harmonium" class="on">Harmonium<small>reed organ</small></button>
-      <button data-t="vocal">Vocal<small>"ah" synth</small></button>
+      <button data-t="vocal_swara">Vocal<small>swara voice</small></button>
       <button data-t="choir">Choir<small>“ah” voices</small></button>
       <button data-t="ai_voice">AI Voice<small>experimental</small></button>
     </div>
@@ -680,6 +680,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   /* ---------- sampled timbres ---------- */
   const NOTE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
   const SHARP_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const SWARA_SYL = { S:"sa", R1:"ri", R2:"ri", R3:"ri", G1:"ga", G2:"ga", G3:"ga",
+                    M1:"ma", M2:"ma", P:"pa", D1:"da", D2:"da", D3:"da", N1:"ni", N2:"ni", N3:"ni" };
   const SAMPLE_SETS = {
     harmonium: {
       base: "samples/harmonium/",
@@ -710,6 +712,16 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       map: (s) => {
         const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
         return { file: NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3", rate: 1 };
+      }
+    },
+    vocal_swara: {
+      base: "samples/vocal_swara/",
+      files: ["sa_60","sa_72","ri_61","ri_62","ga_62","ga_63","ga_64","ma_65","ma_66",
+              "pa_67","da_68","da_69","da_70","ni_69","ni_70","ni_71"].map(f => f + ".mp3"),
+      map: (s) => {
+        const syl = SWARA_SYL[norm(s)];
+        const midi = 60 + SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
+        return { file: syl + "_" + midi + ".mp3", rate: 1 };
       }
     }
   };
@@ -799,7 +811,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     ensureAudio();
     const pb = document.getElementById("playBtn");
     let sampleSet = null;
-    if (timbre === "harmonium" || timbre === "choir" || timbre === "ai_voice") {
+    if (timbre === "harmonium" || timbre === "choir" || timbre === "ai_voice" || timbre === "vocal_swara") {
       pb.textContent = "⏳ Loading " + timbre + "…";
       try { await ensureSamples(timbre); sampleSet = timbre; }
       catch (e) { sampleSet = null; } // fall back to synth
