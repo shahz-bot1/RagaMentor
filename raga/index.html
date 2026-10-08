@@ -606,9 +606,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   speedSlider.oninput = () => { updateSpeedLabel();
     try { localStorage.setItem("raga-speed", speedSlider.value); } catch (e) {} };
   updateSpeedLabel();
-  // iOS suspends Web Audio in background — resume on foreground
+  // iOS suspends Web Audio in background — stop playback on hide, resume ctx on show
   document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && typeof actx !== "undefined" && actx && actx.state === "suspended") actx.resume();
+    if (document.hidden) { if (playing) stopPlayback(); }
+    else if (typeof actx !== "undefined" && actx && actx.state === "suspended") actx.resume();
   });
 
   /* ---------- synth: harmonium vs vocal "ah" ---------- */
