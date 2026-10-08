@@ -150,19 +150,13 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· timbre</span></h2>
-    <div class="seg" id="timbreSeg">
-      <button data-t="harmonium" class="on">Harmonium<small>reed organ</small></button>
-      <button data-t="vocal_swara">Vocal<small>swara voice</small></button>
-      <button data-t="choir">Choir<small>“ah” voices</small></button>
-      <button data-t="ai_voice">AI Voice<small>experimental</small></button>
-    </div>
+    <h2>Listen <span class="tag">· harmonium</span></h2>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
     <div class="sliderow">
       <label for="speedSlider">Speed</label>
-      <input type="range" id="speedSlider" min="0.25" max="1" step="0.05" value="0.5">
+      <input type="range" id="speedSlider" min="0.25" max="2" step="0.05" value="0.5">
       <span id="speedVal">0.50s / note</span>
     </div>
     <p class="note" id="audioStatus" style="margin:10px 0 0">Audio: not started — tap Test beep below</p>
@@ -603,12 +597,6 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     detailView.style.display = "none";
     homeView.style.display = "";
   };
-  document.querySelectorAll("#timbreSeg button").forEach(b => {
-    b.onclick = () => {
-      timbre = b.dataset.t;
-      document.querySelectorAll("#timbreSeg button").forEach(x => x.classList.toggle("on", x === b));
-    };
-  });
   const speedSlider = document.getElementById("speedSlider"), speedVal = document.getElementById("speedVal");
   const updateSpeedLabel = () => { speedVal.textContent = parseFloat(speedSlider.value).toFixed(2) + "s / note"; };
   speedSlider.oninput = updateSpeedLabel;
@@ -680,8 +668,6 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   /* ---------- sampled timbres ---------- */
   const NOTE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
   const SHARP_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-  const SWARA_SYL = { S:"sa", R1:"ri", R2:"ri", R3:"ri", G1:"ga", G2:"ga", G3:"ga",
-                    M1:"ma", M2:"ma", P:"pa", D1:"da", D2:"da", D3:"da", N1:"ni", N2:"ni", N3:"ni" };
   const SAMPLE_SETS = {
     harmonium: {
       base: "samples/harmonium/",
@@ -694,36 +680,6 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
         return { file, rate };
       }
     },
-    choir: {
-      base: "samples/choir/",
-      files: ["chorus-male-c4.mp3","chorus-male-cs4.mp3","chorus-male-d4.mp3","chorus-male-ds4.mp3","chorus-male-e4.mp3","chorus-male-f4.mp3","chorus-male-fs4.mp3","chorus-female-gs4.mp3","chorus-female-a4.mp3","chorus-female-as4.mp3","chorus-female-b4.mp3","chorus-female-c5.mp3"],
-      map: (s) => {
-        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
-        const nm = SHARP_NAMES[semi % 12].toLowerCase().replace("#", "s");
-        if (semi <= 6) return { file: "chorus-male-" + nm + "4.mp3", rate: 1 };
-        if (semi === 7) return { file: "chorus-male-fs4.mp3", rate: Math.pow(2, 1 / 12) }; // P: nearest male sample
-        if (semi <= 11) return { file: "chorus-female-" + nm + "4.mp3", rate: 1 };
-        return { file: "chorus-female-c5.mp3", rate: 1 };
-      }
-    },
-    ai_voice: {
-      base: "samples/ai_voice/",
-      files: ["C4","Cs4","D4","Ds4","E4","F4","Fs4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3"),
-      map: (s) => {
-        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
-        return { file: NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3", rate: 1 };
-      }
-    },
-    vocal_swara: {
-      base: "samples/vocal_swara/",
-      files: ["sa_60","sa_72","ri_61","ri_62","ga_62","ga_63","ga_64","ma_65","ma_66",
-              "pa_67","da_68","da_69","da_70","ni_69","ni_70","ni_71"].map(f => f + ".mp3"),
-      map: (s) => {
-        const syl = SWARA_SYL[norm(s)];
-        const midi = 60 + SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
-        return { file: syl + "_" + midi + ".mp3", rate: 1 };
-      }
-    }
   };
   const sampleBufs = {};    // "set/file" -> AudioBuffer
   const samplesLoading = {}; // set -> promise
@@ -811,7 +767,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     ensureAudio();
     const pb = document.getElementById("playBtn");
     let sampleSet = null;
-    if (timbre === "harmonium" || timbre === "choir" || timbre === "ai_voice" || timbre === "vocal_swara") {
+    if (timbre === "harmonium") {
       pb.textContent = "⏳ Loading " + timbre + "…";
       try { await ensureSamples(timbre); sampleSet = timbre; }
       catch (e) { sampleSet = null; } // fall back to synth
