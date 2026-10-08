@@ -679,53 +679,57 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     };
     saSeg.appendChild(b);
   });
-  // Piano: slice of a full keyboard, Sa->Sa' fully visible, neighbors partially
-  // Piano: slice of a full keyboard, Sa->Sa' fills width, edge neighbors as slivers
+  // Piano: fixed C-to-C layout. Sa selector transposes audio; piano marks Sa + raga notes.
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
     if (!cur) return;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
-    const pc = rel => (saOffset + rel + 120) % 12;
+    const saPc = ((saOffset % 12) + 12) % 12;
+    // raga swaras -> absolute key (pc 0-11, +12 for high octave)
     const swaraAt = {};
     [...cur.aro, ...cur.ava].forEach(s => {
-      const rel = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
-      if (rel >= 0 && rel <= 12 && !swaraAt[rel])
-        swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
+      const absPc = (SEMI[norm(s)] + saOffset + 120) % 12;
+      const key = absPc + (s.includes("'") ? 12 : 0);
+      if (!(key in swaraAt)) swaraAt[key] = notation === "hindustani" ? toHindustani(s) : s;
     });
-    const mainWhites = [];
-    for (let rel = 0; rel <= 12; rel++) if (isWhite(pc(rel))) mainWhites.push(rel);
-    const nw = mainWhites.length, ww = 100 / nw;
-    mainWhites.forEach((rel, i) => {
+    const nw = 8, ww = 100 / nw, bw = ww * 0.62;
+    const whitePcs = [0,2,4,5,7,9,11]; // C D E F G A B
+    whitePcs.forEach((pc, i) => {
       const k = document.createElement("div");
-      k.className = "wk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
+      const label = swaraAt[pc];
+      k.className = "wk" + (label !== undefined ? " in-scale" : "");
       k.style.left = (i * ww) + "%"; k.style.width = ww + "%";
-      k.dataset.semi = rel;
-      if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      k.dataset.key = pc;
+      if (label !== undefined) k.innerHTML = "<span>" + label + "</span>";
+      else if (pc === saPc) k.innerHTML = "<span>Sa</span>";
       el.appendChild(k);
     });
-    // (no partial white slivers - the half-clipped edge black key gives the slice look)
-    const bw = ww * 0.62;
-    for (let rel = 0; rel <= 12; rel++) {
-      if (isWhite(pc(rel))) continue;
+    // high C white key
+    const hc = document.createElement("div");
+    const hLabel = swaraAt[12];
+    hc.className = "wk" + (hLabel !== undefined ? " in-scale" : "");
+    hc.style.left = (7 * ww) + "%"; hc.style.width = ww + "%";
+    hc.dataset.key = 12;
+    if (hLabel !== undefined) hc.innerHTML = "<span>" + hLabel + "</span>";
+    el.appendChild(hc);
+    // black keys
+    [[1,0],[3,1],[6,3],[8,4],[10,5]].forEach(([pc, wi]) => {
       const b = document.createElement("div");
-      b.className = "bk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
-      b.dataset.semi = rel;
-      if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      const label = swaraAt[pc];
+      b.className = "bk" + (label !== undefined ? " in-scale" : "");
       b.style.width = bw + "%";
-      let prevW = -1;
-      for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-      // center on the white-key boundary; clamp inside 0-100% to prevent page overflow
-      let lpct = (prevW + 1) * ww - bw / 2;
-      lpct = Math.max(0, Math.min(100 - bw, lpct));
-      b.style.left = lpct + "%";
-      b.style.marginLeft = "0";
+      b.style.left = ((wi + 1) * ww) + "%";
+      b.style.marginLeft = (-bw / 2) + "%";
+      b.dataset.key = pc;
+      if (label !== undefined) b.innerHTML = "<span>" + label + "</span>";
+      else if (pc === saPc) b.innerHTML = "<span>Sa</span>";
       el.appendChild(b);
-    }
+    });
   }
-  function highlightPiano(semi) {
+  function highlightPiano(absKey) {
     document.querySelectorAll("#pianoStrip .wk, #pianoStrip .bk").forEach(k =>
-      k.classList.toggle("active", semi >= 0 && parseInt(k.dataset.semi) === semi));
+      k.classList.toggle("active", absKey >= 0 && parseInt(k.dataset.key) === absKey));
   }
   function openDetail(id) {
     cur = byId(id);
@@ -988,7 +992,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
         clearPlaying();
         chips[box][idx].classList.add("playing");
         const sw = box === "dAro" ? cur.aro[idx] : cur.ava[idx];
-        highlightPiano(SEMI[norm(sw)] + (sw.includes("'") ? 12 : 0));
+        const absKey = (SEMI[norm(sw)] + saOffset + 120) % 12 + (sw.includes("'") ? 12 : 0);
+        highlightPiano(absKey);
       }, (t0 + i * step - actx.currentTime) * 1000));
     });
     playTimer.push(setTimeout(stopPlayback, (t0 + seq.length * step - actx.currentTime) * 1000 + 300));
@@ -1024,4 +1029,4 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   renderChakras();
 </script>
 </body>
-</html><!-- rebuild 1791480165 -->
+</htmml>
