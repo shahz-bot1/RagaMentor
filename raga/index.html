@@ -81,6 +81,16 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; }
 .scalelabel { color: var(--muted); font-size: 12.5px; margin: 10px 0 8px; }
 .playrow { display: flex; gap: 8px; margin-top: 10px; }
+.sarow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sarow label { font-size: 13.5px; color: var(--muted); flex: none; }
+.saseg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; overflow-x: auto; }
+.saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
+.saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
+.pianostrip { display: flex; gap: 4px; margin-bottom: 12px; }
+.pkey { flex: 1; background: #f8f8f8; border: 1px solid #ccc; border-radius: 0 0 8px 8px; min-height: 72px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: 12px; font-weight: 600; color: #333; }
+.pkey.sa { border-color: var(--accent); color: var(--accent); }
+.pkey.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+[data-theme="light"] .pkey { background: #ffffff; }
 .sliderow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .sliderow label { font-size: 13.5px; color: var(--muted); flex: none; }
 .sliderow input[type=range] { flex: 1; accent-color: var(--accent); }
@@ -161,6 +171,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   </section>
   <section class="card">
     <h2>Listen <span class="tag">· harmonium</span></h2>
+    <div class="sarow">
+      <label>Sa</label>
+      <div class="saseg" id="saSeg"></div>
+    </div>
+    <div class="pianostrip" id="pianoStrip"></div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
@@ -614,6 +629,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     st.classList.toggle("fav", favs.has(cur.id));
   }
   let cur = null, timbre = "harmonium";
+  let saOffset = 0; // semitones above C, persisted
+  try {
+    const savedSa = localStorage.getItem("raga-sa");
+    if (savedSa !== null) saOffset = Math.max(0, Math.min(11, parseInt(savedSa) || 0));
+  } catch (e) {}
   let activeNodes = [];
   function swaraChip(s) {
     const d = document.createElement("div");
@@ -632,8 +652,39 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       b.classList.toggle("on", b.dataset.n === notation));
   }
   document.querySelectorAll("#notationSeg button").forEach(b => {
-    b.onclick = () => { notation = b.dataset.n; renderSwaraChips(); };
+    b.onclick = () => { notation = b.dataset.n; renderSwaraChips(); renderPiano(); };
   });
+  // Sa selector (chromatic C-B)
+  const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const saSeg = document.getElementById("saSeg");
+  SA_NAMES.forEach((nm, i) => {
+    const b = document.createElement("button");
+    b.textContent = nm;
+    b.classList.toggle("on", i === saOffset);
+    b.onclick = () => {
+      saOffset = i;
+      try { localStorage.setItem("raga-sa", String(i)); } catch (e) {}
+      saSeg.querySelectorAll("button").forEach((x, xi) => x.classList.toggle("on", xi === i));
+    };
+    saSeg.appendChild(b);
+  });
+  // Piano strip: arohana as display-only keys
+  function renderPiano() {
+    const strip = document.getElementById("pianoStrip");
+    strip.innerHTML = "";
+    if (!cur) return;
+    cur.aro.forEach(s => {
+      const k = document.createElement("div");
+      k.className = "pkey" + (norm(s) === "S" ? " sa" : "");
+      k.textContent = notation === "hindustani" ? toHindustani(s) : s;
+      k.dataset.swara = s;
+      strip.appendChild(k);
+    });
+  }
+  function highlightPiano(idx) {
+    document.querySelectorAll("#pianoStrip .pkey").forEach((k, ki) =>
+      k.classList.toggle("active", ki === idx));
+  }
   function openDetail(id) {
     cur = byId(id);
     stopPlayback();
@@ -652,6 +703,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     const aro = document.getElementById("dAro"), ava = document.getElementById("dAva");
     notation = cur.sys === "H" ? "hindustani" : "carnatic";
     renderSwaraChips();
+    renderPiano();
     const al = document.getElementById("dAllied");
     al.innerHTML = "";
     cur.allied.forEach(nm => {
@@ -696,7 +748,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   }
   function freqOf(s) {
     const up = s.includes("'") ? 12 : 0;
-    return SA_FREQ * Math.pow(2, (SEMI[norm(s)] + up) / 12);
+    return SA_FREQ * Math.pow(2, (SEMI[norm(s)] + up + saOffset) / 12);
   }
 
   /* ---------- vocal "ah": formant synthesis ---------- */
@@ -763,10 +815,20 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       base: "samples/harmonium/",
       files: ["C4","Cs4","D4","Ds4","E4","F4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3"),
       map: (s) => {
-        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
-        let file = NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3";
+        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0) + saOffset; // semitones above C4
+        const baseSemi = ((semi % 12) + 12) % 12;
+        const oct = 4 + Math.floor(semi / 12);
+        let file = NOTE_NAMES[baseSemi] + oct + ".mp3";
         let rate = 1;
-        if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); } // Fs4 missing upstream
+        // find nearest available sample, pitch-shift the rest
+        const avail = [0,1,2,3,4,5,7,8,9,10,11,12]; // C4..C5 minus Fs4
+        if (!avail.includes(semi) || file === "Fs4.mp3") {
+          let best = avail[0], bestD = 99;
+          avail.forEach(a => { const d = Math.abs(a - semi); if (d < bestD) { bestD = d; best = a; } });
+          file = NOTE_NAMES[best % 12] + (4 + Math.floor(best / 12)) + ".mp3";
+          rate = Math.pow(2, (semi - best) / 12);
+        }
+        if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); }
         return { file, rate };
       }
     },
@@ -841,6 +903,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   }
   function clearPlaying() {
     document.querySelectorAll(".swara.playing").forEach(x => x.classList.remove("playing"));
+    highlightPiano(-1);
   }
   function stopPlayback() {
     playing = false;
@@ -882,6 +945,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
         if (!playing) return;
         clearPlaying();
         chips[box][idx].classList.add("playing");
+        if (box === "dAro") highlightPiano(idx); else highlightPiano(-1);
       }, (t0 + i * step - actx.currentTime) * 1000));
     });
     playTimer.push(setTimeout(stopPlayback, (t0 + seq.length * step - actx.currentTime) * 1000 + 300));
@@ -918,4 +982,3 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 </script>
 </body>
 </html>
-<!-- build 1791470634 -->
