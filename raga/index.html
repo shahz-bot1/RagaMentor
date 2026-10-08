@@ -706,12 +706,12 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     });
     if (!isWhite(pc(0))) {
       const k = document.createElement("div");
-      k.className = "wk"; k.style.left = (-ww * 0.75) + "%"; k.style.width = ww + "%";
+      k.className = "wk"; k.style.left = "0%"; k.style.width = (ww * 0.25) + "%";
       k.dataset.semi = -1; el.appendChild(k);
     }
     if (!isWhite(pc(12))) {
       const k = document.createElement("div");
-      k.className = "wk"; k.style.left = (100 - ww * 0.25) + "%"; k.style.width = ww + "%";
+      k.className = "wk"; k.style.left = (100 - ww * 0.25) + "%"; k.style.width = (ww * 0.25) + "%";
       k.dataset.semi = 13; el.appendChild(k);
     }
     const bw = ww * 0.62;
@@ -724,9 +724,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       b.style.width = bw + "%";
       let prevW = -1;
       for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-      // uniform: center on the white-key boundary (edge keys clip slightly = slice look)
-      b.style.left = ((prevW + 1) * ww) + "%";
-      b.style.marginLeft = (-bw / 2) + "%";
+      // center on the white-key boundary; clamp so no key extends beyond 0-100%
+      let lpct = (prevW + 1) * ww - bw / 2;
+      lpct = Math.max(0, Math.min(100 - bw, lpct));
+      b.style.left = lpct + "%";
+      b.style.marginLeft = "0";
       el.appendChild(b);
     }
   }
