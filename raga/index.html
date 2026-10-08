@@ -87,7 +87,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
 .pianostrip { display: none; }
-.piano { position: relative; height: 110px; margin-bottom: 12px; user-select: none; display: flex; }
+.piano { position: relative; height: 110px; margin-bottom: 12px; user-select: none; display: flex; overflow: hidden; }
 .piano .wk { flex: 1; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; position: relative; min-width: 0; }
 .piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 10px; color: #999; }
 .piano .wk.in-scale { background: #dbeafe; }
@@ -690,13 +690,12 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       if (rel >= 0 && rel <= 12 && !swaraAt[rel])
         swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
-    // extend range if last note (S') is black: include next white key
-    let maxRel = 12;
-    while (!isWhite((saOffset + maxRel) % 12) && maxRel < 14) maxRel++;
+    const maxRel = 12;
     const whites = [];
     for (let rel = 0; rel <= maxRel; rel++)
       if (isWhite((saOffset + rel) % 12)) whites.push(rel);
     const nw = whites.length;
+    const bw = 100 / nw * 0.6; // black key width %
     // white keys via flex
     whites.forEach(rel => {
       const k = document.createElement("div");
@@ -705,24 +704,24 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(k);
     });
-    // black keys absolutely positioned
+    // black keys absolutely positioned, edge ones centered on container edge (clipped)
     for (let rel = 0; rel <= maxRel; rel++) {
       if (isWhite((saOffset + rel) % 12)) continue;
       const b = document.createElement("div");
       b.className = "bk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
       b.dataset.semi = rel;
       if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      b.style.width = bw + "%";
       if (rel === 0) {
-        // Sa is black: pin to left edge
-        b.style.left = "0%";
-        b.style.width = (100 / nw * 0.6) + "%";
+        b.style.left = "0%"; b.style.marginLeft = (-bw / 2) + "%";
+      } else if (rel === maxRel) {
+        b.style.left = "100%"; b.style.marginLeft = (-bw / 2) + "%";
       } else {
         let leftWi = -1;
         for (let wi = 0; wi < nw; wi++) if (whites[wi] < rel) leftWi = wi;
         if (leftWi < 0) continue;
         b.style.left = ((leftWi + 1) / nw * 100) + "%";
-        b.style.width = (100 / nw * 0.6) + "%";
-        b.style.marginLeft = (-100 / nw * 0.3) + "%";
+        b.style.marginLeft = (-bw / 2) + "%";
       }
       el.appendChild(b);
     }
