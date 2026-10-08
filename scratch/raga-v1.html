@@ -150,6 +150,7 @@
       <button data-t="harmonium" class="on">Harmonium<small>reed organ</small></button>
       <button data-t="vocal">Vocal<small>"ah" synth</small></button>
       <button data-t="choir">Choir<small>“ah” voices</small></button>
+      <button data-t="ai_voice">AI Voice<small>experimental</small></button>
     </div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
@@ -160,7 +161,7 @@
     </div>
     <p class="note" style="margin:10px 0 0">Sa = C · prototype synth; vocal is clearly synthetic, good enough to hear sthanas</p>
     <p class="note" style="margin:6px 0 0">🔇 No sound on iPhone? Turn off silent mode.</p>
-    <p class="note" style="margin:6px 0 0">Harmonium samples: tonejs-instruments · CC-BY 3.0 · Choir: Sonatina Symphonic Orchestra · CC Sampling+ 1.0</p>
+    <p class="note" style="margin:6px 0 0">Harmonium: tonejs-instruments · CC-BY 3.0 · Choir: Sonatina · CC Sampling+ 1.0 · AI voice: DiffSinger TIGER (experimental, non-commercial voicebank)</p>
   </section>
   <section class="card">
     <h2>Allied ragas <span class="tag">· sounds like</span></h2>
@@ -397,6 +398,14 @@
         if (semi <= 11) return { file: "chorus-female-" + nm + "4.mp3", rate: 1 };
         return { file: "chorus-female-c5.mp3", rate: 1 };
       }
+    },
+    ai_voice: {
+      base: "samples/ai_voice/",
+      files: ["C4","Cs4","D4","Ds4","E4","F4","Fs4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3"),
+      map: (s) => {
+        const semi = SEMI[norm(s)] + (s.includes("'") ? 12 : 0); // semitones above C4
+        return { file: NOTE_NAMES[semi % 12] + (4 + Math.floor(semi / 12)) + ".mp3", rate: 1 };
+      }
     }
   };
   const sampleBufs = {};    // "set/file" -> AudioBuffer
@@ -479,7 +488,7 @@
     ensureAudio();
     const pb = document.getElementById("playBtn");
     let sampleSet = null;
-    if (timbre === "harmonium" || timbre === "choir") {
+    if (timbre === "harmonium" || timbre === "choir" || timbre === "ai_voice") {
       pb.textContent = "⏳ Loading " + timbre + "…";
       try { await ensureSamples(timbre); sampleSet = timbre; }
       catch (e) { sampleSet = null; } // fall back to synth
