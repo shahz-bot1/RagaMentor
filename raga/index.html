@@ -180,7 +180,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v1</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -679,57 +679,86 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     };
     saSeg.appendChild(b);
   });
-  // Piano: fixed C-to-C layout. Sa selector transposes audio; piano marks Sa + raga notes.
+  // Piano: Sa->Sa' fills container exactly, neighbors masked as slivers. v2
+  const PIANO_VER = 2;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
+    document.getElementById("pianoVer").textContent = "v" + PIANO_VER;
     if (!cur) return;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
-    const saPc = ((saOffset % 12) + 12) % 12;
-    // raga swaras -> absolute key (pc 0-11, +12 for high octave)
+    const pc = rel => (saOffset + rel + 120) % 12;
+    const saPc = saOffset % 12;
     const swaraAt = {};
     [...cur.aro, ...cur.ava].forEach(s => {
-      const absPc = (SEMI[norm(s)] + saOffset + 120) % 12;
-      const key = absPc + (s.includes("'") ? 12 : 0);
-      if (!(key in swaraAt)) swaraAt[key] = notation === "hindustani" ? toHindustani(s) : s;
+      const rel = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
+      if (rel >= 0 && rel <= 12 && !(rel in swaraAt))
+        swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
-    const nw = 8, ww = 100 / nw, bw = ww * 0.62;
-    const whitePcs = [0,2,4,5,7,9,11]; // C D E F G A B
-    whitePcs.forEach((pc, i) => {
+    // main whites in [0,12]
+    const mainWhites = [];
+    for (let rel = 0; rel <= 12; rel++) if (isWhite(pc(rel))) mainWhites.push(rel);
+    const nw = mainWhites.length, ww = 100 / nw, bw = ww * 0.62;
+    const wIdx = {}; mainWhites.forEach((r,i) => wIdx[r] = i);
+    // main whites: Sa left edge at 0%, Sa' right edge at 100%
+    mainWhites.forEach((rel, i) => {
       const k = document.createElement("div");
-      const label = swaraAt[pc];
+      const label = swaraAt[rel];
       k.className = "wk" + (label !== undefined ? " in-scale" : "");
       k.style.left = (i * ww) + "%"; k.style.width = ww + "%";
-      k.dataset.key = pc;
+      k.dataset.rel = rel;
       if (label !== undefined) k.innerHTML = "<span>" + label + "</span>";
-      else if (pc === saPc) k.innerHTML = "<span>Sa</span>";
       el.appendChild(k);
     });
-    // high C white key
-    const hc = document.createElement("div");
-    const hLabel = swaraAt[12];
-    hc.className = "wk" + (hLabel !== undefined ? " in-scale" : "");
-    hc.style.left = (7 * ww) + "%"; hc.style.width = ww + "%";
-    hc.dataset.key = 12;
-    if (hLabel !== undefined) hc.innerHTML = "<span>" + hLabel + "</span>";
-    el.appendChild(hc);
-    // black keys
-    [[1,0],[3,1],[6,3],[8,4],[10,5]].forEach(([pc, wi]) => {
+    // neighbor whites as slivers (masked by overflow:hidden)
+    if (!isWhite(pc(-1))) { /* rel=-1 is black, no white sliver */ }
+    else {
+      const k = document.createElement("div");
+      k.className = "wk"; k.style.left = (-ww * 0.7) + "%"; k.style.width = ww + "%";
+      k.dataset.rel = -1; el.appendChild(k);
+    }
+    if (isWhite(pc(13))) {
+      const k = document.createElement("div");
+      k.className = "wk"; k.style.left = (100 - ww * 0.3) + "%"; k.style.width = ww + "%";
+      k.dataset.rel = 13; el.appendChild(k);
+    }
+    // black keys in [0,12], edge ones flush to container
+    for (let rel = 0; rel <= 12; rel++) {
+      if (isWhite(pc(rel))) continue;
       const b = document.createElement("div");
-      const label = swaraAt[pc];
+      const label = swaraAt[rel];
       b.className = "bk" + (label !== undefined ? " in-scale" : "");
       b.style.width = bw + "%";
-      b.style.left = ((wi + 1) * ww) + "%";
-      b.style.marginLeft = (-bw / 2) + "%";
-      b.dataset.key = pc;
+      b.dataset.rel = rel;
       if (label !== undefined) b.innerHTML = "<span>" + label + "</span>";
-      else if (pc === saPc) b.innerHTML = "<span>Sa</span>";
+      let lpct;
+      if (rel === 0) lpct = 0; // Sa black: flush left
+      else if (rel === 12) lpct = 100 - bw; // Sa' black: flush right
+      else {
+        let prevW = -1;
+        for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
+        lpct = (prevW + 1) * ww - bw / 2;
+      }
+      b.style.left = lpct + "%";
       el.appendChild(b);
-    });
+    }
+    // neighbor black slivers if adjacent semitone is black
+    if (!isWhite(pc(-1))) {
+      const b = document.createElement("div");
+      b.className = "bk"; b.style.width = bw + "%";
+      b.style.left = (-bw * 0.7) + "%"; b.dataset.rel = -1;
+      el.appendChild(b);
+    }
+    if (!isWhite(pc(13))) {
+      const b = document.createElement("div");
+      b.className = "bk"; b.style.width = bw + "%";
+      b.style.left = (100 - bw * 0.3) + "%"; b.dataset.rel = 13;
+      el.appendChild(b);
+    }
   }
-  function highlightPiano(absKey) {
+  function highlightPiano(rel) {
     document.querySelectorAll("#pianoStrip .wk, #pianoStrip .bk").forEach(k =>
-      k.classList.toggle("active", absKey >= 0 && parseInt(k.dataset.key) === absKey));
+      k.classList.toggle("active", rel >= 0 && parseInt(k.dataset.rel) === rel));
   }
   function openDetail(id) {
     cur = byId(id);
@@ -992,8 +1021,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
         clearPlaying();
         chips[box][idx].classList.add("playing");
         const sw = box === "dAro" ? cur.aro[idx] : cur.ava[idx];
-        const absKey = (SEMI[norm(sw)] + saOffset + 120) % 12 + (sw.includes("'") ? 12 : 0);
-        highlightPiano(absKey);
+        highlightPiano(SEMI[norm(sw)] + (sw.includes("'") ? 12 : 0));
       }, (t0 + i * step - actx.currentTime) * 1000));
     });
     playTimer.push(setTimeout(stopPlayback, (t0 + seq.length * step - actx.currentTime) * 1000 + 300));
