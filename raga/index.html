@@ -76,7 +76,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .hero .star { position: static; width: 40px; height: 40px; font-size: 24px; flex: none; }
 .swararow { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 6px; }
 .swara { border: 1px solid var(--border); background: var(--panel2); border-radius: 9px; padding: 8px 11px; font-size: 14px; }
-.swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; }
 .scalelabel { color: var(--muted); font-size: 12.5px; margin: 10px 0 8px; }
 .playrow { display: flex; gap: 8px; margin-top: 10px; }
 .bigplay { flex: 1; padding: 13px; border-radius: 13px; border: 0; background: var(--accent); color: #fff;
@@ -549,6 +549,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     st.classList.toggle("fav", favs.has(cur.id));
   }
   let cur = null, timbre = "harmonium";
+  let activeNodes = [];
   function swaraChip(s) {
     const d = document.createElement("div");
     d.className = "swara" + (norm(s) === "S" ? " sa" : "");
@@ -660,6 +661,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.2);
     [o1, o2, lfo].forEach(o => { o.start(t); o.stop(t + dur + 0.25); });
     ns.start(t); ns.stop(t + dur + 0.25);
+    activeNodes.push(o1, o2, lfo, ns);
   }
 
   /* ---------- sampled timbres ---------- */
@@ -728,6 +730,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
     src.connect(g); g.connect(actx.destination);
     src.start(t); src.stop(t + dur + 0.2);
+    activeNodes.push(src);
     return true;
   }
   function noteNode(t, f, dur, timbre) {
@@ -741,6 +744,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       lp.type = "lowpass"; lp.frequency.value = 2400; lp.Q.value = 0.5;
       o.connect(lp); o2.connect(lp); lp.connect(g); g.connect(actx.destination);
       o2.start(t); o2.stop(t + dur + 0.15);
+      activeNodes.push(o2);
     } else {
       // vocal "ah": formant bandpasses + vibrato
       [[730, 7], [1090, 9], [2440, 11]].forEach(([fr, qq]) => {
@@ -753,6 +757,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       const lg = actx.createGain(); lg.gain.value = f * 0.012;
       lfo.connect(lg); lg.connect(o.frequency);
       lfo.start(t); lfo.stop(t + dur + 0.15);
+      activeNodes.push(lfo);
     }
     const atk = timbre === "harmonium" ? 0.03 : 0.09;
     const vol = timbre === "harmonium" ? 0.4 : 0.55;
@@ -761,6 +766,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     g.gain.setValueAtTime(vol, t + Math.max(atk, dur - 0.09));
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
     o.start(t); o.stop(t + dur + 0.15);
+    activeNodes.push(o);
   }
   function clearPlaying() {
     document.querySelectorAll(".swara.playing").forEach(x => x.classList.remove("playing"));
@@ -768,6 +774,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   function stopPlayback() {
     playing = false;
     if (playTimer) { playTimer.forEach(clearTimeout); playTimer = null; }
+    activeNodes.forEach(n => { try { n.stop(); } catch (e) {} });
+    activeNodes = [];
     clearPlaying();
     const pb = document.getElementById("playBtn");
     pb.textContent = "▶ Play arohana + avarohana";
