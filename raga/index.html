@@ -83,11 +83,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
 .playrow { display: flex; gap: 8px; margin-top: 10px; }
 .sarow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .sarow label { font-size: 13.5px; color: var(--muted); flex: none; }
-.saseg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; overflow-x: auto; }
-.saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
+.saseg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; min-width: 0; overflow-x: auto; }
+.saseg button { flex: 1 1 0; min-width: 28px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
 .pianostrip { display: none; }
-.piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; }
+.piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; max-width: 100%; }
 .piano { position: relative; height: 110px; user-select: none; }
 .piano .wk { position: absolute; top: 0; bottom: 0; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; }
 .piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 10px; color: #999; }
@@ -202,7 +202,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <p class="note" style="margin:6px 0 0">Harmonium: tonejs-instruments · CC-BY 3.0 · Choir: Sonatina · CC Sampling+ 1.0 · AI voice: DiffSinger TIGER (experimental, non-commercial voicebank)</p>
   </section>
   <section class="card">
-    <h2>Keyboard <span class="tag" id="pianoVer2">v6</span></h2>
+    <h2>Keyboard <span class="tag" id="pianoVer2">v7</span></h2>
     <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
   </section>
   <section class="card">
@@ -683,7 +683,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 6;
+  const PIANO_VER = 7;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
