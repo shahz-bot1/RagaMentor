@@ -180,7 +180,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v12</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v13</span>
+      <span class="seg small" id="labelSeg" style="float:right">
+        <button data-m="sargam" class="on">Sargam</button><button data-m="western">Western</button>
+      </span>
+    </h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -674,6 +678,23 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   document.querySelectorAll("#notationSeg button").forEach(b => {
     b.onclick = () => { notation = b.dataset.n; renderSwaraChips(); renderPiano(); };
   });
+  // Piano label mode: sargam (S R G...) vs western (C D E...)
+  const WESTERN_NAMES = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+  let labelMode = "sargam";
+  try { labelMode = localStorage.getItem("raga-label-mode") || "sargam"; } catch (e) {}
+  if (labelMode !== "western") labelMode = "sargam";
+  function syncLabelSeg() {
+    document.querySelectorAll("#labelSeg button").forEach(b =>
+      b.classList.toggle("on", b.dataset.m === labelMode));
+  }
+  document.querySelectorAll("#labelSeg button").forEach(b => {
+    b.onclick = () => {
+      labelMode = b.dataset.m;
+      try { localStorage.setItem("raga-label-mode", labelMode); } catch (e) {}
+      syncLabelSeg(); renderPiano();
+    };
+  });
+  syncLabelSeg();
   // Sa selector (chromatic C-B)
   const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   const saSeg = document.getElementById("saSeg");
@@ -690,7 +711,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 12;
+  const PIANO_VER = 13;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
@@ -701,8 +722,12 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     const swaraAt = {};
     [...cur.aro, ...cur.ava].forEach(s => {
       const rel = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
-      if (rel >= 0 && rel <= 12 && !(rel in swaraAt))
-        swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
+      if (rel >= 0 && rel <= 12 && !(rel in swaraAt)) {
+        if (labelMode === "western")
+          swaraAt[rel] = WESTERN_NAMES[(((saOffset % 12) + 12) % 12 + rel) % 12];
+        else
+          swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
+      }
     });
     // Build continuous strip in piano coordinates: start one semitone before Sa
     // White width: Sa(0) to Sa'(12) must span exactly 100%
