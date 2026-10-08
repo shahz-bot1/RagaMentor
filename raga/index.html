@@ -180,7 +180,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v9</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v10</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -447,7 +447,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       allied:["Abhogi"] },
     // Hindustani ragas
     { id:"desh", name:"Desh", sys:"H", thaat:"Khamaj",
-      aro:["S","R2","M1","P","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R2","S"],
+      aro:["S","R2","M1","P","N3","S'"], ava:["S'","N2","D2","P","M1","G3","R2","S"],
       allied:[] },
     { id:"yaman", name:"Yaman", sys:"H", thaat:"Yaman",
       aro:["S","R2","G3","M2","P","D2","N3","S'"], ava:["S'","N3","D2","P","M2","G3","R2","S"],
@@ -681,7 +681,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 9;
+  const PIANO_VER = 10;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
