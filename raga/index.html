@@ -180,7 +180,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v11</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v12</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
@@ -470,6 +470,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     { id:"darbari", name:"Darbari Kanada", sys:"H", thaat:"Asavari",
       aro:["S","R2","G2","M1","P","D1","N2","S'"], ava:["S'","D1","N2","P","M1","P","G2","M1","R2","S"],
       allied:[] },
+    { id:"ahirbhairav", name:"Ahir Bhairav", sys:"H", thaat:"Bhairav",
+      aro:["S","R1","G3","M1","P","D2","N3","S'"], ava:["S'","N3","D2","P","M1","G3","R1","S"],
+      allied:["bhairav_h"] },
+    { id:"saba", name:"Saba", sys:"H", thaat:"Maqam",
+      aro:["S","R1","G2","M1","M2","D1","N2","S'"], ava:["S'","N2","D1","M2","M1","G2","R1","S"],
+      allied:[] },
+    { id:"sikah", name:"Sikah", sys:"H", thaat:"Maqam",
+      aro:["S","R1","G3","M1","P","D1","N2","S'"], ava:["S'","N2","D1","P","M1","G3","R1","S"],
+      allied:[] },
   ];
   const byId = id => RAGAS.find(r => r.id === id);
 
@@ -681,7 +690,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 11;
+  const PIANO_VER = 12;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
