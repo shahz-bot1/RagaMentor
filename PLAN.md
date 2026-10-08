@@ -196,6 +196,7 @@ Publish ~20 Hz. The segment-offset math is the fiddliest part — prove it in th
 
 ### Session & interruptions
 - `AVAudioSession`: category `.playback`, mode `.default`; activate on first play; `UIBackgroundModes = audio`.
+- The `.playback` category is what frees the native app from the web prototypes' silent-switch limitation: on iOS, Web Audio API output (RagaBrowser mock synth/samples, Tala Studio metronome) is classified as interactive/ambient sound and muted by the silent switch, while `<audio>` elements (LoopLab song playback) take the media-playback route and are not. Native `.playback` guarantees ALL app audio — loops, metronome, raga samples — sounds regardless of the switch. Web prototypes carry a "turn off silent mode" hint instead (no JS API can change this).
 - Interruption notification → pause on begin, offer resume on end; route-change → pause on headphone unplug.
 - MPNowPlayingInfoCenter / lock-screen remotes: v1.1.
 
