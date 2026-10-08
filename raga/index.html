@@ -715,10 +715,9 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       b.style.width = bw + "%";
       let prevW = -1;
       for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-      // center on the white-key boundary for uniform spacing (slice look)
-      // edges: allow half-clip, partial white slivers provide context
+      // center on the white-key boundary; clamp inside 0-100% to prevent page overflow
       let lpct = (prevW + 1) * ww - bw / 2;
-      if (rel === 12 && !isWhite(pc(12))) lpct = Math.min(100 - bw, lpct); // right edge: keep inside
+      lpct = Math.max(0, Math.min(100 - bw, lpct));
       b.style.left = lpct + "%";
       b.style.marginLeft = "0";
       el.appendChild(b);
