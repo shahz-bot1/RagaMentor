@@ -424,11 +424,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 
   /* ---------- tabs ---------- */
   document.querySelectorAll("#tabbar button").forEach(b => b.onclick = () => {
+    stopPlayback();
+    detailView.style.display = "none";
+    homeView.style.display = "";
     document.querySelectorAll("#tabbar button").forEach(x => x.classList.remove("on"));
     document.querySelectorAll("#homeView .view").forEach(x => x.classList.remove("on"));
     b.classList.add("on");
     document.getElementById(b.dataset.v).classList.add("on");
   });
+  document.getElementById("homeBtn").onclick = () => { location.href = "../"; };
 
   /* ---------- chakra data ---------- */
   const CHAKRA_NAMES = ["Indu","Netra","Agni","Veda","Bana","Rutu","Rishi","Vasu","Brahma","Disi","Rudra","Aditya"];
@@ -518,6 +522,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   }
   function renderList() {
     const list = document.getElementById("ragaList");
+    if (!q && selSwaras.size === 0) {
+      document.getElementById("resultCount").textContent = "";
+      list.innerHTML = '<div class="empty">Type a raga name or pick swaras above to search.<br>All 72 melakartas live in the 🎼 Melakartas tab.</div>';
+      return;
+    }
     const res = RAGAS.filter(matches);
     document.getElementById("resultCount").textContent =
       res.length + " raga" + (res.length === 1 ? "" : "s") + (RAGAS.length > res.length ? " · " + RAGAS.length + " total" : "");
@@ -580,7 +589,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   document.getElementById("detailBack").onclick = () => {
     stopPlayback();
     detailView.style.display = "none";
-    homeView.style.display = "grid";
+    homeView.style.display = "";
   };
   document.querySelectorAll("#timbreSeg button").forEach(b => {
     b.onclick = () => {
