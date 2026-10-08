@@ -83,8 +83,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
 .playrow { display: flex; gap: 8px; margin-top: 10px; }
 .sarow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .sarow label { font-size: 13.5px; color: var(--muted); flex: none; }
-.saseg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; min-width: 0; overflow-x: auto; }
-.saseg button { flex: 1 1 0; min-width: 28px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
+.saseg { display: flex; flex-wrap: wrap; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; min-width: 0; }
+.saseg button { flex: 1 1 15%; min-width: 0; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
 .pianostrip { display: none; }
 .piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; max-width: 100%; }
@@ -180,11 +180,12 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> </h2>
+    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v8</span></h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
     </div>
+    <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
@@ -201,10 +202,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <p class="note" style="margin:6px 0 0">🔇 No sound on iPhone? Turn off silent mode.</p>
     <p class="note" style="margin:6px 0 0">Harmonium: tonejs-instruments · CC-BY 3.0 · Choir: Sonatina · CC Sampling+ 1.0 · AI voice: DiffSinger TIGER (experimental, non-commercial voicebank)</p>
   </section>
-  <section class="card">
-    <h2>Keyboard <span class="tag" id="pianoVer2">v7</span></h2>
-    <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
-  </section>
+
   <section class="card">
     <h2>Allied ragas <span class="tag">· sounds like</span></h2>
     <div class="allied" id="dAllied"></div>
@@ -683,11 +681,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 7;
+  const PIANO_VER = 8;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
-    var pv=document.getElementById("pianoVer"); if(pv) pv.textContent="v"+PIANO_VER; var pv2=document.getElementById("pianoVer2"); if(pv2) pv2.textContent="v"+PIANO_VER;
+    var pv=document.getElementById("pianoVer"); if(pv) pv.textContent="v"+PIANO_VER;
     if (!cur) return;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
     const pc = rel => (saOffset + rel + 120) % 12;
