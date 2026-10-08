@@ -86,11 +86,20 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
 .saseg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; overflow-x: auto; }
 .saseg button { flex: 1; min-width: 32px; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
-.pianostrip { display: flex; gap: 4px; margin-bottom: 12px; }
-.pkey { flex: 1; background: #f8f8f8; border: 1px solid #ccc; border-radius: 0 0 8px 8px; min-height: 72px; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: 12px; font-weight: 600; color: #333; }
-.pkey.sa { border-color: var(--accent); color: var(--accent); }
-.pkey.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-[data-theme="light"] .pkey { background: #ffffff; }
+.pianostrip { display: none; }
+.piano { position: relative; height: 110px; margin-bottom: 12px; user-select: none; }
+.piano .wk { position: absolute; top: 0; bottom: 0; background: #f8f8f8; border: 1px solid #bbb; border-radius: 0 0 6px 6px; }
+.piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center; font-size: 10px; color: #999; }
+.piano .wk.in-scale { background: #dbeafe; }
+.piano .wk.in-scale span { color: var(--accent); font-weight: 700; font-size: 11px; }
+.piano .wk.active { background: var(--accent); }
+.piano .wk.active span { color: #fff; }
+.piano .bk { position: absolute; top: 0; height: 62%; background: #222; border-radius: 0 0 4px 4px; z-index: 2; }
+.piano .bk span { position: absolute; bottom: 5px; width: 100%; text-align: center; font-size: 9px; color: #777; }
+.piano .bk.in-scale { background: #1e3a5f; }
+.piano .bk.in-scale span { color: #7db8ff; font-weight: 700; }
+.piano .bk.active { background: var(--accent); }
+.piano .bk.active span { color: #fff; }
 .sliderow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
 .sliderow label { font-size: 13.5px; color: var(--muted); flex: none; }
 .sliderow input[type=range] { flex: 1; accent-color: var(--accent); }
@@ -175,7 +184,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
     </div>
-    <div class="pianostrip" id="pianoStrip"></div>
+    <div class="piano" id="pianoStrip"></div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
@@ -668,22 +677,49 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     };
     saSeg.appendChild(b);
   });
-  // Piano strip: arohana as display-only keys
+  // Piano: one chromatic octave Sa->Sa', raga swaras highlighted
   function renderPiano() {
-    const strip = document.getElementById("pianoStrip");
-    strip.innerHTML = "";
+    const el = document.getElementById("pianoStrip");
+    el.innerHTML = "";
     if (!cur) return;
-    cur.aro.forEach(s => {
-      const k = document.createElement("div");
-      k.className = "pkey" + (norm(s) === "S" ? " sa" : "");
-      k.textContent = notation === "hindustani" ? toHindustani(s) : s;
-      k.dataset.swara = s;
-      strip.appendChild(k);
+    const W = el.clientWidth || 600;
+    const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
+    // map relative semitone -> swara label
+    const swaraAt = {};
+    [...cur.aro, ...cur.ava].forEach(s => {
+      const rel = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
+      if (rel >= 0 && rel <= 12 && !swaraAt[rel])
+        swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
+    const whites = [];
+    for (let rel = 0; rel <= 12; rel++)
+      if (isWhite((saOffset + rel) % 12)) whites.push(rel);
+    const ww = W / whites.length;
+    whites.forEach((rel, wi) => {
+      const k = document.createElement("div");
+      k.className = "wk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
+      k.style.left = (wi * ww) + "px"; k.style.width = ww + "px";
+      k.dataset.semi = rel;
+      if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      el.appendChild(k);
+    });
+    for (let rel = 0; rel <= 12; rel++) {
+      if (isWhite((saOffset + rel) % 12)) continue;
+      let leftWi = -1;
+      for (let wi = 0; wi < whites.length; wi++) if (whites[wi] < rel) leftWi = wi;
+      if (leftWi < 0) continue;
+      const b = document.createElement("div");
+      b.className = "bk" + (swaraAt[rel] !== undefined ? " in-scale" : "");
+      b.style.left = ((leftWi + 1) * ww - ww * 0.28) + "px";
+      b.style.width = (ww * 0.56) + "px";
+      b.dataset.semi = rel;
+      if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
+      el.appendChild(b);
+    }
   }
-  function highlightPiano(idx) {
-    document.querySelectorAll("#pianoStrip .pkey").forEach((k, ki) =>
-      k.classList.toggle("active", ki === idx));
+  function highlightPiano(semi) {
+    document.querySelectorAll("#pianoStrip .wk, #pianoStrip .bk").forEach(k =>
+      k.classList.toggle("active", semi >= 0 && parseInt(k.dataset.semi) === semi));
   }
   function openDetail(id) {
     cur = byId(id);
@@ -945,7 +981,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
         if (!playing) return;
         clearPlaying();
         chips[box][idx].classList.add("playing");
-        if (box === "dAro") highlightPiano(idx); else highlightPiano(-1);
+        const sw = box === "dAro" ? cur.aro[idx] : cur.ava[idx];
+        highlightPiano(SEMI[norm(sw)] + (sw.includes("'") ? 12 : 0));
       }, (t0 + i * step - actx.currentTime) * 1000));
     });
     playTimer.push(setTimeout(stopPlayback, (t0 + seq.length * step - actx.currentTime) * 1000 + 300));
