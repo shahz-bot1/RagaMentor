@@ -599,8 +599,17 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   };
   const speedSlider = document.getElementById("speedSlider"), speedVal = document.getElementById("speedVal");
   const updateSpeedLabel = () => { speedVal.textContent = parseFloat(speedSlider.value).toFixed(2) + "s / note"; };
-  speedSlider.oninput = updateSpeedLabel;
+  try {
+    const savedSpeed = localStorage.getItem("raga-speed");
+    if (savedSpeed && parseFloat(savedSpeed) >= 0.25 && parseFloat(savedSpeed) <= 2) speedSlider.value = savedSpeed;
+  } catch (e) {}
+  speedSlider.oninput = () => { updateSpeedLabel();
+    try { localStorage.setItem("raga-speed", speedSlider.value); } catch (e) {} };
   updateSpeedLabel();
+  // iOS suspends Web Audio in background — resume on foreground
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && typeof actx !== "undefined" && actx && actx.state === "suspended") actx.resume();
+  });
 
   /* ---------- synth: harmonium vs vocal "ah" ---------- */
   let actx = null, playTimer = null, playing = false;
@@ -765,6 +774,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
   document.getElementById("playBtn").onclick = async () => {
     if (playing) { stopPlayback(); return; }
     ensureAudio();
+    if (actx.state === "suspended") { try { await actx.resume(); } catch (e) {} }
     const pb = document.getElementById("playBtn");
     let sampleSet = null;
     if (timbre === "harmonium") {
