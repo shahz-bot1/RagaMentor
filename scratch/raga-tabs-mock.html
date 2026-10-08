@@ -1,0 +1,151 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tabs + favourites — mock</title>
+<style>
+:root{--bg:#f7f4ec;--panel:#fffdf7;--panel2:#efe9da;--text:#2b2620;--muted:#8a7f6a;--gold:#b8860b;--border:#ddd3bd;--chip:#f3eedd;--accent:#7a6a3f}
+@media(prefers-color-scheme:dark){:root{--bg:#171410;--panel:#211d16;--panel2:#2b251b;--text:#ece5d3;--muted:#a89a7c;--gold:#d4a017;--border:#3d3423;--chip:#2e2718;--accent:#c9a959}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,sans-serif;padding:0 0 90px}
+header{padding:16px 16px 6px}h1{font-size:20px;margin:0}.hsub{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+.view{display:none;padding:10px 16px}.view.on{display:block}
+input[type=search]{width:100%;padding:11px 13px;border-radius:12px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:15px;margin:4px 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px}
+.chips button{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:20px;padding:7px 12px;font-size:13px}
+.chips button.on{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:700}
+.count{color:var(--muted);font-size:12.5px;margin:6px 0}
+.ragacard{position:relative;display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:13px;padding:12px 44px 12px 13px;margin:8px 0;color:var(--text)}
+.ragacard b{font-size:15.5px}.ragacard .sub{color:var(--muted);font-size:12.5px;margin-top:2px}
+.ragacard .scale{color:var(--accent);font-size:12.5px;margin-top:4px}
+.star{position:absolute;right:6px;top:6px;width:34px;height:34px;border:0;background:none;font-size:20px;color:var(--muted)}
+.star.fav{color:var(--gold)}
+.empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:3px;margin:4px 0 12px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font-size:13.5px;padding:8px;border-radius:9px}
+.seg button.on{background:var(--panel);color:var(--text);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.chakra{background:var(--panel);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden}
+.chead{width:100%;text-align:left;background:none;border:0;color:var(--text);padding:12px 13px;display:flex;align-items:center;gap:9px;font-size:14.5px}
+.chead .num{color:var(--gold);font-weight:800;min-width:24px}.chead .nm{font-weight:700;flex:1}
+.chead .sig{color:var(--muted);font-size:12px}.chead .arr{color:var(--muted)}
+.chakra.open .chead .arr{transform:rotate(90deg);display:inline-block}
+.cbody{display:none;padding:0 10px 10px}.chakra.open .cbody{display:block}
+.cbody .ragacard{margin:6px 0}
+.tabbar{position:fixed;left:0;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--border);display:flex;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:10}
+.tabbar button{flex:1;border:0;background:none;color:var(--muted);font-size:11.5px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px}
+.tabbar button .ic{font-size:21px}.tabbar button.on{color:var(--gold);font-weight:700}
+.mocktag{color:var(--gold);font-size:11px;border:1px solid var(--gold);border-radius:6px;padding:2px 7px;margin-left:8px;vertical-align:2px}
+</style></head><body>
+<header><h1>RagaBrowser<span class="mocktag">mock</span></h1><p class="hsub">Tabbed: search · favourites · melakartas</p></header>
+
+<section class="view on" id="v-search">
+<input type="search" id="q" placeholder="Search ragas…">
+<div class="chips" id="swchips"></div>
+<div class="count" id="cnt"></div>
+<div id="res"></div>
+</section>
+
+<section class="view" id="v-fav">
+<div class="count" id="favcnt"></div>
+<div id="favlist"></div>
+</section>
+
+<section class="view" id="v-mel">
+<div class="seg" id="mSeg"><button data-m="all" class="on">All 72</button><button data-m="M1">M1 · 1–36</button><button data-m="M2">M2 · 37–72</button></div>
+<div id="chlist"></div>
+</section>
+
+<nav class="tabbar">
+<button data-v="v-search" class="on"><span class="ic">🔍</span>Search</button>
+<button data-v="v-fav"><span class="ic">⭐</span>Favourites</button>
+<button data-v="v-mel"><span class="ic">🎼</span>Melakartas</button>
+</nav>
+
+<script>
+const RAGAS = [{"id": "mel001", "n": 1, "name": "Kanakangi", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel002", "n": 2, "name": "Ratnangi", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel003", "n": 3, "name": "Ganamurti", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel004", "n": 4, "name": "Vanaspati", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel005", "n": 5, "name": "Manavati", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel006", "n": 6, "name": "Tanarupi", "chakra": "Indu", "ci": 0, "m": "M1", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel007", "n": 7, "name": "Senavati", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel008", "n": 8, "name": "Hanumatodi", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel009", "n": 9, "name": "Dhenuka", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel010", "n": 10, "name": "Natakapriya", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel011", "n": 11, "name": "Kokilapriya", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel012", "n": 12, "name": "Rupavati", "chakra": "Netra", "ci": 1, "m": "M1", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel013", "n": 13, "name": "Gayakapriya", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel014", "n": 14, "name": "Vakulabharanam", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel015", "n": 15, "name": "Mayamalavagowla", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel016", "n": 16, "name": "Chakravakam", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel017", "n": 17, "name": "Suryakantam", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel018", "n": 18, "name": "Hatakambari", "chakra": "Agni", "ci": 2, "m": "M1", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel019", "n": 19, "name": "Jhankaradhvani", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel020", "n": 20, "name": "Natabhairavi", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel021", "n": 21, "name": "Keeravani", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel022", "n": 22, "name": "Kharaharapriya", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel023", "n": 23, "name": "Gourimanohari", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel024", "n": 24, "name": "Varunapriya", "chakra": "Veda", "ci": 3, "m": "M1", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel025", "n": 25, "name": "Mararanjani", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel026", "n": 26, "name": "Charukesi", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel027", "n": 27, "name": "Sarasangi", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel028", "n": 28, "name": "Harikambhoji", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel029", "n": 29, "name": "Dheerasankarabharanam", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel030", "n": 30, "name": "Naganandini", "chakra": "Bana", "ci": 4, "m": "M1", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel031", "n": 31, "name": "Yagapriya", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel032", "n": 32, "name": "Ragavardhini", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel033", "n": 33, "name": "Gangeyabhushani", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel034", "n": 34, "name": "Vagadheeswari", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel035", "n": 35, "name": "Shulini", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel036", "n": 36, "name": "Chalanata", "chakra": "Rutu", "ci": 5, "m": "M1", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M1", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M1", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel037", "n": 37, "name": "Salagam", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel038", "n": 38, "name": "Jalarnavam", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel039", "n": 39, "name": "Jhalavarali", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel040", "n": 40, "name": "Navaneetam", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel041", "n": 41, "name": "Pavani", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel042", "n": 42, "name": "Raghupriya", "chakra": "Rishi", "ci": 6, "m": "M2", "rg": "R1 G1", "jati": "Sampurna", "aro": ["S", "R1", "G1", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G1", "R1", "S"], "mel": "Melakarta"}, {"id": "mel043", "n": 43, "name": "Gavambhodi", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel044", "n": 44, "name": "Bhavapriya", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel045", "n": 45, "name": "Shubhapantuvarali", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel046", "n": 46, "name": "Shadvidhamargini", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel047", "n": 47, "name": "Suvarnangi", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel048", "n": 48, "name": "Divyamani", "chakra": "Vasu", "ci": 7, "m": "M2", "rg": "R1 G2", "jati": "Sampurna", "aro": ["S", "R1", "G2", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G2", "R1", "S"], "mel": "Melakarta"}, {"id": "mel049", "n": 49, "name": "Dhavalambari", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel050", "n": 50, "name": "Namanarayani", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel051", "n": 51, "name": "Kamavardhani", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel052", "n": 52, "name": "Ramapriya", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel053", "n": 53, "name": "Gamanashrama", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel054", "n": 54, "name": "Vishwambari", "chakra": "Brahma", "ci": 8, "m": "M2", "rg": "R1 G3", "jati": "Sampurna", "aro": ["S", "R1", "G3", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G3", "R1", "S"], "mel": "Melakarta"}, {"id": "mel055", "n": 55, "name": "Shyamalangi", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel056", "n": 56, "name": "Shanmukhapriya", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel057", "n": 57, "name": "Simhendramadhyamam", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel058", "n": 58, "name": "Hemavati", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel059", "n": 59, "name": "Dharmavati", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel060", "n": 60, "name": "Neetimati", "chakra": "Disi", "ci": 9, "m": "M2", "rg": "R2 G2", "jati": "Sampurna", "aro": ["S", "R2", "G2", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G2", "R2", "S"], "mel": "Melakarta"}, {"id": "mel061", "n": 61, "name": "Kantamani", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel062", "n": 62, "name": "Rishabhapriya", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel063", "n": 63, "name": "Latangi", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel064", "n": 64, "name": "Vachaspati", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel065", "n": 65, "name": "Mechakalyani", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel066", "n": 66, "name": "Chitrambari", "chakra": "Rudra", "ci": 10, "m": "M2", "rg": "R2 G3", "jati": "Sampurna", "aro": ["S", "R2", "G3", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G3", "R2", "S"], "mel": "Melakarta"}, {"id": "mel067", "n": 67, "name": "Sucharitra", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D1", "N1", "S'"], "ava": ["S'", "N1", "D1", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel068", "n": 68, "name": "Jyotiswarupini", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel069", "n": 69, "name": "Dhatuvardhani", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D1", "N3", "S'"], "ava": ["S'", "N3", "D1", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel070", "n": 70, "name": "Nasikabhushani", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D2", "N2", "S'"], "ava": ["S'", "N2", "D2", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel071", "n": 71, "name": "Kosalam", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D2", "N3", "S'"], "ava": ["S'", "N3", "D2", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mel072", "n": 72, "name": "Rasikapriya", "chakra": "Aditya", "ci": 11, "m": "M2", "rg": "R3 G3", "jati": "Sampurna", "aro": ["S", "R3", "G3", "M2", "P", "D3", "N3", "S'"], "ava": ["S'", "N3", "D3", "P", "M2", "G3", "R3", "S"], "mel": "Melakarta"}, {"id": "mohanam", "name": "Mohanam", "mel": "Harikambhoji (28)", "jati": "Audava", "aro": ["S", "R2", "G3", "P", "D2", "S'"], "ava": ["S'", "D2", "P", "G3", "R2", "S"]}, {"id": "hamsadhvani", "name": "Hamsadhvani", "mel": "Dheerasankarabharanam (29)", "jati": "Audava", "aro": ["S", "R2", "G3", "P", "N3", "S'"], "ava": ["S'", "N3", "P", "G3", "R2", "S"]}, {"id": "abhogi", "name": "Abhogi", "mel": "Kharaharapriya (22)", "jati": "Audava", "aro": ["S", "R2", "G2", "M1", "D2", "S'"], "ava": ["S'", "D2", "M1", "G2", "R2", "S"]}, {"id": "hindolam", "name": "Hindolam", "mel": "Natabhairavi (20)", "jati": "Audava", "aro": ["S", "G2", "M1", "D1", "N2", "S'"], "ava": ["S'", "N2", "D1", "M1", "G2", "S"]}];
+const CHAKRAS = [{"name": "Indu", "num": 1, "m": "M1", "rg": "R1 G1", "ids": ["mel001", "mel002", "mel003", "mel004", "mel005", "mel006"]}, {"name": "Netra", "num": 2, "m": "M1", "rg": "R1 G2", "ids": ["mel007", "mel008", "mel009", "mel010", "mel011", "mel012"]}, {"name": "Agni", "num": 3, "m": "M1", "rg": "R1 G3", "ids": ["mel013", "mel014", "mel015", "mel016", "mel017", "mel018"]}, {"name": "Veda", "num": 4, "m": "M1", "rg": "R2 G2", "ids": ["mel019", "mel020", "mel021", "mel022", "mel023", "mel024"]}, {"name": "Bana", "num": 5, "m": "M1", "rg": "R2 G3", "ids": ["mel025", "mel026", "mel027", "mel028", "mel029", "mel030"]}, {"name": "Rutu", "num": 6, "m": "M1", "rg": "R3 G3", "ids": ["mel031", "mel032", "mel033", "mel034", "mel035", "mel036"]}, {"name": "Rishi", "num": 7, "m": "M2", "rg": "R1 G1", "ids": ["mel037", "mel038", "mel039", "mel040", "mel041", "mel042"]}, {"name": "Vasu", "num": 8, "m": "M2", "rg": "R1 G2", "ids": ["mel043", "mel044", "mel045", "mel046", "mel047", "mel048"]}, {"name": "Brahma", "num": 9, "m": "M2", "rg": "R1 G3", "ids": ["mel049", "mel050", "mel051", "mel052", "mel053", "mel054"]}, {"name": "Disi", "num": 10, "m": "M2", "rg": "R2 G2", "ids": ["mel055", "mel056", "mel057", "mel058", "mel059", "mel060"]}, {"name": "Rudra", "num": 11, "m": "M2", "rg": "R2 G3", "ids": ["mel061", "mel062", "mel063", "mel064", "mel065", "mel066"]}, {"name": "Aditya", "num": 12, "m": "M2", "rg": "R3 G3", "ids": ["mel067", "mel068", "mel069", "mel070", "mel071", "mel072"]}];
+const byId = id => RAGAS.find(r => r.id === id);
+let favs = new Set(JSON.parse(localStorage.getItem("raga-fav-mock") || "[]"));
+const saveFavs = () => localStorage.setItem("raga-fav-mock", JSON.stringify([...favs]));
+const SW = ["S","R1","R2","R3","G1","G2","G3","M1","M2","P","D1","D2","D3","N1","N2","N3"];
+let selS = new Set(), mFilter = "all", openCh = -1;
+
+function starBtn(r){
+  const b = document.createElement("button");
+  b.className = "star" + (favs.has(r.id) ? " fav" : "");
+  b.textContent = favs.has(r.id) ? "★" : "☆";
+  b.onclick = e => { e.stopPropagation();
+    favs.has(r.id) ? favs.delete(r.id) : favs.add(r.id);
+    saveFavs(); renderAll();
+  };
+  return b;
+}
+function card(r){
+  const b = document.createElement("button");
+  b.className = "ragacard";
+  const sub = r.num ? "#" + r.n + " · " + r.chakra + " chakra · " + r.jati : r.mel + " · " + r.jati;
+  b.innerHTML = "<b>" + r.name + "</b><div class='sub'>" + sub + "</div><div class='scale'>" + r.aro.join(" ") + "</div>";
+  b.appendChild(starBtn(r));
+  b.onclick = () => {};
+  return b;
+}
+/* search */
+function renderSw(){
+  const c = document.getElementById("swchips"); c.innerHTML = "";
+  SW.forEach(s => {
+    const b = document.createElement("button");
+    b.textContent = s; if (selS.has(s)) b.classList.add("on");
+    b.onclick = () => { selS.has(s) ? selS.delete(s) : selS.add(s); renderSearch(); };
+    c.appendChild(b);
+  });
+}
+function renderSearch(){
+  renderSw();
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const res = RAGAS.filter(r => {
+    if (q && !r.name.toLowerCase().includes(q)) return false;
+    if (selS.size){
+      const ns = new Set([...r.aro, ...r.ava].map(s => s.replace("'","")));
+      for (const s of selS) if (!ns.has(s)) return false;
+    }
+    return true;
+  });
+  document.getElementById("cnt").textContent = res.length + " of " + RAGAS.length;
+  const d = document.getElementById("res"); d.innerHTML = "";
+  res.forEach(r => d.appendChild(card(r)));
+}
+document.getElementById("q").oninput = renderSearch;
+/* favourites */
+function renderFav(){
+  const list = [...favs].map(byId).filter(Boolean);
+  document.getElementById("favcnt").textContent = list.length ? list.length + " favourite" + (list.length>1?"s":"") : "";
+  const d = document.getElementById("favlist"); d.innerHTML = "";
+  if (!list.length){ d.innerHTML = "<div class='empty'>No favourites yet.<br>Tap ☆ on any raga to pin it here.</div>"; return; }
+  list.forEach(r => d.appendChild(card(r)));
+}
+/* melakarta chakra browse */
+function renderCh(){
+  const list = document.getElementById("chlist"); list.innerHTML = "";
+  CHAKRAS.forEach((c, i) => {
+    if (mFilter !== "all" && c.m !== mFilter) return;
+    const d = document.createElement("div");
+    d.className = "chakra" + (openCh === i ? " open" : "");
+    const head = document.createElement("button");
+    head.className = "chead";
+    head.innerHTML = "<span class='num'>" + c.num + "</span><span class='nm'>" + c.name + "</span><span class='sig'>" + c.rg + " · " + c.m + "</span><span class='arr'>›</span>";
+    head.onclick = () => { openCh = openCh === i ? -1 : i; renderCh(); };
+    const body = document.createElement("div"); body.className = "cbody";
+    c.ids.forEach(id => body.appendChild(card(byId(id))));
+    d.appendChild(head); d.appendChild(body); list.appendChild(d);
+  });
+}
+document.querySelectorAll("#mSeg button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("#mSeg button").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); mFilter = b.dataset.m; openCh = -1; renderCh();
+});
+/* tabs */
+document.querySelectorAll(".tabbar button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabbar button").forEach(x => x.classList.remove("on"));
+  document.querySelectorAll(".view").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); document.getElementById(b.dataset.v).classList.add("on");
+});
+function renderAll(){ renderSearch(); renderFav(); renderCh(); }
+renderAll();
+</script></body></html>
