@@ -5,138 +5,137 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mock: RagaBrowser v1</title>
 <style>
-  :root, [data-theme="dark"] {
-    --bg: #101318; --panel: #171c24; --panel2: #1f2631;
-    --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
-    --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
-    --samam: #ffd166;
-  }
-  [data-theme="light"] {
-    --bg: #f4f6f9; --panel: #ffffff; --panel2: #eef1f5;
-    --text: #1b2330; --muted: #5d6b7d; --border: #dde3ea;
-    --accent: #2f6fe4; --accent-soft: rgba(47,111,228,.12);
-    --samam: #d99a17;
-  }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Segoe UI, sans-serif;
-         background: var(--bg); color: var(--text); }
-  .mockbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px;
-             background: var(--panel2); border-bottom: 1px solid var(--border);
-             font-size: 12px; color: var(--muted); position: sticky; top: 0; z-index: 30; }
-  .mockbar button { font-size: 12px; padding: 4px 12px; border-radius: 8px;
-                    border: 1px solid var(--border); background: transparent; color: var(--text); }
-  header.apphead { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); }
-  .llrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 12px; }
-  #homeBtn { justify-self: start; font-size: 13px; padding: 6px 10px; border-radius: 8px;
-             border: 1px solid var(--border); background: transparent; color: var(--accent); }
-  .lltitle { justify-self: center; text-align: center; min-width: 0; }
-  .lltitle h1 { margin: 0; font-size: 20px; letter-spacing: .2px; white-space: nowrap; }
-  .lltitle h1 span { color: var(--accent); }
-  .lltitle p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-  #themeBtn { justify-self: end; font-size: 13px; padding: 6px 10px; border-radius: 8px;
-              border: 1px solid var(--border); background: transparent; color: var(--text); }
-  main { max-width: 640px; margin: 0 auto; padding: 16px 20px 60px; display: grid; gap: 16px; }
-  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
-  .card h2 { margin: 0 0 12px; font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-  .card h2 .tag { text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 11px; }
-  .searchbar { display: flex; gap: 8px; }
-  .searchbar input { flex: 1; font: inherit; font-size: 15px; padding: 10px 14px; border-radius: 10px;
-                     border: 1px solid var(--border); background: var(--panel2); color: var(--text); }
-  .searchbar input::placeholder { color: var(--muted); }
-  .clearbtn { font-size: 13px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
-              background: transparent; color: var(--muted); }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .chips button { border: 1px solid var(--border); background: var(--panel2); color: var(--muted);
-                  font: inherit; font-size: 14px; padding: 8px 13px; border-radius: 999px; min-width: 44px; }
-  .chips button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--text); font-weight: 600; }
-  .mchips button { font-size: 12px; padding: 7px 12px; }
-  .ragalist { display: grid; gap: 10px; }
-  .ragacard { width: 100%; text-align: left; background: var(--panel); border: 1px solid var(--border);
-              border-radius: 14px; padding: 14px 16px; color: var(--text); font: inherit; }
-  .ragacard b { font-size: 16px; }
-  .ragacard .sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
-  .ragacard .scale { font-size: 13px; color: var(--accent); margin-top: 6px; font-variant-numeric: tabular-nums; }
-  .ragacard .chev { float: right; color: var(--muted); font-size: 18px; }
-  .count { font-size: 12px; color: var(--muted); }
-  /* detail */
-  #detailView { display: none; }
-  .backbtn { font-size: 13px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border);
-             background: transparent; color: var(--accent); margin-bottom: 4px; justify-self: start; }
-  .hero { text-align: center; padding: 8px 0 2px; }
-  .hero h2 { font-size: 26px; margin: 0; }
-  .hero .meta { font-size: 13px; color: var(--muted); margin-top: 6px; }
-  .hero .meta b { color: var(--samam); font-weight: 600; }
-  .swararow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-  .swara { font-size: 14px; font-weight: 600; padding: 9px 0; border-radius: 10px; min-width: 46px; text-align: center;
-           background: var(--panel2); border: 1px solid var(--border); }
-  .swara.sa { border-color: var(--samam); color: var(--samam); }
-  .swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .scalelabel { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin: 12px 0 2px; }
-  .scalelabel:first-child { margin-top: 0; }
-  .seg { display: flex; background: var(--panel2); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit;
-                font-size: 13px; padding: 9px 4px; border-radius: 8px; }
-  .seg button.on { background: var(--panel); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.25); }
-  .seg button small { display: block; font-size: 10px; color: var(--muted); }
-  .seg button.on small { color: var(--accent); }
-  .playrow { display: flex; gap: 10px; margin-top: 12px; }
-  .bigplay { flex: 1; border: 0; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 700;
-             background: var(--accent); color: #fff; }
-  .bigplay.playing { background: var(--panel2); color: var(--text); border: 1px solid var(--border); }
-  .allied { display: flex; flex-wrap: wrap; gap: 8px; }
-  .allied button { border: 1px solid var(--border); background: var(--panel2); color: var(--text);
-                   font: inherit; font-size: 13px; padding: 8px 14px; border-radius: 999px; }
-  .note { font-size: 12px; color: var(--muted); }
-  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 18px; }
+:root, [data-theme="dark"] {
+  --bg: #101318; --panel: #171c24; --panel2: #1f2631;
+  --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
+  --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
+}
+[data-theme="light"] {
+  --bg: #f4f6f9; --panel: #ffffff; --panel2: #eef1f5;
+  --text: #1b2330; --muted: #5d6b7d; --border: #dde3ea;
+  --accent: #2f6fe4; --accent-soft: rgba(47,111,228,.12);
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Segoe UI, sans-serif;
+       background: var(--bg); color: var(--text); padding-bottom: 92px; }
+.apphead { max-width: 640px; margin: 0 auto; padding: 14px 16px 4px; }
+.llrow { display: flex; align-items: center; gap: 12px; }
+.llrow button { font-size: 13px; padding: 6px 12px; border-radius: 8px;
+                border: 1px solid var(--border); background: transparent; color: var(--text); }
+.lltitle { flex: 1; } .lltitle h1 { margin: 0; font-size: 22px; } .lltitle h1 span { color: var(--accent); }
+.lltitle p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
+.view { display: none; } .view.on { display: block; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 10px; font-size: 15px; }
+.tag { color: var(--muted); font-weight: 400; font-size: 12px; }
+.searchbar { display: flex; gap: 8px; }
+.searchbar input { flex: 1; padding: 11px 13px; border-radius: 12px; border: 1px solid var(--border);
+                   background: var(--panel2); color: var(--text); font-size: 15px; }
+.clearbtn { padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border);
+            background: var(--panel2); color: var(--text); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.chips button { border: 1px solid var(--border); background: var(--panel2); color: var(--text);
+                border-radius: 20px; padding: 7px 12px; font-size: 13px; }
+.chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.count { color: var(--muted); font-size: 12.5px; margin: 4px 0 8px; }
+.ragacard { position: relative; display: block; width: 100%; text-align: left; background: var(--panel);
+            border: 1px solid var(--border); border-radius: 14px; padding: 13px 44px 13px 14px;
+            margin: 8px 0; color: var(--text); font: inherit; cursor: pointer; }
+.ragacard b { font-size: 15.5px; }
+.ragacard .sub { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.ragacard .scale { color: var(--accent); font-size: 12.5px; margin-top: 4px; }
+.ragacard .chev { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 18px; }
+.star { position: absolute; right: 4px; top: 4px; width: 36px; height: 36px; border: 0; background: none;
+        font-size: 20px; color: var(--muted); cursor: pointer; z-index: 2; }
+.star.fav { color: var(--accent); }
+.empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+.seg { display: flex; background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 3px; margin-bottom: 12px; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 9px 4px; border-radius: 9px; }
+.seg button.on { background: var(--panel); color: var(--text); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.seg button small { display: block; font-size: 10.5px; font-weight: 400; opacity: .75; }
+.chakra { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; overflow: hidden; }
+.chead { width: 100%; text-align: left; background: none; border: 0; color: var(--text); padding: 13px 14px;
+         display: flex; align-items: center; gap: 10px; font-size: 15px; font: inherit; cursor: pointer; }
+.chead .num { color: var(--accent); font-weight: 800; min-width: 26px; }
+.chead .nm { font-weight: 700; flex: 1; } .chead .sig { color: var(--muted); font-size: 12.5px; }
+.chead .arr { color: var(--muted); } .chakra.open .chead .arr { transform: rotate(90deg); display: inline-block; }
+.cbody { display: none; padding: 0 10px 10px; } .chakra.open .cbody { display: block; }
+.cbody .ragacard { margin: 6px 0; }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: 1px solid var(--border);
+          display: flex; padding: 8px 6px calc(8px + env(safe-area-inset-bottom)); z-index: 10; }
+.tabbar button { flex: 1; border: 0; background: none; color: var(--muted); font-size: 11.5px; display: flex;
+                 flex-direction: column; align-items: center; gap: 3px; padding: 6px; font: inherit; cursor: pointer; }
+.tabbar button .ic { font-size: 21px; } .tabbar button.on { color: var(--accent); font-weight: 700; }
+.backbtn { border: 1px solid var(--border); background: var(--panel); color: var(--text); border-radius: 10px;
+           padding: 8px 14px; font-size: 14px; margin-bottom: 12px; cursor: pointer; }
+.hero { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 12px; }
+.hero h2 { margin: 0; font-size: 26px; flex: 1; } .hero .meta { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
+.hero .star { position: static; width: 40px; height: 40px; font-size: 24px; flex: none; }
+.swararow { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 6px; }
+.swara { border: 1px solid var(--border); background: var(--panel2); border-radius: 9px; padding: 8px 11px; font-size: 14px; }
+.swara.playing { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.scalelabel { color: var(--muted); font-size: 12.5px; margin: 10px 0 8px; }
+.playrow { display: flex; gap: 8px; margin-top: 10px; }
+.bigplay { flex: 1; padding: 13px; border-radius: 13px; border: 0; background: var(--accent); color: #fff;
+           font-size: 15px; font-weight: 700; cursor: pointer; }
+.bigplay.playing { background: #d33; }
+.note { color: var(--muted); font-size: 12.5px; }
+.allied { display: flex; flex-wrap: wrap; gap: 8px; }
+.allied button { border: 1px solid var(--border); background: var(--panel2); color: var(--text);
+                 border-radius: 18px; padding: 8px 14px; font-size: 13.5px; cursor: pointer; }
 </style>
 </head>
 <body>
-<div class="mockbar">
-  <span>MOCK — RagaBrowser v1 · 8-raga sample data · audio is real synth</span>
-  <button id="mockTheme">◐ Light</button>
-</div>
-
 <header class="apphead">
   <div class="llrow">
     <button id="homeBtn">‹ RagaMentor</button>
     <div class="lltitle">
-      <h1>🔍 Raga<span>Browser</span></h1>
-      <p>Find your raga</p>
+      <h1>Raga<span>Browser</span></h1>
+      <p>Find your raga · hear every swara</p>
     </div>
     <button id="themeBtn">◐ Theme</button>
   </div>
 </header>
 
 <main id="homeView">
-  <section class="card">
-    <h2>Search by name</h2>
-    <div class="searchbar">
-      <input id="nameSearch" type="search" placeholder="e.g. mohanam…" autocomplete="off">
-      <button class="clearbtn" id="clearBtn">Clear</button>
+  <section class="view on" id="view-search">
+    <div class="card">
+      <h2>Search by name</h2>
+      <div class="searchbar">
+        <input id="nameSearch" type="search" placeholder="e.g. mohanam…" autocomplete="off">
+        <button class="clearbtn" id="clearBtn">Clear</button>
+      </div>
     </div>
-  </section>
-
-  <section class="card">
-    <h2>Search by swaras <span class="tag">· ragas containing all selected</span></h2>
-    <div class="chips" id="swaraChips"></div>
-  </section>
-
-  <section class="card">
-    <h2>Browse by melakarta <span class="tag">· parent of the sample set</span></h2>
-    <div class="chips mchips" id="melChips"></div>
-  </section>
-
-  <section>
+    <div class="card">
+      <h2>Search by swaras <span class="tag">· ragas containing all selected</span></h2>
+      <div class="chips" id="swaraChips"></div>
+    </div>
     <div class="count" id="resultCount"></div>
-    <div class="ragalist" id="ragaList" style="margin-top:10px"></div>
+    <div class="ragalist" id="ragaList"></div>
+  </section>
+  <section class="view" id="view-fav">
+    <div class="count" id="favCount"></div>
+    <div id="favList"></div>
+  </section>
+  <section class="view" id="view-mel">
+    <div class="seg" id="mSeg">
+      <button data-m="all" class="on">All 72</button><button data-m="M1">M1 · 1–36</button><button data-m="M2">M2 · 37–72</button>
+    </div>
+    <div id="chakraList"></div>
   </section>
 </main>
+<nav class="tabbar" id="tabbar">
+  <button data-v="view-search" class="on"><span class="ic">🔍</span>Search</button>
+  <button data-v="view-fav"><span class="ic">⭐</span>Favourites</button>
+  <button data-v="view-mel"><span class="ic">🎼</span>Melakartas</button>
+</nav>
 
 <main id="detailView">
   <button class="backbtn" id="detailBack">‹ Search</button>
   <div class="hero">
-    <h2 id="dName"></h2>
-    <div class="meta" id="dMeta"></div>
+    <div style="flex:1;min-width:0"><h2 id="dName"></h2><div class="meta" id="dMeta"></div></div>
+    <button class="star" id="dStar" title="Favourite">☆</button>
   </div>
   <section class="card">
     <h2>Arohana · ascending</h2>
@@ -407,16 +406,75 @@
       allied:["Abhogi"] },
   ];
   const byId = id => RAGAS.find(r => r.id === id);
+
+  /* ---------- favourites ---------- */
+  let favs = new Set(JSON.parse(localStorage.getItem("raga-favs") || "[]"));
+  const saveFavs = () => { try { localStorage.setItem("raga-favs", JSON.stringify([...favs])); } catch (e) {} };
+  function starBtn(r) {
+    const b = document.createElement("button");
+    b.className = "star" + (favs.has(r.id) ? " fav" : "");
+    b.textContent = favs.has(r.id) ? "\u2605" : "\u2606";
+    b.title = "Favourite";
+    b.onclick = e => { e.stopPropagation();
+      favs.has(r.id) ? favs.delete(r.id) : favs.add(r.id);
+      saveFavs(); renderList(); renderFav(); updateDetailStar();
+    };
+    return b;
+  }
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll("#tabbar button").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#tabbar button").forEach(x => x.classList.remove("on"));
+    document.querySelectorAll("#homeView .view").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    document.getElementById(b.dataset.v).classList.add("on");
+  });
+
+  /* ---------- chakra data ---------- */
+  const CHAKRA_NAMES = ["Indu","Netra","Agni","Veda","Bana","Rutu","Rishi","Vasu","Brahma","Disi","Rudra","Aditya"];
+  const CHAKRA_RG = ["R1 G1","R1 G2","R1 G3","R2 G2","R2 G3","R3 G3"];
+  function chakraIdx(r) {
+    const nn = r.num <= 36 ? r.num : r.num - 36;
+    const ci = Math.floor((nn - 1) / 6);
+    return r.num <= 36 ? ci : ci + 6;
+  }
+  let mFilter = "all", openChakra = -1;
+  function renderChakras() {
+    const list = document.getElementById("chakraList");
+    list.innerHTML = "";
+    for (let ci = 0; ci < 12; ci++) {
+      const m = ci < 6 ? "M1" : "M2";
+      if (mFilter !== "all" && m !== mFilter) continue;
+      const ragas = RAGAS.filter(r => r.num && chakraIdx(r) === ci);
+      if (!ragas.length) continue;
+      const d = document.createElement("div");
+      d.className = "chakra" + (openChakra === ci ? " open" : "");
+      const head = document.createElement("button");
+      head.className = "chead";
+      head.innerHTML = '<span class="num">' + (ci + 1) + '</span><span class="nm">' + CHAKRA_NAMES[ci] +
+        ' chakra</span><span class="sig">' + CHAKRA_RG[ci % 6] + ' \u00B7 ' + m + '</span><span class="arr">\u203A</span>';
+      head.onclick = () => { openChakra = openChakra === ci ? -1 : ci; renderChakras(); };
+      const body = document.createElement("div");
+      body.className = "cbody";
+      ragas.forEach(r => body.appendChild(ragaCard(r)));
+      d.appendChild(head); d.appendChild(body);
+      list.appendChild(d);
+    }
+  }
+  document.querySelectorAll("#mSeg button").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#mSeg button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on"); mFilter = b.dataset.m; openChakra = -1; renderChakras();
+  });
   const norm = s => s.replace("'","");
   const noteSet = r => new Set([...r.aro, ...r.ava].map(norm));
 
-  let q = "", selSwaras = new Set(), selMel = null;
+  let q = "", selSwaras = new Set();
 
   /* ---------- home: filters ---------- */
   const nameSearch = document.getElementById("nameSearch");
   nameSearch.oninput = () => { q = nameSearch.value.trim().toLowerCase(); renderList(); };
   document.getElementById("clearBtn").onclick = () => {
-    q = ""; nameSearch.value = ""; selSwaras.clear(); selMel = null;
+    q = ""; nameSearch.value = ""; selSwaras.clear();
     renderChips(); renderList();
   };
   function renderChips() {
@@ -429,22 +487,34 @@
       b.onclick = () => { selSwaras.has(s) ? selSwaras.delete(s) : selSwaras.add(s); renderChips(); renderList(); };
       sc.appendChild(b);
     });
-    const mc = document.getElementById("melChips");
-    mc.innerHTML = "";
-    [...new Set(RAGAS.map(r => r.mel))].sort().forEach(m => {
-      const b = document.createElement("button");
-      b.textContent = m;
-      if (selMel === m) b.classList.add("on");
-      b.onclick = () => { selMel = selMel === m ? null : m; renderChips(); renderList(); };
-      mc.appendChild(b);
-    });
   }
   function matches(r) {
     if (q && !r.name.toLowerCase().includes(q)) return false;
-    if (selMel && r.mel !== selMel) return false;
     const ns = noteSet(r);
     for (const s of selSwaras) if (!ns.has(s)) return false;
     return true;
+  }
+  function ragaCard(r) {
+    const b = document.createElement("button");
+    b.className = "ragacard";
+    b.innerHTML = '<span class="chev">›</span><b>' + r.name + '</b>' +
+      '<div class="sub">' + (r.num ? "#" + r.num + " · " + r.chakra + " chakra" : r.mel) + ' · ' + r.jati + '</div>' +
+      '<div class="scale">' + r.aro.join(" ") + '</div>';
+    b.appendChild(starBtn(r));
+    b.onclick = () => openDetail(r.id);
+    return b;
+  }
+  function renderFav() {
+    const list = [...favs].map(byId).filter(Boolean);
+    document.getElementById("favCount").textContent =
+      list.length ? list.length + " favourite" + (list.length === 1 ? "" : "s") : "";
+    const d = document.getElementById("favList");
+    d.innerHTML = "";
+    if (!list.length) {
+      d.innerHTML = '<div class="empty">No favourites yet.<br>Tap ☆ on any raga to pin it here.</div>';
+      return;
+    }
+    list.forEach(r => d.appendChild(ragaCard(r)));
   }
   function renderList() {
     const list = document.getElementById("ragaList");
@@ -456,19 +526,17 @@
       list.innerHTML = '<div class="empty">No ragas match — try fewer swaras.</div>';
       return;
     }
-    res.forEach(r => {
-      const b = document.createElement("button");
-      b.className = "ragacard";
-      b.innerHTML = '<span class="chev">›</span><b>' + r.name + '</b>' +
-        '<div class="sub">' + (r.num ? "#" + r.num + " · " + r.chakra + " chakra" : r.mel) + ' · ' + r.jati + '</div>' +
-        '<div class="scale">' + r.aro.join(" ") + '</div>';
-      b.onclick = () => openDetail(r.id);
-      list.appendChild(b);
-    });
+    res.forEach(r => list.appendChild(ragaCard(r)));
   }
 
   /* ---------- detail ---------- */
   const homeView = document.getElementById("homeView"), detailView = document.getElementById("detailView");
+  function updateDetailStar() {
+    const st = document.getElementById("dStar");
+    if (!st || !cur) return;
+    st.textContent = favs.has(cur.id) ? "\u2605" : "\u2606";
+    st.classList.toggle("fav", favs.has(cur.id));
+  }
   let cur = null, timbre = "harmonium";
   function swaraChip(s) {
     const d = document.createElement("div");
@@ -481,6 +549,11 @@
     cur = byId(id);
     stopPlayback();
     document.getElementById("dName").textContent = cur.name;
+    updateDetailStar();
+    document.getElementById("dStar").onclick = () => {
+      favs.has(cur.id) ? favs.delete(cur.id) : favs.add(cur.id);
+      saveFavs(); updateDetailStar(); renderList(); renderFav(); renderChakras();
+    };
     document.getElementById("dMeta").innerHTML =
       cur.num
         ? "Melakarta <b>#" + cur.num + " · " + cur.chakra + " chakra</b> · " + cur.jati
@@ -738,16 +811,18 @@
   };
 
   /* ---------- theme ---------- */
-  const mt = document.getElementById("mockTheme");
-  const apply = th => {
-    document.documentElement.dataset.theme = th;
-    mt.textContent = th === "dark" ? "◐ Light" : "◐ Dark";
-  };
-  mt.onclick = () => apply(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
-  apply("dark");
+  const applyTheme = th => { document.documentElement.dataset.theme = th;
+    try { localStorage.setItem("ragamentor-theme", th); } catch (e) {} };
+  let savedTh = null;
+  try { savedTh = localStorage.getItem("ragamentor-theme"); } catch (e) {}
+  applyTheme(savedTh || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
+  document.getElementById("themeBtn").onclick = () =>
+    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
 
   renderChips();
   renderList();
+  renderFav();
+  renderChakras();
 </script>
 </body>
 </html>
