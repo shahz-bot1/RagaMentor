@@ -419,7 +419,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; }
     b.title = "Favourite";
     b.onclick = e => { e.stopPropagation();
       favs.has(r.id) ? favs.delete(r.id) : favs.add(r.id);
-      saveFavs(); renderList(); renderFav(); updateDetailStar();
+      saveFavs(); renderList(); renderFav(); renderChakras(); updateDetailStar();
     };
     return b;
   }
