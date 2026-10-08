@@ -139,6 +139,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       <h2>Search by swaras <span class="tag">· ragas containing all selected</span></h2>
       <div class="chips" id="swaraChips"></div>
     </div>
+    <div class="card">
+      <h2>Keyboard <span class="tag" id="pianoVer2">v5</span></h2>
+      <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
+    </div>
     <div class="count" id="resultCount"></div>
     <div class="ragalist" id="ragaList"></div>
   </section>
@@ -180,12 +184,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="swararow" id="dAva"></div>
   </section>
   <section class="card">
-    <h2>Listen <span class="tag">· harmonium</span> <span class="tag" id="pianoVer">v1</span></h2>
+    <h2>Listen <span class="tag">· harmonium</span> </h2>
     <div class="sarow">
       <label>Sa</label>
       <div class="saseg" id="saSeg"></div>
     </div>
-    <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
@@ -680,11 +683,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
-  const PIANO_VER = 4;
+  const PIANO_VER = 5;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
-    document.getElementById("pianoVer").textContent = "v" + PIANO_VER;
+    var pv=document.getElementById("pianoVer"); if(pv) pv.textContent="v"+PIANO_VER; var pv2=document.getElementById("pianoVer2"); if(pv2) pv2.textContent="v"+PIANO_VER;
     if (!cur) return;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
     const pc = rel => (saOffset + rel + 120) % 12;
