@@ -724,9 +724,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       b.style.width = bw + "%";
       let prevW = -1;
       for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-      // center on the white-key boundary; clamp so no key extends beyond 0-100%
+      // center on the white-key boundary for uniform spacing (slice look)
+      // left edge: allow half-clip, the partial white sliver provides context
       let lpct = (prevW + 1) * ww - bw / 2;
-      lpct = Math.max(0, Math.min(100 - bw, lpct));
+      if (rel === 12 && !isWhite(pc(12))) lpct = Math.min(100 - bw, lpct); // right edge: keep inside
       b.style.left = lpct + "%";
       b.style.marginLeft = "0";
       el.appendChild(b);
