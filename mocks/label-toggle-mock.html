@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Label toggle mock</title>
+<style>
+:root, [data-theme="dark"] {
+  --bg: #101318; --panel: #171c24; --panel2: #1f2631;
+  --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
+  --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, "SF Pro Text", sans-serif; padding: 12px; }
+.card { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 12px; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.card h2 .tag { font-size: 12px; color: var(--muted); font-weight: 400; }
+.card h2 .spacer { flex: 1; }
+.seg { display: flex; background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 3px; margin-bottom: 12px; }
+.seg button { flex: 1; border: 0; background: transparent; color: var(--muted);
+  font-size: 13px; padding: 9px 4px; border-radius: 9px; }
+.seg button.on { background: var(--panel); color: var(--text); font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.seg.small { margin: 0; padding: 2px; }
+.seg.small button { font-size: 11px; padding: 4px 8px; flex: none; }
+.piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; max-width: 100%; }
+.piano { position: relative; height: 110px; user-select: none; }
+.piano .wk { position: absolute; top: 0; bottom: 0; background: #f8f8f8;
+  border: 1px solid #bbb; border-radius: 0 0 6px 6px; }
+.piano .wk span { position: absolute; bottom: 6px; width: 100%; text-align: center;
+  font-size: 10px; color: #999; }
+.piano .wk.in-scale { background: #dbeafe; }
+.piano .wk.in-scale span { color: var(--accent); font-weight: 700; font-size: 11px; }
+.piano .bk { position: absolute; top: 0; height: 62%; background: #222;
+  border-radius: 0 0 4px 4px; z-index: 2; }
+.piano .bk span { position: absolute; bottom: 5px; width: 100%; text-align: center;
+  font-size: 9px; color: #777; }
+.piano .bk.in-scale { background: #1e3a5f; }
+.piano .bk.in-scale span { color: #7db8ff; font-weight: 700; }
+.cap { font-size: 12px; color: var(--muted); margin: -4px 0 12px; }
+</style>
+</head>
+<body>
+
+<section class="card">
+  <h2>Listen <span class="tag">· harmonium</span><span class="spacer"></span>
+    <span class="seg small" id="labelSeg1">
+      <button data-m="swara" class="on">Swara</button><button data-m="cde">CDE</button>
+    </span>
+  </h2>
+  <p class="cap">State A — Swara selected (today's behavior)</p>
+  <div class="piano-wrap"><div class="piano" id="pianoA"></div></div>
+</section>
+
+<section class="card">
+  <h2>Listen <span class="tag">· harmonium</span><span class="spacer"></span>
+    <span class="seg small" id="labelSeg2">
+      <button data-m="swara">Swara</button><button data-m="cde" class="on">CDE</button>
+    </span>
+  </h2>
+  <p class="cap">State B — CDE selected (proposed): same keys, Western note names from Sa</p>
+  <div class="piano-wrap"><div class="piano" id="pianoB"></div></div>
+</section>
+
+<script>
+// Shubhapantuvarali, Sa=C — same geometry as the real v12 renderer (simplified)
+const NOTE_NAMES = ["C","C#","D","Eb","E","F","F#","G","Ab","A","Bb","B"];
+const SWARAS = {0:"S",1:"R1",3:"G2",6:"M2",7:"P",8:"D1",11:"N3",12:"S'"};
+const WESTERN = {0:"C",1:"C#",3:"Eb",6:"F#",7:"G",8:"Ab",11:"B",12:"C"};
+function render(el, mode) {
+  el.innerHTML = "";
+  const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
+  const ww = 100/8, bw = ww*0.62;
+  const whites = [0,2,4,5,7,9,11,12];
+  whites.forEach((semi,i) => {
+    const k = document.createElement("div");
+    const inScale = semi in SWARAS;
+    k.className = "wk" + (inScale ? " in-scale" : "");
+    k.style.left = (i*ww)+"%"; k.style.width = ww+"%";
+    if (inScale) k.innerHTML = "<span>"+(mode==="swara"?SWARAS[semi]:WESTERN[semi])+"</span>";
+    el.appendChild(k);
+  });
+  [[1,0],[3,1],[6,3],[8,4],[10,5]].forEach(([semi,wi]) => {
+    const b = document.createElement("div");
+    const inScale = semi in SWARAS;
+    b.className = "bk" + (inScale ? " in-scale" : "");
+    b.style.width = bw+"%";
+    b.style.left = ((wi+1)*ww)+"%";
+    b.style.marginLeft = (-bw/2)+"%";
+    if (inScale) b.innerHTML = "<span>"+(mode==="swara"?SWARAS[semi]:WESTERN[semi])+"</span>";
+    el.appendChild(b);
+  });
+}
+render(document.getElementById("pianoA"), "swara");
+render(document.getElementById("pianoB"), "cde");
+</script>
+</body>
+</html>
