@@ -679,8 +679,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     };
     saSeg.appendChild(b);
   });
-  // Piano: Sa->Sa' fills container exactly, neighbors masked as slivers. v2
-  const PIANO_VER = 3;
+  // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
+  const PIANO_VER = 4;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
@@ -688,77 +688,62 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     if (!cur) return;
     const isWhite = pc => [0,2,4,5,7,9,11].includes(pc);
     const pc = rel => (saOffset + rel + 120) % 12;
-    const saPc = saOffset % 12;
     const swaraAt = {};
     [...cur.aro, ...cur.ava].forEach(s => {
       const rel = SEMI[norm(s)] + (s.includes("'") ? 12 : 0);
       if (rel >= 0 && rel <= 12 && !(rel in swaraAt))
         swaraAt[rel] = notation === "hindustani" ? toHindustani(s) : s;
     });
-    // main whites in [0,12]
-    const mainWhites = [];
-    for (let rel = 0; rel <= 12; rel++) if (isWhite(pc(rel))) mainWhites.push(rel);
-    const nw = mainWhites.length, ww = 100 / nw, bw = ww * 0.62;
-    const wIdx = {}; mainWhites.forEach((r,i) => wIdx[r] = i);
-    // main whites: Sa left edge at 0%, Sa' right edge at 100%
-    mainWhites.forEach((rel, i) => {
-      const k = document.createElement("div");
-      const label = swaraAt[rel];
-      k.className = "wk" + (label !== undefined ? " in-scale" : "");
-      k.style.left = (i * ww) + "%"; k.style.width = ww + "%";
-      k.dataset.rel = rel;
-      if (label !== undefined) k.innerHTML = "<span>" + label + "</span>";
+    // Build continuous strip in piano coordinates: start one semitone before Sa
+    // White width chosen so Sa(0) to Sa'(12) spans exactly 100% after offset
+    const ww = 100 / 7.62, bw = ww * 0.62; // 7 whites + black overhang
+    // Map rel -> x position (left edge) in % of container
+    // We lay out starting at rel=-1 (neighbor), then offset so rel=0 left edge = 0%
+    const whiteX = {}; // rel -> left%
+    const blackX = {};
+    let x = 0;
+    // rel=-1 to 13
+    const rels = [];
+    for (let r = -1; r <= 13; r++) rels.push(r);
+    // First pass: whites
+    rels.forEach(rel => {
+      if (isWhite(pc(rel))) { whiteX[rel] = x; x += ww; }
+    });
+    // Second pass: blacks centered on boundaries
+    rels.forEach(rel => {
+      if (!isWhite(pc(rel))) {
+        // find white below and above
+        let below = null, above = null;
+        for (let r = rel - 1; r >= -1; r--) if (isWhite(pc(r))) { below = r; break; }
+        for (let r = rel + 1; r <= 13; r++) if (isWhite(pc(r))) { above = r; break; }
+        if (below !== null && below in whiteX) blackX[rel] = whiteX[below] + ww - bw / 2;
+        else if (above !== null && above in whiteX) blackX[rel] = whiteX[above] - bw / 2;
+      }
+    });
+    // Offset so Sa (rel=0) left edge = 0%
+    let saLeft;
+    if (isWhite(pc(0))) saLeft = whiteX[0];
+    else saLeft = blackX[0];
+    const off = -saLeft;
+    const mk = (cls, left, width, rel) => {
+      const d = document.createElement("div");
+      d.className = cls; d.style.left = (left + off) + "%"; d.style.width = width + "%";
+      d.dataset.rel = rel; return d;
+    };
+    // whites
+    Object.keys(whiteX).forEach(rel => {
+      rel = parseInt(rel);
+      const k = mk("wk" + (swaraAt[rel] !== undefined ? " in-scale" : ""), whiteX[rel], ww, rel);
+      if (swaraAt[rel] !== undefined) k.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(k);
     });
-    // neighbor whites as slivers (masked by overflow:hidden)
-    if (!isWhite(pc(-1))) { /* rel=-1 is black, no white sliver */ }
-    else {
-      const k = document.createElement("div");
-      k.className = "wk"; k.style.left = (-ww * 0.7) + "%"; k.style.width = ww + "%";
-      k.dataset.rel = -1; el.appendChild(k);
-    }
-    if (isWhite(pc(13))) {
-      const k = document.createElement("div");
-      k.className = "wk"; k.style.left = (100 - ww * 0.3) + "%"; k.style.width = ww + "%";
-      k.dataset.rel = 13; el.appendChild(k);
-    }
-    // black keys in [0,12], edge ones flush to container
-    for (let rel = 0; rel <= 12; rel++) {
-      if (isWhite(pc(rel))) continue;
-      const b = document.createElement("div");
-      const label = swaraAt[rel];
-      b.className = "bk" + (label !== undefined ? " in-scale" : "");
-      b.style.width = bw + "%";
-      b.dataset.rel = rel;
-      if (label !== undefined) b.innerHTML = "<span>" + label + "</span>";
-      let lpct;
-      if (rel === 0 && !isWhite(pc(0))) {
-        // Sa black: natural boundary position (partial white sliver to left provides context)
-        // boundary is at right edge of the sliver = ww*0.3%
-        lpct = ww * 0.3 - bw / 2;
-      }
-      else if (rel === 12) lpct = 100 - bw; // Sa' black: flush right
-      else {
-        let prevW = -1;
-        for (let i = mainWhites.length - 1; i >= 0; i--) if (mainWhites[i] < rel) { prevW = i; break; }
-        lpct = (prevW + 1) * ww - bw / 2;
-      }
-      b.style.left = lpct + "%";
+    // blacks
+    Object.keys(blackX).forEach(rel => {
+      rel = parseInt(rel);
+      const b = mk("bk" + (swaraAt[rel] !== undefined ? " in-scale" : ""), blackX[rel], bw, rel);
+      if (swaraAt[rel] !== undefined) b.innerHTML = "<span>" + swaraAt[rel] + "</span>";
       el.appendChild(b);
-    }
-    // neighbor black slivers if adjacent semitone is black
-    if (!isWhite(pc(-1))) {
-      const b = document.createElement("div");
-      b.className = "bk"; b.style.width = bw + "%";
-      b.style.left = (-bw * 0.7) + "%"; b.dataset.rel = -1;
-      el.appendChild(b);
-    }
-    if (!isWhite(pc(13))) {
-      const b = document.createElement("div");
-      b.className = "bk"; b.style.width = bw + "%";
-      b.style.left = (100 - bw * 0.3) + "%"; b.dataset.rel = 13;
-      el.appendChild(b);
-    }
+    });
   }
   function highlightPiano(rel) {
     document.querySelectorAll("#pianoStrip .wk, #pianoStrip .bk").forEach(k =>
