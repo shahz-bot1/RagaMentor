@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard + Sa Mock</title>
+<style>
+:root { --bg:#101318; --panel:#1a1f27; --panel2:#222a35; --border:#2c3542; --text:#e8ecf1; --muted:#8b95a5; --accent:#4a9eff; }
+[data-theme=light] { --bg:#f5f6f8; --panel:#ffffff; --panel2:#eef1f4; --border:#dde2e8; --text:#1a1d21; --muted:#6b7480; --accent:#2b7de0; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,system-ui,sans-serif; padding:16px; max-width:640px; margin:0 auto; }
+.card { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px; }
+.card h2 { margin:0 0 12px; font-size:16px; }
+.tag { font-size:11px; color:var(--muted); font-weight:400; }
+.swararow { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:6px; }
+.swara { border:1px solid var(--border); background:var(--panel2); border-radius:9px; padding:8px 11px; font-size:14px; }
+.swara.sa { border-color:var(--accent); color:var(--accent); }
+.scalelabel { font-size:12px; color:var(--muted); margin:10px 0 6px; }
+/* Sa selector */
+.sarow { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.sarow label { font-size:13.5px; color:var(--muted); }
+.saseg { display:flex; background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:2px; flex:1; overflow-x:auto; }
+.saseg button { flex:1; min-width:36px; border:0; background:transparent; color:var(--muted); font-size:13px; padding:7px 2px; border-radius:7px; }
+.saseg button.on { background:var(--accent); color:#fff; font-weight:700; }
+/* Piano */
+.piano { position:relative; height:120px; margin:12px 0 4px; user-select:none; }
+.piano .white { position:absolute; top:0; bottom:0; background:#f8f8f8; border:1px solid #ccc; border-radius:0 0 6px 6px; }
+.piano .white.in-scale { background:#dbeafe; }
+.piano .white.active { background:var(--accent); }
+.piano .white span { position:absolute; bottom:6px; width:100%; text-align:center; font-size:10px; color:#666; }
+.piano .white.in-scale span { color:var(--accent); font-weight:700; }
+.piano .black { position:absolute; top:0; height:65%; background:#222; border-radius:0 0 4px 4px; z-index:2; }
+.piano .black.in-scale { background:#1e3a5f; }
+.piano .black.active { background:var(--accent); }
+.piano .black span { position:absolute; bottom:6px; width:100%; text-align:center; font-size:9px; color:#999; }
+.piano .black.in-scale span { color:#7db8ff; font-weight:700; }
+.note { font-size:12px; color:var(--muted); margin-top:8px; }
+h3 { font-size:14px; margin:24px 0 8px; color:var(--accent); }
+</style>
+</head>
+<body>
+
+<h3>Mock A — Sa selector (chromatic strip)</h3>
+<div class="card">
+  <h2>Listen <span class="tag">· harmonium</span></h2>
+  <div class="sarow">
+    <label>Sa</label>
+    <div class="saseg">
+      <button class="on">C</button><button>C#</button><button>D</button><button>D#</button><button>E</button><button>F</button><button>F#</button><button>G</button><button>G#</button><button>A</button><button>A#</button><button>B</button>
+    </div>
+  </div>
+  <div class="swararow">
+    <div class="swara sa">S</div><div class="swara">R2</div><div class="swara">G3</div><div class="swara">M1</div><div class="swara">P</div><div class="swara">D2</div><div class="swara">N3</div><div class="swara sa">S'</div>
+  </div>
+  <div class="note">Sa = C selected. All swaras transpose automatically.</div>
+</div>
+
+<h3>Mock B — Piano keyboard (Mohanam, Sa=C)</h3>
+<div class="card">
+  <h2>Keyboard <span class="tag">· tap to play</span></h2>
+  <div class="piano" id="piano"></div>
+  <div class="note">Blue keys = Mohanam swaras. Tap any key to hear it. Keys light up during arohana playback.</div>
+</div>
+
+<h3>Mock C — Piano with active note (during playback)</h3>
+<div class="card">
+  <h2>Keyboard <span class="tag">· tap to play</span></h2>
+  <div class="piano" id="piano2"></div>
+  <div class="note">Ga key highlighted — currently playing.</div>
+</div>
+
+<script>
+function buildPiano(id, activeIdx) {
+  const el = document.getElementById(id);
+  const W = el.clientWidth || 600;
+  // Mohanam: S R2 G3 M1 P D2 N3 (C D E F G A B) — all white keys for Sa=C
+  const inScale = [0,2,4,5,7,9,11]; // semitones
+  const names = {0:'S',2:'R2',4:'G3',5:'M1',7:'P',9:'D2',11:'N3'};
+  const whiteIdx = [0,2,4,5,7,9,11];
+  const blackAfter = {0:1, 2:3, 5:6, 7:8, 9:10}; // white index -> black semitone
+  const ww = W / 7;
+  whiteIdx.forEach((semi, i) => {
+    const k = document.createElement('div');
+    k.className = 'white' + (inScale.includes(semi) ? ' in-scale' : '') + (activeIdx === semi ? ' active' : '');
+    k.style.left = (i*ww)+'px'; k.style.width = ww+'px';
+    k.innerHTML = '<span>'+(names[semi]||'')+'</span>';
+    el.appendChild(k);
+    if (blackAfter[i] !== undefined) {
+      const b = document.createElement('div');
+      const bsemi = blackAfter[i];
+      b.className = 'black' + (inScale.includes(bsemi) ? ' in-scale' : '') + (activeIdx === bsemi ? ' active' : '');
+      b.style.left = (i*ww + ww*0.72)+'px'; b.style.width = (ww*0.56)+'px';
+      el.appendChild(b);
+    }
+  });
+}
+buildPiano('piano', -1);
+buildPiano('piano2', 4); // Ga active
+</script>
+</body>
+</html>
