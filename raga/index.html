@@ -680,7 +680,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     saSeg.appendChild(b);
   });
   // Piano: Sa->Sa' fills container exactly, neighbors masked as slivers. v2
-  const PIANO_VER = 2;
+  const PIANO_VER = 3;
   function renderPiano() {
     const el = document.getElementById("pianoStrip");
     el.innerHTML = "";
@@ -732,7 +732,11 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       b.dataset.rel = rel;
       if (label !== undefined) b.innerHTML = "<span>" + label + "</span>";
       let lpct;
-      if (rel === 0) lpct = 0; // Sa black: flush left
+      if (rel === 0 && !isWhite(pc(0))) {
+        // Sa black: natural boundary position (partial white sliver to left provides context)
+        // boundary is at right edge of the sliver = ww*0.3%
+        lpct = ww * 0.3 - bw / 2;
+      }
       else if (rel === 12) lpct = 100 - bw; // Sa' black: flush right
       else {
         let prevW = -1;
