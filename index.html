@@ -64,6 +64,14 @@
       </span>
       <span class="chev">›</span>
     </button>
+    <button class="appcard" id="ragaCard">
+      <span class="appicon">🔍</span>
+      <span class="appmeta">
+        <b>RagaBrowser</b>
+        <p>Find your raga. Hear every swara.</p>
+      </span>
+      <span class="chev">›</span>
+    </button>
   </div>
   <p class="coming">More studios coming</p>
 </div>
@@ -85,6 +93,7 @@
   };
   document.getElementById("loopLabCard").onclick = function () { location.href = "prototype/"; };
   document.getElementById("talaCard").onclick = function () { location.href = "tala/"; };
+  document.getElementById("ragaCard").onclick = function () { location.href = "raga/"; };
   // live counts from the shared song library
   try {
     var req = indexedDB.open("slowloop-proto", 1);
