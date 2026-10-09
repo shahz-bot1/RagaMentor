@@ -163,8 +163,8 @@ StudioUI.segControl(document.getElementById("spdSeg"),
   n => { speed = +n; save("varisai-speed", n); restartIfPlaying(); });
 
 StudioUI.segControl(document.getElementById("lblSeg"),
-  [[true, "S R G"], [false, "S R\u2081 G\u2083"]], simpleLabels,
-  v => { simpleLabels = (v === "true"); save("varisai-labels", simpleLabels ? "simple" : "full");
+  [["simple", "S R G"], ["full", "S R\u2081 G\u2083"]], simpleLabels ? "simple" : "full",
+  v => { simpleLabels = (v === "simple"); save("varisai-labels", simpleLabels ? "simple" : "full");
     if (curLesson) openPattern(patIdx); });
 
 const loopBtn = document.getElementById("loopBtn");
