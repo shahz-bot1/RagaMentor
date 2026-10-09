@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Varisai Studio — mock</title>
+<style>
+:root, [data-theme="dark"] {
+  --bg: #101318; --panel: #171c24; --panel2: #1f2631;
+  --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
+  --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font-family: -apple-system, "SF Pro Text", sans-serif; padding: 12px; padding-bottom: 40px; }
+header { display: flex; align-items: center; gap: 10px; margin: 4px 2px 14px; }
+header h1 { margin: 0; font-size: 22px; flex: 1; }
+header h1 span { color: var(--accent); }
+header p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+.tbtn { border: 1px solid var(--border); background: var(--panel); color: var(--text);
+  border-radius: 10px; padding: 8px 12px; font-size: 13px; }
+.card { background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 4px; font-size: 17px; }
+.card .sub { font-size: 12.5px; color: var(--muted); margin: 0 0 12px; }
+.lesson { display: flex; align-items: center; gap: 12px; padding: 13px 4px;
+  border-bottom: 1px solid var(--border); }
+.lesson:last-child { border-bottom: 0; }
+.lesson .n { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft);
+  color: var(--accent); font-weight: 700; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; flex: none; }
+.lesson .t { flex: 1; }
+.lesson .t b { display: block; font-size: 15px; }
+.lesson .t small { color: var(--muted); font-size: 12px; }
+.lesson .chev { color: var(--muted); font-size: 20px; }
+.backbtn { border: 0; background: none; color: var(--accent); font-size: 15px;
+  padding: 4px 0 12px; }
+.swararow { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.chip { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; font-size: 15px; font-weight: 600; min-width: 44px; text-align: center; }
+.chip.hl { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.sarow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sarow label { font-size: 13.5px; color: var(--muted); flex: none; }
+.saseg { display: flex; flex-wrap: wrap; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; min-width: 0; }
+.saseg button { flex: 1 1 15%; min-width: 0; border: 0; background: transparent;
+  color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
+.saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
+.sliderow { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.sliderow label { font-size: 13.5px; color: var(--muted); flex: none; }
+.sliderow input[type=range] { flex: 1; accent-color: var(--accent); }
+.sliderow span { font-size: 13px; color: var(--muted); min-width: 64px; text-align: right; }
+.bigplay { width: 100%; border: 0; border-radius: 12px; background: var(--accent);
+  color: #fff; font-size: 16px; font-weight: 700; padding: 14px; }
+.playrow { display: flex; gap: 10px; margin-top: 10px; }
+.loopbtn { flex: 1; border: 1px solid var(--border); background: var(--panel2);
+  color: var(--muted); border-radius: 12px; font-size: 14px; padding: 12px; }
+.loopbtn.on { color: var(--accent); border-color: var(--accent); font-weight: 700; }
+.view { display: none; } .view.on { display: block; }
+.cap { font-size: 12px; color: var(--muted); margin: 0 2px 10px; }
+</style>
+</head>
+<body>
+
+<!-- ============ LIST VIEW ============ -->
+<div class="view on" id="v-list">
+  <header>
+    <div style="flex:1"><h1>Varisai <span>Studio</span></h1>
+    <p>Structured Carnatic practice exercises</p></div>
+    <button class="tbtn">◐ Theme</button>
+  </header>
+  <p class="cap">MOCK — list view: six exercise families</p>
+  <section class="card">
+    <h2>Lessons</h2>
+    <p class="sub">Traditional practice sequence · Mayamalavagowla unless noted</p>
+    <div class="lesson" data-l="sarali">
+      <div class="n">1</div>
+      <div class="t"><b>Sarali Varisai</b><small>14 patterns · straight swara sequences</small></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="lesson" data-l="janta">
+      <div class="n">2</div>
+      <div class="t"><b>Janta Varisai</b><small>10 patterns · double-note (janta) sequences</small></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="lesson" data-l="dhattu">
+      <div class="n">3</div>
+      <div class="t"><b>Dhattu Varisai</b><small>10 patterns · jumping (dhattu) sequences</small></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="lesson" data-l="alankaram">
+      <div class="n">4</div>
+      <div class="t"><b>Sapta Tala Alankarams</b><small>7 alankarams · one per tala</small></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="lesson" data-l="madhya">
+      <div class="n">5</div>
+      <div class="t"><b>Madhya Sthayi Varisai</b><small>Middle octave sequences</small></div>
+      <div class="chev">›</div>
+    </div>
+    <div class="lesson" data-l="mel">
+      <div class="n">6</div>
+      <div class="t"><b>Mel Sthayi Varisai</b><small>Upper octave sequences</small></div>
+      <div class="chev">›</div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ PLAYER VIEW ============ -->
+<div class="view" id="v-player">
+  <button class="backbtn" id="backBtn">‹ Lessons</button>
+  <p class="cap">MOCK — player view: Sarali Varisai · Pattern 1 (tapping a lesson opens this)</p>
+  <section class="card">
+    <h2>Sarali Varisai · 1</h2>
+    <p class="sub">Mayamalavagowla · straight ascent &amp; descent</p>
+    <div class="swararow" id="swaras"></div>
+    <div class="sarow">
+      <label>Sa</label>
+      <div class="saseg" id="saSeg"></div>
+    </div>
+    <div class="sliderow">
+      <label>Tempo</label>
+      <input type="range" min="30" max="240" step="10" value="90">
+      <span>90 BPM</span>
+    </div>
+    <button class="bigplay">▶ Play pattern</button>
+    <div class="playrow">
+      <button class="loopbtn on">🔁 Loop</button>
+      <button class="loopbtn">🎤 Sing back (soon)</button>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Patterns</h2>
+    <p class="sub">14 in this lesson</p>
+    <div class="lesson"><div class="n">1</div><div class="t"><b>S R G M P D N S'</b></div><div class="chev">›</div></div>
+    <div class="lesson"><div class="n">2</div><div class="t"><b>S' N D P M G R S</b></div><div class="chev">›</div></div>
+    <div class="lesson"><div class="n">3</div><div class="t"><b>S R G · R G M · G M P…</b></div><div class="chev">›</div></div>
+  </section>
+</div>
+
+<script>
+const SA = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const saSeg = document.getElementById("saSeg");
+SA.forEach((nm,i)=>{
+  const b=document.createElement("button"); b.textContent=nm;
+  if(i===0) b.classList.add("on");
+  b.onclick=()=>{saSeg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");};
+  saSeg.appendChild(b);
+});
+const sw = ["S","R1","G3","M1","P","D1","N3","S'","S'","N3","D1","P","M1","G3","R1","S"];
+const row = document.getElementById("swaras");
+sw.forEach((s,i)=>{
+  const c=document.createElement("div"); c.className="chip"+(i<8?" hl":""); c.textContent=s;
+  row.appendChild(c);
+});
+document.querySelectorAll("#v-list .lesson").forEach(l=>{
+  l.onclick=()=>{ document.getElementById("v-list").classList.remove("on");
+    document.getElementById("v-player").classList.add("on"); window.scrollTo(0,0); };
+});
+document.getElementById("backBtn").onclick=()=>{
+  document.getElementById("v-player").classList.remove("on");
+  document.getElementById("v-list").classList.add("on"); window.scrollTo(0,0);
+};
+document.querySelector("input[type=range]").oninput=e=>{
+  e.target.nextElementSibling.textContent=e.target.value+" BPM";
+};
+</script>
+</body>
+</html>
