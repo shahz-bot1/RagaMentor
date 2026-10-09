@@ -87,6 +87,7 @@ const StudioUI = {
     let cur = opts.value;
     const sync = () => el.querySelectorAll("button").forEach((x, xi) =>
       x.classList.toggle("on", xi === cur));
+    el.classList.add("wrap"); // 12 notes -> 2 rows of 6
     // reuse segControl for the button building + active-state handling
     StudioUI.segControl(el, SA_NAMES.map((nm, i) => [i, nm]), cur, i => {
       cur = i;
