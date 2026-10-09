@@ -175,11 +175,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
     </div>
-    <div class="sliderow">
-      <label for="speedSlider">Tempo</label>
-      <input type="range" id="speedSlider" min="30" max="240" step="10" value="120">
-      <span id="speedVal">120 BPM</span>
-    </div>
+    <div id="tempoRow"></div>
     <p class="note" id="audioStatus" style="margin:10px 0 0">Audio: not started — tap Test beep below</p>
     <div class="playrow">
       <button class="clearbtn" id="beepBtn" style="flex:1">🔔 Test beep</button>
@@ -199,6 +195,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   </section>
 </main>
 
+<script src="../shared/components.js"></script>
+<script src="../shared/audio.js"></script>
 <script>
   const SEMI = { S:0, R1:1, R2:2, R3:2, G1:2, G2:3, G3:4, M1:5, M2:6, P:7, D1:8, D2:9, D3:10, N1:9, N2:10, N3:11 };
   const SWARAS12 = ["S","R1","R2","G2","G3","M1","M2","P","D1","D2","N2","N3"];
@@ -678,19 +676,9 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   });
   syncLabelSeg();
   // Sa selector (chromatic C-B)
-  const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-  const saSeg = document.getElementById("saSeg");
-  SA_NAMES.forEach((nm, i) => {
-    const b = document.createElement("button");
-    b.textContent = nm;
-    b.classList.toggle("on", i === saOffset);
-    b.onclick = () => {
-      saOffset = i;
-      try { localStorage.setItem("raga-sa", String(i)); } catch (e) {}
-      saSeg.querySelectorAll("button").forEach((x, xi) => x.classList.toggle("on", xi === i));
-      renderPiano();
-    };
-    saSeg.appendChild(b);
+  StudioUI.saSelector(document.getElementById("saSeg"), {
+    value: saOffset, storageKey: "raga-sa",
+    onChange: i => { saOffset = i; renderPiano(); }
   });
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
   const PIANO_VER = 13;
@@ -807,22 +795,17 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     detailView.style.display = "none";
     homeView.style.display = "";
   };
-  const speedSlider = document.getElementById("speedSlider"), speedVal = document.getElementById("speedVal");
-  const updateSpeedLabel = () => { speedVal.textContent = speedSlider.value + " BPM"; };
-  try {
-    const savedTempo = localStorage.getItem("raga-tempo");
-    if (savedTempo && parseInt(savedTempo) >= 30 && parseInt(savedTempo) <= 240) speedSlider.value = savedTempo;
-    updateSpeedLabel();
-  } catch (e) {}
   let tempoRestartT = null;
   const restartIfPlaying = () => {
     if (playing) { stopPlayback(); document.getElementById("playBtn").onclick(); }
   };
-  speedSlider.oninput = () => { updateSpeedLabel();
-    try { localStorage.setItem("raga-tempo", speedSlider.value); } catch (e) {}
-    clearTimeout(tempoRestartT);
-    tempoRestartT = setTimeout(() => restartIfPlaying(), 350); };
-  updateSpeedLabel();
+  const tempoCtl = StudioUI.tempoSlider(document.getElementById("tempoRow"), {
+    label: "Tempo", min: 30, max: 240, step: 10, value: 120, storageKey: "raga-tempo",
+    onChange: () => {
+      clearTimeout(tempoRestartT);
+      tempoRestartT = setTimeout(() => restartIfPlaying(), 350);
+    }
+  });
   // iOS suspends Web Audio in background — stop playback on hide, resume ctx on show
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { if (playing) stopPlayback(); }
@@ -832,10 +815,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   /* ---------- synth: harmonium vs vocal "ah" ---------- */
   let actx = null, playTimer = null, playing = false;
   const SA_FREQ = 261.63; // C4
-  function ensureAudio() {
-    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === "suspended") actx.resume();
-  }
+  function ensureAudio() { actx = StudioAudio.ensure(); }
   function freqOf(s) {
     const up = s.includes("'") ? 12 : 0;
     return SA_FREQ * Math.pow(2, (SEMI[norm(s)] + up + saOffset) / 12);
@@ -923,38 +903,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       }
     },
   };
-  const sampleBufs = {};    // "set/file" -> AudioBuffer
-  const samplesLoading = {}; // set -> promise
   function ensureSamples(setName) {
-    if (!samplesLoading[setName]) {
-      samplesLoading[setName] = (async () => {
-        const set = SAMPLE_SETS[setName];
-        await Promise.all(set.files.map(async f => {
-          const key = setName + "/" + f;
-          if (sampleBufs[key]) return;
-          const res = await fetch(set.base + f);
-          if (!res.ok) throw new Error("sample " + f);
-          sampleBufs[key] = await actx.decodeAudioData(await res.arrayBuffer());
-        }));
-      })();
-    }
-    return samplesLoading[setName];
+    const set = SAMPLE_SETS[setName];
+    return StudioAudio.loadSamples(set.base, set.files);
   }
   function playSampledNote(setName, t, swara, dur) {
     const { file, rate } = SAMPLE_SETS[setName].map(swara);
-    const buf = sampleBufs[setName + "/" + file];
-    if (!buf) return false;
-    const src = actx.createBufferSource();
-    src.buffer = buf; src.playbackRate.value = rate;
-    const g = actx.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.9, t + 0.02);
-    g.gain.setValueAtTime(0.9, t + Math.max(0.02, dur - 0.12));
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.15);
-    src.connect(g); g.connect(actx.destination);
-    src.start(t); src.stop(t + dur + 0.2);
-    activeNodes.push(src);
-    return true;
+    const buf = StudioAudio.getBuf(SAMPLE_SETS[setName].base, file);
+    const node = StudioAudio.playSampled(t, buf, rate, dur, n => activeNodes.push(n));
+    return !!node;
   }
   function noteNode(t, f, dur, timbre) {
     const o = actx.createOscillator();
@@ -1020,7 +977,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     pb.textContent = "■ Stop";
     pb.classList.add("playing");
     const seq = [...cur.aro.map(s => ["dAro", s]), ...cur.ava.map(s => ["dAva", s])];
-    const step = 60 / (parseInt(document.getElementById("speedSlider").value) || 120);
+    const step = 60 / (tempoCtl.get() || 120);
     const t0 = actx.currentTime + 0.08;
     const chips = {
       dAro: [...document.getElementById("dAro").children],
@@ -1061,13 +1018,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   };
 
   /* ---------- theme ---------- */
-  const applyTheme = th => { document.documentElement.dataset.theme = th;
-    try { localStorage.setItem("ragamentor-theme", th); } catch (e) {} };
-  let savedTh = null;
-  try { savedTh = localStorage.getItem("ragamentor-theme"); } catch (e) {}
-  applyTheme(savedTh || (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
-  document.getElementById("themeBtn").onclick = () =>
-    applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+  StudioTheme.init("themeBtn", "ragamentor-theme",
+    (window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches) ? "light" : "dark");
 
   renderChips();
   renderList();
@@ -1075,4 +1027,4 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   renderChakras();
 </script>
 </body>
-</htmml>
+</html>
