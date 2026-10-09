@@ -832,8 +832,14 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     if (savedTempo && parseInt(savedTempo) >= 30 && parseInt(savedTempo) <= 240) speedSlider.value = savedTempo;
     updateSpeedLabel();
   } catch (e) {}
+  let tempoRestartT = null;
+  const restartIfPlaying = () => {
+    if (playing) { stopPlayback(); document.getElementById("playBtn").onclick(); }
+  };
   speedSlider.oninput = () => { updateSpeedLabel();
-    try { localStorage.setItem("raga-tempo", speedSlider.value); } catch (e) {} };
+    try { localStorage.setItem("raga-tempo", speedSlider.value); } catch (e) {}
+    clearTimeout(tempoRestartT);
+    tempoRestartT = setTimeout(() => restartIfPlaying(), 350); };
   updateSpeedLabel();
   // iOS suspends Web Audio in background — stop playback on hide, resume ctx on show
   document.addEventListener("visibilitychange", () => {
@@ -1038,10 +1044,13 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       dAro: [...document.getElementById("dAro").children],
       dAva: [...document.getElementById("dAva").children],
     };
+    // Overlap: at high tempos give each note a little extra ring so the
+    // harmonium body stays audible; attacks stay on the grid.
+    const sndDur = Math.max(step * 0.96, Math.min(step * 2.0, 0.3));
     seq.forEach(([box, s], i) => {
-      if (sampleSet) playSampledNote(sampleSet, t0 + i * step, s, step * 0.96);
-      else if (timbre === "harmonium") noteNode(t0 + i * step, freqOf(s), step * 0.96, timbre);
-      else noteVocal(t0 + i * step, freqOf(s), step * 0.96); // vocal, or choir fallback
+      if (sampleSet) playSampledNote(sampleSet, t0 + i * step, s, sndDur);
+      else if (timbre === "harmonium") noteNode(t0 + i * step, freqOf(s), sndDur, timbre);
+      else noteVocal(t0 + i * step, freqOf(s), sndDur); // vocal, or choir fallback
       const idx = box === "dAro" ? i : i - cur.aro.length;
       playTimer.push(setTimeout(() => {
         if (!playing) return;
