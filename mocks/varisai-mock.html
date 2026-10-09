@@ -123,6 +123,10 @@ header p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
       <input type="range" min="30" max="240" step="10" value="90">
       <span>90 BPM</span>
     </div>
+    <div class="sarow">
+      <label>Speed</label>
+      <div class="saseg" id="spdSeg" style="flex-wrap:nowrap"></div>
+    </div>
     <button class="bigplay">▶ Play pattern</button>
     <div class="playrow">
       <button class="loopbtn on">🔁 Loop</button>
@@ -161,6 +165,14 @@ document.getElementById("backBtn").onclick=()=>{
   document.getElementById("v-player").classList.remove("on");
   document.getElementById("v-list").classList.add("on"); window.scrollTo(0,0);
 };
+const spdSeg = document.getElementById("spdSeg");
+[1,2,4,8].forEach((n,i)=>{
+  const b=document.createElement("button"); b.textContent=n+(n===1?" /beat":"");
+  if(i===1) b.classList.add("on");
+  b.onclick=()=>{spdSeg.querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");};
+  b.style.flex="1 1 0";
+  spdSeg.appendChild(b);
+});
 document.querySelector("input[type=range]").oninput=e=>{
   e.target.nextElementSibling.textContent=e.target.value+" BPM";
 };
