@@ -82,6 +82,7 @@ header p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
     <p>Structured Carnatic practice exercises</p></div>
     <button class="tbtn" id="themeBtn">◐ Theme</button>
   </header>
+  <button class="backbtn" id="homeBtn">‹ Home</button>
   <section class="card">
     <h2>Lessons</h2>
     <p class="sub">Traditional practice sequence · Mayamalavagowla unless noted</p>
@@ -261,6 +262,10 @@ function openPattern(i) {
   renderPatternList();
   window.scrollTo(0, 0);
 }
+document.getElementById("homeBtn").onclick = () => {
+  stopPlayback();
+  location.href = "../";
+};
 document.getElementById("backBtn").onclick = () => {
   stopPlayback();
   document.getElementById("v-player").classList.remove("on");
