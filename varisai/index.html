@@ -126,7 +126,7 @@ let saOffset = 0, tempo = 60, speed = 2, loopOn = true, simpleLabels = false;
 try {
   const v = localStorage.getItem("varisai-sa");       if (v !== null && +v >= 0 && +v < 12) saOffset = +v;
   const t = localStorage.getItem("varisai-tempo");    if (t !== null && +t >= 30 && +t <= 90) tempo = +t;
-  simpleLabels = localStorage.getItem("varisai-labels") === "simple";
+  simpleLabels = localStorage.getItem("varisai-labels") !== "full"; // default: basic (S R G M)
   const s = localStorage.getItem("varisai-speed");    if (["1","2","4","8"].includes(s)) speed = +s;
 } catch (e) {}
 const save = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
