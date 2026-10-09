@@ -1,0 +1,44 @@
+/* ============================================================
+   RagaMentor — shared studio styles
+   Common theme, header, cards and base styles for all studios.
+   Each studio links this file, then keeps only its unique
+   styles inline. Inline rules cascade over these where a studio
+   intentionally differs.
+   ============================================================ */
+
+/* ---------- theme ---------- */
+:root, [data-theme="dark"] {
+  --bg: #101318; --panel: #171c24; --panel2: #1f2631;
+  --text: #e8ecf2; --muted: #9aa4b2; --border: #2a323e;
+  --accent: #5b9dff; --accent-soft: rgba(91,157,255,.16);
+}
+[data-theme="light"] {
+  --bg: #f4f6f9; --panel: #ffffff; --panel2: #eef1f5;
+  --text: #1b2330; --muted: #5d6b7d; --border: #dde3ea;
+  --accent: #2f6fe4; --accent-soft: rgba(47,111,228,.12);
+}
+
+/* ---------- base ---------- */
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, Segoe UI, sans-serif;
+       background: var(--bg); color: var(--text); }
+input[type="range"] { accent-color: var(--accent); }
+
+/* ---------- studio header (full-bleed, edge-to-edge separator) ---------- */
+header.apphead { padding: 12px 16px 10px; border-bottom: 1px solid var(--border); }
+.llrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center; column-gap: 12px; }
+#homeBtn { justify-self: start; font-size: 13px; padding: 6px 10px; border-radius: 8px;
+           border: 1px solid var(--border); background: transparent; color: var(--accent); cursor: pointer; }
+.lltitle { justify-self: center; text-align: center; min-width: 0; }
+.lltitle h1 { margin: 0; font-size: 20px; letter-spacing: .2px; white-space: nowrap; }
+.lltitle h1 span { color: var(--accent); }
+.lltitle p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+#themeBtn { justify-self: end; font-size: 13px; padding: 6px 10px; border-radius: 8px;
+            border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; }
+
+/* ---------- cards ---------- */
+.card { background: var(--panel); border: 1px solid var(--border); padding: 16px; }
+
+/* ---------- views ---------- */
+.view { display: none; }
+.view.on { display: block; }
