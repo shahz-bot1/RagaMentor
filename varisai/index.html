@@ -233,7 +233,7 @@ function syncPatNav() {
   sel.innerHTML = "";
   curLesson.patterns.forEach((p, i) => {
     const o = document.createElement("option");
-    o.value = i; o.textContent = (i + 1) + ". " + (p.sub || p.title);
+    o.value = i; o.textContent = (i + 1) + ". " + p.title.split("·")[1].trim();
     if (i === patIdx) o.selected = true;
     sel.appendChild(o);
   });
