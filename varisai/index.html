@@ -236,8 +236,8 @@ function openPattern(i) {
   }
   // Grouped or flat notation
   const gridOpts = {
-    labelFn: s => swaraLabel(s) + (s.includes(",") ? "\u0323" : "") + "'".repeat(upOct(s)),
-    isRest, isLow: s => s.includes(",")
+    labelFn: s => swaraLabel(s) + (s[0] === "," ? "\u0323" : "") + "'".repeat(upOct(s)),
+    isRest, isLow: s => s[0] === "," && s !== ","
   };
   if (p.dlines) {
     chipGrid = StudioUI.groupedGrid(document.getElementById("swaras"), p.dlines, gridOpts);
