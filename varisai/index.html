@@ -32,6 +32,15 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 .chip.rest { opacity: .45; }
 .sarow { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .sarow .saseg { flex: 1; }
+.ctl-bar { display: flex; gap: 8px; margin: 12px 0; }
+.ctl-drop { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ctl-drop span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ctl-drop select {
+  width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 28px 10px 12px; font-size: 15px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4b2' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
 .sarow label { font-size: 13.5px; color: var(--muted); flex: none; min-width: 44px; }
 .sliderow { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
 .sliderow label { font-size: 13.5px; color: var(--muted); flex: none; min-width: 44px; }
@@ -80,19 +89,12 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
     <p class="sub" id="pSub">—</p>
     <div id="layaInfo" style="display:none"></div>
     <div class="swararow" id="swaras"></div>
-    <div class="sarow">
-      <label>Sa</label>
-      <div class="saseg" id="saSeg"></div>
+    <div class="ctl-bar">
+      <div class="ctl-drop"><span>Sa</span><select id="saSel"></select></div>
+      <div class="ctl-drop"><span>Speed</span><select id="spdSel"></select></div>
+      <div class="ctl-drop"><span>Labels</span><select id="lblSel"></select></div>
     </div>
     <div id="tempoRow"></div>
-    <div class="sarow">
-      <label>Speed</label>
-      <div class="saseg" id="spdSeg" style="flex-wrap:nowrap"></div>
-    </div>
-    <div class="sarow">
-      <label>Labels</label>
-      <div class="saseg" id="lblSeg" style="flex-wrap:nowrap"></div>
-    </div>
     <button class="bigplay" id="playBtn">▶ Play pattern</button>
     <div class="playrow">
       <button class="loopbtn on" id="loopBtn">🔁 Loop</button>
@@ -146,10 +148,14 @@ LESSONS.forEach(L => {
 });
 
 /* ================= PLAYER VIEW ================= */
-StudioUI.saSelector(document.getElementById("saSeg"), {
-  value: saOffset, storageKey: "varisai-sa",
-  onChange: i => { saOffset = i; restartIfPlaying(); }
+const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+// Sa dropdown
+const saSel = document.getElementById("saSel");
+SA_NAMES.forEach((nm, i) => {
+  const o = document.createElement("option"); o.value = i; o.textContent = nm;
+  if (i === saOffset) o.selected = true; saSel.appendChild(o);
 });
+saSel.onchange = () => { saOffset = +saSel.value; save("varisai-sa", saOffset); restartIfPlaying(); };
 
 let tempoRestartT = null;
 StudioUI.tempoSlider(document.getElementById("tempoRow"), {
@@ -159,14 +165,23 @@ StudioUI.tempoSlider(document.getElementById("tempoRow"), {
     tempoRestartT = setTimeout(() => restartIfPlaying(), 350); }
 });
 
-StudioUI.segControl(document.getElementById("spdSeg"),
-  [[1, "1"], [2, "2"], [4, "4"], [8, "8"]], speed,
-  n => { speed = +n; save("varisai-speed", n); restartIfPlaying(); });
+// Speed dropdown
+const spdSel = document.getElementById("spdSel");
+[[1, "1x"], [2, "2x"], [4, "4x"], [8, "8x"]].forEach(([v, label]) => {
+  const o = document.createElement("option"); o.value = v; o.textContent = label;
+  if (v === speed) o.selected = true; spdSel.appendChild(o);
+});
+spdSel.onchange = () => { speed = +spdSel.value; save("varisai-speed", speed); restartIfPlaying(); };
 
-StudioUI.segControl(document.getElementById("lblSeg"),
-  [["simple", "S R G"], ["full", "S R\u2081 G\u2083"]], simpleLabels ? "simple" : "full",
-  v => { simpleLabels = (v === "simple"); save("varisai-labels", simpleLabels ? "simple" : "full");
-    if (curLesson) openPattern(patIdx); });
+// Labels dropdown
+const lblSel = document.getElementById("lblSel");
+[["simple", "S R G"], ["full", "S R\u2081 G\u2083"]].forEach(([v, label]) => {
+  const o = document.createElement("option"); o.value = v; o.textContent = label;
+  if ((v === "simple") === simpleLabels) o.selected = true; lblSel.appendChild(o);
+});
+lblSel.onchange = () => { simpleLabels = (lblSel.value === "simple");
+  save("varisai-labels", simpleLabels ? "simple" : "full");
+  if (curLesson) openPattern(patIdx); };
 
 const loopBtn = document.getElementById("loopBtn");
 loopBtn.classList.toggle("on", loopOn);
