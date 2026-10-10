@@ -238,10 +238,6 @@ const StudioUI = {
      upper-octave tokens get "'" suffix; bare rest tokens keep "rest" class.
      Returns {el, highlight(li, gi, ni), clear()} for playback highlighting. */
   groupedGrid(el, dlines, opts = {}) {
-    // Dynamic font size: shrink chips when lines are dense (e.g. alankarams with 14 swaras)
-    const maxChips = Math.max(...dlines.map(line => line.flat().length), 1);
-    const fs = maxChips > 12 ? '11px' : maxChips > 8 ? '12px' : '13px';
-    el.style.setProperty('--gchip-fs', fs);
     const labelFn = opts.labelFn || (s => s);
     const isRest = opts.isRest || (s => s === "-" || s === ",");
     const isLow = opts.isLow || (s => s[0] === "," && s !== ",");
