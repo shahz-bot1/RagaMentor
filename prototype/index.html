@@ -65,7 +65,6 @@
   .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
   .row .label { font-size: 13px; color: var(--muted); min-width: 62px; }
   #speedVal { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 52px; }
-  #speedPresets button { flex: 1 0 auto; min-width: 44px; }
   textarea.noteEdit { width: 100%; font-size: 13px; padding: 6px 8px; border-radius: 7px;
                       border: 1px solid var(--accent); background: var(--panel); color: var(--text);
                       font-family: inherit; resize: vertical; margin-top: 6px; box-sizing: border-box; }
@@ -208,12 +207,7 @@
       </div>
       <div id="audioMsg" class="hint" hidden style="color:var(--danger);min-height:18px;margin:2px 0"></div>
 
-      <div class="row" id="speedRow">
-        <span class="label">Speed</span>
-        <div class="seg" id="speedPresets">
-          <button data-r="0.25">0.25x</button><button data-r="0.5">0.5x</button><button data-r="0.75">0.75x</button><button data-r="1">1x</button>
-        </div>
-      </div>
+
       <input type="file" id="loopsFileInput" accept=".json,application/json" hidden>
     </div>
   </section>
