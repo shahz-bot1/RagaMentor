@@ -78,6 +78,7 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
   <section class="card">
     <h2 id="pTitle">—</h2>
     <p class="sub" id="pSub">—</p>
+    <div id="layaInfo" style="display:none"></div>
     <div class="swararow" id="swaras"></div>
     <div class="sarow">
       <label>Sa</label>
@@ -202,10 +203,47 @@ function openPattern(i) {
   document.getElementById("pTitle").textContent = curLesson.name + " · " + (i + 1);
   document.getElementById("pSub").textContent =
     (p.sub ? p.sub + " · " : "") + curLesson.raga + " · " + p.notes.length + " swaras";
-  chipGrid = StudioUI.chipGrid(document.getElementById("swaras"), p.notes, {
+  // Laya / Tala display
+  const li = document.getElementById("layaInfo");
+  let talaPop = null;
+  const closeTalaPop = () => { if (talaPop) { talaPop.close(); talaPop = null; } };
+  if (p.tala) {
+    li.style.display = "block";
+    li.innerHTML = "";
+    StudioUI.talaDisplay(li, p.tala, (boxEl) => {
+      if (talaPop) { closeTalaPop(); return; }
+      const wrap = li.querySelector(".tala-wrap");
+      const legend = '<h4>Tala symbols</h4>' +
+        '<div class="trow"><code>I</code><span class="tdef"><b>Laghu</b> — beats = jati number (I4 = 4, I7 = 7)</span></div>' +
+        '<div class="trow"><code>0</code><span class="tdef"><b>Drutam</b> — 2 beats</span></div>' +
+        '<div class="trow"><code>U</code><span class="tdef"><b>Anudrutam</b> — 1 beat</span></div>';
+      talaPop = StudioUI.coachmark(wrap, legend);
+      const dismiss = (e) => {
+        if (!talaPop || talaPop.el.contains(e.target)) return;
+        closeTalaPop();
+        document.removeEventListener("click", dismiss);
+      };
+      setTimeout(() => document.addEventListener("click", dismiss), 0);
+    });
+  } else if (p.laya) {
+    closeTalaPop();
+    li.style.display = "block";
+    li.innerHTML = "";
+    StudioUI.layaDisplay(li, p.laya);
+  } else {
+    closeTalaPop();
+    li.style.display = "none";
+  }
+  // Grouped or flat notation
+  const gridOpts = {
     labelFn: s => swaraLabel(s) + (s.includes(",") ? "\u0323" : "") + "'".repeat(upOct(s)),
     isRest, isLow: s => s.includes(",")
-  });
+  };
+  if (p.dlines) {
+    chipGrid = StudioUI.groupedGrid(document.getElementById("swaras"), p.dlines, gridOpts);
+  } else {
+    chipGrid = StudioUI.chipGrid(document.getElementById("swaras"), p.notes, gridOpts);
+  }
   renderPatternList();
   window.scrollTo(0, 0);
 }
