@@ -102,6 +102,7 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
       <select class="pnav-sel" id="patSel"></select>
       <button class="pnav-btn" id="nextPat">›</button>
     </div>
+    <h2 id="pTitle">—</h2>
     <p class="sub" id="pSub">—</p>
     <div id="layaInfo" style="display:none"></div>
     <div class="swararow" id="swaras"></div>
@@ -232,7 +233,7 @@ function syncPatNav() {
   sel.innerHTML = "";
   curLesson.patterns.forEach((p, i) => {
     const o = document.createElement("option");
-    o.value = i; o.textContent = curLesson.name + " " + (i + 1);
+    o.value = i; o.textContent = (i + 1) + ". " + (p.sub || p.title);
     if (i === patIdx) o.selected = true;
     sel.appendChild(o);
   });
@@ -245,6 +246,7 @@ document.getElementById("nextPat").onclick = () => { if (patIdx < curLesson.patt
 function openPattern(i) {
   stopPlayback();
   patIdx = i;
+  document.getElementById("pTitle").textContent = curLesson.name + " · " + (i + 1);
   syncPatNav();
   const p = curLesson.patterns[i];
   document.getElementById("pSub").textContent =
