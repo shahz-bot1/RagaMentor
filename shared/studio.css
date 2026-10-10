@@ -104,4 +104,4 @@ header.apphead { padding: 12px 16px 10px; border-bottom: 1px solid var(--border)
 .chip.hold { opacity: .55; }
 
 /* lower-octave indicator (dashed border; dot-below added by label fn) */
-.chip.lo { border-style: dashed; }
+.chip.lo { border: 1px dashed var(--muted); border-radius: 4px; }
