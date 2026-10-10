@@ -136,6 +136,9 @@ const StudioUI = {
      parts. Parenthesised count hints "(...)" are stripped. Returns el. */
   layaDisplay(el, laya) {
     el.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "laya";
+    el.appendChild(box);
     const parsePart = part => {
       part = String(part).replace(/\s*\([^)]*\)\s*/g, "").trim();
       if (!part.includes("-")) return [part.replace(/\s+/g, "")];
@@ -146,7 +149,7 @@ const StudioUI = {
     const title = document.createElement("div");
     title.className = "laya-title";
     title.textContent = "Laya";
-    el.appendChild(title);
+    box.appendChild(title);
     const parts = document.createElement("div");
     parts.className = "laya-parts";
     String(laya).split(" and ").map(parsePart).forEach((groups, pi) => {
@@ -166,7 +169,7 @@ const StudioUI = {
       });
       parts.appendChild(pd);
     });
-    el.appendChild(parts);
+    box.appendChild(parts);
     return el;
   },
 
