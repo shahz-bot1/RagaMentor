@@ -94,11 +94,11 @@ header.apphead { padding: 12px 16px 10px; border-bottom: 1px solid var(--border)
 .tala-popover .tdef b { color: var(--text); }
 
 /* ---------- grouped notation ---------- */
-.talaline { display: flex; gap: 8px; align-items: stretch; margin-bottom: 10px; }
+.talaline { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; margin-bottom: 10px; }
 .swararow.grouped { display: block; }
 .tgroup { display: flex; gap: 2px; background: var(--panel2); border: 1px solid var(--border); min-width: 0;
           border-radius: 9px; padding: 4px; }
-.tgroup .chip { flex: 1 1 0; min-width: 0; border: 0; background: transparent; padding: 7px 1px; font-size: var(--gchip-fs, 13px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tgroup .chip { flex: 1 1 0; min-width: 0; border: 0; background: transparent; padding: 7px 2px; font-size: 13px; }
 .talaline > .chip { flex: none; align-self: center; }
 .tgroup .chip.playing { background: var(--accent); border-radius: 6px; }
 .chip.hold { opacity: .55; }
