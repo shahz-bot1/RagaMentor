@@ -118,7 +118,7 @@ const SEMI = { S:0, R1:1, R2:2, R3:2, G1:2, G2:3, G3:4, M1:5, M2:6,
                P:7, D1:8, D2:9, D3:10, N1:9, N2:10, N3:11 };
 const norm = s => s.replace(/'/g, "").replace(/,/g, "");
 const swaraLabel = s => simpleLabels ? norm(s).replace(/[123]/g, "") : norm(s);
-const isRest = s => s === "-";
+const isRest = s => s === "-" || s === ",";
 const upOct = s => (s.match(/'/g) || []).length;
 const dnOct = s => (s.match(/,/g) || []).length; // mandra sthayi: ,S = S one octave down
 
