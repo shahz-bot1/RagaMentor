@@ -167,10 +167,6 @@ const StudioUI = {
       parts.appendChild(pd);
     });
     el.appendChild(parts);
-    const legend = document.createElement("div");
-    legend.className = "laya-legend";
-    legend.innerHTML = "digits count beats \u00b7 <code>,</code> = hold";
-    el.appendChild(legend);
     return el;
   },
 
