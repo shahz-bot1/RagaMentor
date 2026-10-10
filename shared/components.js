@@ -248,7 +248,7 @@ const StudioUI = {
     el.innerHTML = "";
     el.classList.add("grouped");
     const upOct = s => (s.match(/'/g) || []).length;
-    const dispTok = s => labelFn(s) + (isLow(s) ? "\u0323" : "") + "'".repeat(upOct(s));
+    const dispTok = s => labelFn(s); // labelFn handles octave/dot rendering
     const chips = []; // chips[li][gi][ni]
     dlines.forEach(line => {
       const ld = document.createElement("div");
