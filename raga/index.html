@@ -68,6 +68,15 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
 .saseg { display: flex; flex-wrap: wrap; background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: 2px; flex: 1; min-width: 0; }
 .saseg button { flex: 1 1 15%; min-width: 0; border: 0; background: transparent; color: var(--muted); font-size: 12.5px; padding: 6px 2px; border-radius: 7px; }
 .saseg button.on { background: var(--accent); color: #fff; font-weight: 700; }
+.ctl-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+.ctl-drop { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ctl-drop span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ctl-drop select {
+  width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 28px 10px 12px; font-size: 15px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4b2' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
 .pianostrip { display: none; }
 .piano-wrap { overflow: hidden; margin: 0 2px 12px; border-radius: 8px; max-width: 100%; }
 .piano { position: relative; height: 110px; user-select: none; }
@@ -167,9 +176,8 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
         <button data-m="sargam" class="on">Sargam</button><button data-m="western">Western</button>
       </span>
     </h2>
-    <div class="sarow">
-      <label>Sa</label>
-      <div class="saseg" id="saSeg"></div>
+    <div class="ctl-bar">
+      <div class="ctl-drop"><span>Sa</span><select id="saSel"></select></div>
     </div>
     <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
     <div class="playrow">
@@ -676,10 +684,16 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
   });
   syncLabelSeg();
   // Sa selector (chromatic C-B)
-  StudioUI.saSelector(document.getElementById("saSeg"), {
-    value: saOffset, storageKey: "raga-sa",
-    onChange: i => { saOffset = i; renderPiano(); }
+  // Sa dropdown
+  const saSel = document.getElementById("saSel");
+  const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  SA_NAMES.forEach((nm, i) => {
+    const o = document.createElement("option"); o.value = i; o.textContent = nm;
+    if (i === saOffset) o.selected = true; saSel.appendChild(o);
   });
+  saSel.onchange = () => { saOffset = +saSel.value;
+    try { localStorage.setItem("raga-sa", saOffset); } catch (e) {}
+    renderPiano(); };
   // Piano v4: true continuous strip, offset so Sa aligns to left edge, masked by overflow.
   const PIANO_VER = 14;
   function renderPiano() {
