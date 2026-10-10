@@ -983,9 +983,9 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
       dAro: [...document.getElementById("dAro").children],
       dAva: [...document.getElementById("dAva").children],
     };
-    // Overlap: at high tempos give each note a little extra ring so the
-    // harmonium body stays audible; attacks stay on the grid.
-    const sndDur = Math.max(step * 0.96, Math.min(step * 2.0, 0.3));
+    // Overlap (legato): tempo-aware fixed-ms overlap (75ms); attacks stay on the grid.
+    // Ported from Varisai Studio for consistent swara legato across studios.
+    const sndDur = step * (1 + Math.min(1.5, 0.075 / step));
     seq.forEach(([box, s], i) => {
       if (sampleSet) playSampledNote(sampleSet, t0 + i * step, s, sndDur);
       else if (timbre === "harmonium") noteNode(t0 + i * step, freqOf(s), sndDur, timbre);
