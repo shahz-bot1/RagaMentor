@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compose Studio · RagaMentor</title>
+<link rel="stylesheet" href="../shared/studio.css?v=4">
+<style>
+:root, [data-theme="dark"] { --bad: #f87171; --warn: #fbbf24; }
+[data-theme="light"] { --bad: #dc2626; --warn: #b45309; }
+body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px; }
+.card { border-radius: 14px; margin-bottom: 12px; }
+.view.on { padding: 12px; }
+.backbtn { border: 0; background: none; color: var(--accent); font-size: 15px;
+  padding: 4px 0 12px; cursor: pointer; }
+.note { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.foot { text-align: center; font-size: 11.5px; color: var(--muted); margin-top: 18px; }
+.hidden { display: none; }
+
+/* list view */
+.listbtns { display: flex; gap: 8px; margin-bottom: 12px; }
+.listbtns .bigplay { flex: 1; }
+.listbtns .loopbtn { flex: none; padding: 12px 16px; }
+.crow { display: flex; align-items: center; gap: 12px; padding: 11px 2px;
+  border-bottom: 1px solid var(--border); cursor: pointer; }
+.crow:last-child { border-bottom: 0; }
+.crow .pbtn2 { flex: none; width: 42px; height: 42px; border-radius: 50%;
+  border: 1.5px solid var(--accent); background: var(--accent-soft);
+  color: var(--accent); font-size: 15px; cursor: pointer; }
+.crow .pbtn2.playing { background: var(--accent); color: #fff; }
+.crow .meta { flex: 1; min-width: 0; }
+.crow .meta b { font-size: 16px; display: block; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.crow .meta span { font-size: 12.5px; color: var(--muted); }
+.crow .chev { color: var(--muted); font-size: 20px; flex: none; }
+
+/* editor */
+.titlein { width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; font-weight: 600;
+  color: var(--text); background: transparent; border: none;
+  border-bottom: 1px solid var(--border); padding: 4px 2px; margin-bottom: 12px; }
+.titlein:focus { outline: none; border-bottom-color: var(--accent); }
+.ctl-bar { display: flex; gap: 8px; margin: 12px 0; }
+.ctl-drop { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ctl-drop span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ctl-drop select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 28px 10px 12px; font-size: 15px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4b2' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+.sliderow { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.sliderow label { font-size: 13.5px; color: var(--muted); flex: none; min-width: 44px; }
+.sliderow input[type=range] { flex: 1; accent-color: var(--accent); }
+.sliderow span { font-size: 13px; color: var(--muted); min-width: 64px; text-align: right; }
+.bigplay { width: 100%; border: 0; border-radius: 12px; background: var(--accent);
+  color: #fff; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; }
+.bigplay.playing { background: #e05252; }
+.playrow { display: flex; gap: 8px; margin-top: 10px; }
+.loopbtn { flex: 1; border: 1px solid var(--border); background: var(--panel2);
+  color: var(--muted); border-radius: 12px; font-size: 14px; padding: 12px 6px; cursor: pointer; }
+.loopbtn.on { color: var(--accent); border-color: var(--accent); font-weight: 700; }
+.loopbtn.danger { color: var(--bad); }
+
+/* raw JSON mode */
+#rawText { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.55; color: var(--text); background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+
+/* flow strip */
+.strip { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.fchip { background: var(--panel2); border: 1.5px solid var(--accent); border-radius: 12px;
+  padding: 10px 12px; font-size: 16px; font-weight: 700; min-width: 56px; text-align: center;
+  position: relative; cursor: pointer; }
+.fchip.gapc { border-color: var(--border); color: var(--muted); }
+.fchip.holdc { border-color: var(--border); color: var(--muted); }
+.fchip.cur { outline: 2px solid var(--warn); }
+.fchip .dur { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.fchip sub { font-size: 10px; color: var(--muted); }
+.fchip .st { line-height: 1.05; font-size: 13px; }
+.fchip .st sub { font-size: 9px; color: var(--muted); }
+.fchip .oct-up::after { content: "˙"; display: block; font-size: 10px; line-height: 1; color: var(--accent); }
+.fchip .oct-dn::before { content: "."; display: block; font-size: 12px; line-height: 1; color: var(--accent); }
+.fchip.addc { border-style: dashed; border-color: var(--accent); color: var(--accent);
+  font-size: 24px; min-width: 56px; display: flex; align-items: center; justify-content: center; }
+
+/* picker sheet (studio-unique; ported from the Swara Builder playground) */
+.pkveil { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 40; display: none; }
+.pkveil.on { display: block; }
+.pksheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--panel);
+  border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; padding: 14px 14px 26px;
+  display: none; max-height: 72vh; overflow-y: auto; }
+.pksheet.on { display: block; }
+.pksheet h3 { margin: 0 0 10px; font-size: 15px; }
+.pkhead { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pinsbtn { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--accent); font-size: 20px; line-height: 1; margin-top: -5px; padding: 0; }
+.pinsmenu { position: absolute; top: 36px; right: 0; z-index: 5; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 172px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.pinsmenu[hidden] { display: none; }
+.pinsmenu button { display: block; width: 100%; text-align: left; background: transparent; border: none;
+  color: var(--text); font-size: 15px; padding: 10px 12px; border-radius: 8px; }
+.pinsmenu button:active { background: var(--accent-soft); }
+.pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.pkbtn { background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 12px; padding: 12px 4px; font-size: 17px; font-weight: 700; }
+.pkbtn sub { font-size: 11px; color: var(--muted); }
+.pkbtn:active { background: var(--accent-soft); }
+.pkrow { display: flex; gap: 8px; margin-top: 10px; }
+.pkrow .pkbtn { flex: 1; }
+.pkseg { display: flex; gap: 6px; margin: 10px 0; }
+.pkseg button { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--muted); font-size: 13px; }
+.pkseg button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.pksheet .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.stackbar { display: flex; align-items: center; gap: 8px; margin: 10px 0 12px; }
+.stacktgl { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--text); font-size: 14px; white-space: nowrap; }
+.stacktgl.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+#pkSel { flex: 1; display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; min-width: 0;
+  font-size: 15px; color: var(--text); white-space: nowrap; align-items: center; }
+#pkSel .ph { color: var(--muted); font-size: 13px; }
+.selchip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 16px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent);
+  font-size: 14px; white-space: nowrap; }
+.selchip .x { font-size: 12px; opacity: .7; }
+.pkbtn.picked { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.donebtn2 { padding: 8px 12px; border-radius: 10px; border: none; background: var(--accent);
+  color: #fff; font-size: 16px; }
+.donebtn2[disabled] { opacity: .35; }
+.pkcur { font-size: 14px; color: var(--muted); margin: -6px 0 6px; }
+.pkdur { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.pkdur > span { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pkdur .pkseg { flex: 1; margin: 0; }
+</style>
+</head>
+<body>
+
+<header class="apphead">
+  <div class="llrow">
+    <button id="homeBtn" title="Back to RagaMentor home">‹ RagaMentor</button>
+    <div class="lltitle">
+      <h1>🎼 Compose<span>Studio</span></h1>
+      <p>Compose your own swara phrases</p>
+    </div>
+    <button id="themeBtn" title="Toggle light/dark">◐ Theme</button>
+  </div>
+</header>
+
+<!-- ============ LIST VIEW ============ -->
+<div class="view on" id="v-list">
+  <section class="card">
+    <h2>Compositions</h2>
+    <div class="listbtns">
+      <button class="bigplay" id="newBtn">＋ New composition</button>
+      <button class="loopbtn" id="importBtn">Import</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+    </div>
+    <div id="rows"></div>
+    <p class="note" id="emptyNote">No compositions yet — tap ＋ New composition to start your first one,
+    or Import one you exported earlier.</p>
+  </section>
+  <p class="foot">Compose Studio v1 · harmonium · 🔇 no sound on iPhone? turn off silent mode</p>
+</div>
+
+<!-- ============ EDITOR VIEW ============ -->
+<div class="view" id="v-editor">
+  <button class="backbtn" id="backBtn">‹ Compositions</button>
+  <section class="card" id="setupCard">
+    <input class="titlein" id="compName" type="text" placeholder="Composition name">
+    <div class="ctl-bar">
+      <div class="ctl-drop"><span>Raga</span><select id="ragaSel"></select></div>
+      <div class="ctl-drop"><span>Sa</span><select id="saSel"></select></div>
+    </div>
+    <div id="tempoRow"></div>
+    <button class="bigplay" id="edPlay">▶ Play</button>
+    <div class="playrow">
+      <button class="loopbtn" id="loopBtn">🔁 Loop</button>
+      <button class="loopbtn" id="exportBtn">Export</button>
+      <button class="loopbtn" id="rawBtn">{ } JSON</button>
+      <button class="loopbtn danger" id="deleteBtn">Delete</button>
+    </div>
+    <p class="note">Tap a chip to edit it, or ＋ to append. Total beats: <b id="totBeats">0</b>.</p>
+  </section>
+  <section class="card" id="phraseCard">
+    <h2>Phrase</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+  <section class="card hidden" id="rawCard">
+    <h2>Raw JSON</h2>
+    <textarea id="rawText" rows="16" spellcheck="false"></textarea>
+    <div class="playrow">
+      <button class="loopbtn" id="rawApply">Apply</button>
+      <button class="loopbtn" id="rawCopy">Copy all</button>
+      <button class="loopbtn" id="rawCancel">Cancel</button>
+    </div>
+    <p class="note">One chip per line — copy a section and paste it elsewhere to repeat it.
+    Apply validates everything first (same checks as Import); nothing is saved until it passes.</p>
+  </section>
+</div>
+
+<script src="../shared/components.js"></script>
+<script src="../shared/audio.js"></script>
+<script>
+"use strict";
+
+/* ================= DATA (ported verbatim from the validated playground) ================= */
+const SEMI = { S:0, R1:1, R2:2, R3:2, G1:2, G2:3, G3:4, M1:5, M2:6,
+               P:7, D1:8, D2:9, D3:10, N1:9, N2:10, N3:11 };
+const CHROMATIC = ["S","R1","R2","R3","G1","G2","G3","M1","M2","P","D1","D2","D3","N1","N2","N3"];
+const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+/* Curated raga set (arohana / avarohana). Anchor-checked against standard lakshana. */
+const RAGAS = [
+  { id:"mohanam",          name:"Mohanam",
+    aro:["S","R2","G3","P","D2"],            ava:["S","D2","P","G3","R2"] },
+  { id:"hamsadhvani",      name:"Hamsadhvani",
+    aro:["S","R2","G3","P","N3"],            ava:["S","N3","P","G3","R2"] },
+  { id:"shankarabharanam", name:"Shankarabharanam",
+    aro:["S","R2","G3","M1","P","D2","N3"],  ava:["S","N3","D2","P","M1","G3","R2"] },
+  { id:"kalyani",          name:"Kalyani",
+    aro:["S","R2","G3","M2","P","D2","N3"],  ava:["S","N3","D2","P","M2","G3","R2"] },
+  { id:"mayamalavagowla",  name:"Mayamalavagowla",
+    aro:["S","R1","G3","M1","P","D1","N3"],  ava:["S","N3","D1","P","M1","G3","R1"] },
+  { id:"hindolam",         name:"Hindolam",
+    aro:["S","G2","M1","D1","N2"],           ava:["S","N2","D1","M1","G2"] },
+  { id:"abhogi",           name:"Abhogi",
+    aro:["S","R2","G2","M1","D2"],           ava:["S","D2","M1","G2","R2"] },
+  { id:"bhairavi",         name:"Bhairavi",
+    aro:["S","R2","G2","M1","P","D2","N2"],  ava:["S","N2","D1","P","M1","G2","R2"] },
+  { id:"aanandabhairavi",  name:"Aananda Bhairavi",
+    aro:["S","G2","R2","G2","M1","P","D2","P","N2"], ava:["S","N2","D2","P","M1","G2","R2"] },
+  { id:"shubhapanthuvarali", name:"Shubhapanthuvarali",
+    aro:["S","R1","G2","M2","P","D1","N3"], ava:["S","N3","D1","P","M2","G2","R1"] },
+];
+const ragaById = id => RAGAS.find(r => r.id === id) || null;
+/* picker order: arohana order (dedup) */
+const ragaPickerList = raga => {
+  const seen = new Set(), out = [];
+  raga.aro.forEach(s => { if (!seen.has(s)) { seen.add(s); out.push(s); } });
+  return out;
+};
+function slotLabelHTML(slot) {
+  if (slot.k === "hold") return ",";
+  if (slot.k === "gap") return "–";
+  if (slot.k !== "note" || !slot.stack.length) return "";
+  return slot.stack.map(n => {
+    if (n.hold) return `<span class="st">,</span>`;
+    const cls = n.oct > 0 ? "oct-up" : n.oct < 0 ? "oct-dn" : "";
+    const m = n.st.match(/^([A-Z])(\d?)$/);
+    const inner = m ? m[1] + (m[2] ? "<sub>"+m[2]+"</sub>" : "") : n.st;
+    return `<span class="st ${cls}">${inner}</span>`;
+  }).join("");
+}
+
+/* ================= STORE ================= */
+/* Same key as the playground preview (same origin) — compositions carry over. */
+const LS_KEY = "compose-studio-v1";
+const DURS = [0.25, 0.5, 1, 2, 4];
+const durLabel = b => b === 1 ? "1 beat" : b === 0.5 ? "½ beat" : b === 0.25 ? "¼ beat" : b + " beats";
+const uid = () => "c" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+const store = {
+  data: (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || { compositions: [] }; }
+                 catch (e) { return { compositions: [] }; } })(),
+  save() { try { localStorage.setItem(LS_KEY, JSON.stringify(this.data)); } catch (e) {} }
+};
+const comps = () => store.data.compositions;
+const byId = id => comps().find(c => c.id === id) || null;
+let view = "list", openId = null;
+const cur = () => (openId ? byId(openId) : null);
+function touch(c) { c.updatedAt = Date.now(); store.save(); }
+
+function fmtBeats(b) {
+  const w = Math.floor(b + 1e-9), f = Math.round((b - w) * 100) / 100;
+  const fm = { 0: "", 0.25: "¼", 0.5: "½", 0.75: "¾" };
+  const fs = fm[f] !== undefined ? fm[f] : (f ? String(f) : "");
+  return w ? w + fs : (fs || "0");
+}
+const totBeats = c => c.chips.reduce((a, x) => a + x.beats, 0);
+const fmtDate = ts => new Date(ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const ragaName = id => (id && ragaById(id)) ? ragaById(id).name : "Chromatic";
+const chipLabel = ch => ch.k === "note" ? slotLabelHTML(ch) : ch.k === "hold" ? "," : "–";
+
+/* ================= IMPORT SANITIZER ================= */
+function sanitizeComposition(raw) {
+  const c = raw && raw.composition ? raw.composition : raw;
+  if (!c || !Array.isArray(c.chips)) return null;
+  const chips = [];
+  for (const ch of c.chips) {
+    if (!ch || typeof ch !== "object") return null;
+    const beats = DURS.includes(ch.beats) ? ch.beats : 1;
+    if (ch.k === "hold" || ch.k === "gap") { chips.push({ k: ch.k, beats }); continue; }
+    if (ch.k !== "note" || !Array.isArray(ch.stack) || !ch.stack.length) return null;
+    const stack = [];
+    for (const n of ch.stack) {
+      if (n && n.hold === true) stack.push({ hold: true });
+      else if (n && SEMI[n.st] !== undefined)
+        stack.push({ st: n.st, oct: [-1, 0, 1].includes(n.oct) ? n.oct : 0 });
+      else return null;
+    }
+    chips.push({ k: "note", stack, beats });
+  }
+  return {
+    name: typeof c.name === "string" && c.name.trim() ? c.name : "Imported composition",
+    ragaId: ragaById(c.ragaId) ? c.ragaId : null,
+    saOffset: Number.isInteger(c.saOffset) && c.saOffset >= 0 && c.saOffset < 12 ? c.saOffset : 0,
+    tempo: Math.min(120, Math.max(30, +c.tempo || 60)),
+    loop: !!c.loop,
+    chips,
+  };
+}
+
+/* ================= AUDIO (shared StudioAudio) ================= */
+const SAMPLES = "../raga/samples/harmonium/";
+const SAMPLE_FILES = ["C4","Cs4","D4","Ds4","E4","F4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3");
+const FILE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
+/* nearest harmonium sample for a semitone offset above C4 */
+function sampleFor(semi) {
+  const avail = [0,1,2,3,4,5,7,8,9,10,11,12]; // C4..C5 minus Fs4
+  const baseSemi = ((semi % 12) + 12) % 12;
+  const oct = 4 + Math.floor(semi / 12);
+  let file = FILE_NAMES[baseSemi] + oct + ".mp3";
+  let rate = 1;
+  if (!avail.includes(semi) || file === "Fs4.mp3") {
+    let best = avail[0], bestD = 99;
+    avail.forEach(a => { const d = Math.abs(a - semi); if (d < bestD) { bestD = d; best = a; } });
+    file = FILE_NAMES[best % 12] + (4 + Math.floor(best / 12)) + ".mp3";
+    rate = Math.pow(2, (semi - best) / 12);
+  }
+  if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); }
+  return { file, rate };
+}
+const activeNodes = [];
+function stopAllNodes() {
+  activeNodes.forEach(n => { try { n.stop(); } catch (e) {} });
+  activeNodes.length = 0;
+}
+function playNoteAt(t, st, oct, saOffset, soundDur) {
+  const semi = SEMI[st] + oct * 12 + saOffset;
+  const { file, rate } = sampleFor(semi);
+  const buf = StudioAudio.getBuf(SAMPLES, file);
+  if (buf) { StudioAudio.playSampledSustain(t, buf, rate, soundDur, n => activeNodes.push(n)); return; }
+  StudioAudio.playSynth(t, 261.63 * Math.pow(2, semi / 12), soundDur, n => activeNodes.push(n));
+}
+
+/* ================= PLAYBACK (list rows + editor) ================= */
+let pb = null, pbToken = 0; // pb: { comp, timers }
+function stopPlayback() {
+  pbToken++;
+  if (!pb) { refreshPlayButtons(); return; }
+  pb.timers.forEach(clearTimeout); pb = null;
+  stopAllNodes();
+  refreshPlayButtons();
+}
+async function startPlayback(c, onChip) {
+  stopPlayback();
+  if (!c.chips.length) return;
+  const token = ++pbToken;
+  StudioAudio.ensure();
+  try { await StudioAudio.loadSamples(SAMPLES, SAMPLE_FILES); } catch (e) {}
+  if (token !== pbToken) return; // superseded while samples loaded
+  const beat = 60 / c.tempo, t0 = StudioAudio.ensure().currentTime + 0.1;
+  const timers = [];
+  const mine = { comp: c, timers };
+  pb = mine;
+  refreshPlayButtons();
+  // expand: holds and all-hold stacks extend the previous sounding chip
+  const evs = [];
+  let pending = null;
+  const flush = () => { if (pending) { evs.push(pending); pending = null; } };
+  let t = t0;
+  c.chips.forEach((ch, ci) => {
+    const ct = t;
+    timers.push(setTimeout(() => { if (pb === mine && onChip) onChip(ci); },
+      Math.max(0, (ct - t0) * 1000)));
+    if (ch.k === "hold") { if (pending) pending.dur += ch.beats * beat; t += ch.beats * beat; return; }
+    if (ch.k === "note" && ch.stack.length && ch.stack.every(n => n.hold)) {
+      if (pending) pending.dur += ch.beats * beat; t += ch.beats * beat; return;
+    }
+    flush();
+    if (ch.k === "note") pending = { chip: ch, t, dur: ch.beats * beat };
+    t += ch.beats * beat;
+  });
+  flush();
+  evs.forEach(ev => {
+    const stack = ev.chip.stack || [];
+    const n = stack.length;
+    if (!n) return;
+    // a hold inside the stack extends the preceding sub-note
+    const units = [];
+    stack.forEach(sn => {
+      if (sn.hold) { if (units.length) units[units.length - 1].shares += 1; }
+      else units.push({ note: sn, shares: 1 });
+    });
+    if (!units.length) return;
+    const ownDur = ev.chip.beats * beat; // stack subdivides its OWN chip duration
+    const sub = ownDur / n;
+    const extra = ev.dur - ownDur; // outer holds extend the final sub-note only
+    let st = ev.t;
+    units.forEach((u, ui) => {
+      let ud = u.shares * sub;
+      if (ui === units.length - 1) ud += extra;
+      playNoteAt(st, u.note.st, u.note.oct, c.saOffset, ud + Math.min(0.28, ud * 0.7));
+      st += ud;
+    });
+  });
+  timers.push(setTimeout(() => {
+    if (pb !== mine) return;
+    if (c.loop && view === "editor" && openId === c.id) { startPlayback(c, onChip); return; }
+    pb = null;
+    if (onChip) onChip(-1);
+    refreshPlayButtons();
+  }, (t - t0) * 1000 + 400));
+}
+function togglePlay(c, onChip) {
+  if (pb && pb.comp.id === c.id) stopPlayback();
+  else startPlayback(c, onChip);
+}
+function restartIfPlaying() {
+  const c = cur();
+  if (pb && c && pb.comp.id === c.id) startPlayback(c, highlightChip);
+}
+function refreshPlayButtons() {
+  document.querySelectorAll("[data-play]").forEach(b => {
+    const active = !!pb && pb.comp.id === b.dataset.play;
+    b.textContent = active ? "⏹" : "▶";
+    b.classList.toggle("playing", active);
+  });
+  const ep = document.getElementById("edPlay");
+  if (ep) {
+    const active = !!pb && !!openId && pb.comp.id === openId;
+    ep.textContent = active ? "⏹ Stop" : "▶ Play";
+    ep.classList.toggle("playing", active);
+  }
+}
+const highlightChip = i => {
+  document.querySelectorAll(".fchip.cur").forEach(x => x.classList.remove("cur"));
+  if (i < 0 || view !== "editor") return;
+  const host = document.getElementById("strip");
+  if (host && host.children[i]) host.children[i].classList.add("cur");
+};
+
+/* ================= THEME ================= */
+StudioTheme.init("themeBtn", "slowloop-theme", "dark");
+
+/* ================= LIST VIEW ================= */
+function renderList() {
+  const host = document.getElementById("rows");
+  host.innerHTML = "";
+  const list = [...comps()].sort((a, b) => b.updatedAt - a.updatedAt);
+  document.getElementById("emptyNote").style.display = list.length ? "none" : "";
+  list.forEach(c => {
+    const row = document.createElement("div");
+    row.className = "crow";
+    row.innerHTML =
+      `<button class="pbtn2" data-play="${c.id}" title="Play">▶</button>` +
+      `<span class="meta"><b></b><span>${ragaName(c.ragaId)} · ${fmtBeats(totBeats(c))} beats · ${c.tempo} bpm · ${fmtDate(c.updatedAt)}</span></span>` +
+      `<span class="chev">›</span>`;
+    row.querySelector("b").textContent = c.name || "Untitled";
+    row.querySelector("[data-play]").onclick = e => { e.stopPropagation(); togglePlay(c, null); };
+    row.onclick = () => openEditor(c.id);
+    host.appendChild(row);
+  });
+  refreshPlayButtons();
+}
+document.getElementById("newBtn").onclick = () => {
+  const now = Date.now();
+  const c = { id: uid(), name: "Untitled composition", ragaId: "mohanam", saOffset: 0,
+              tempo: 60, loop: false, chips: [], createdAt: now, updatedAt: now };
+  comps().push(c); store.save();
+  openEditor(c.id);
+};
+const fileIn = document.getElementById("importFile");
+document.getElementById("importBtn").onclick = () => fileIn.click();
+fileIn.onchange = async () => {
+  const f = fileIn.files && fileIn.files[0];
+  fileIn.value = "";
+  if (!f) return;
+  let raw;
+  try { raw = JSON.parse(await f.text()); }
+  catch (e) { alert("Couldn't import: that file isn't valid JSON."); return; }
+  const clean = sanitizeComposition(raw);
+  if (!clean) { alert("Couldn't import: that file doesn't look like a composition."); return; }
+  const now = Date.now();
+  comps().push({ id: uid(), ...clean, createdAt: now, updatedAt: now });
+  store.save(); render();
+  alert(`Imported "${clean.name}".`);
+};
+
+/* ================= EDITOR VIEW ================= */
+const tempoCtl = StudioUI.tempoSlider(document.getElementById("tempoRow"), {
+  label: "Tempo", min: 30, max: 120, step: 1, value: 60, storageKey: "compose-tempo",
+  onChange: v => { const c = cur(); if (c) { c.tempo = v; touch(c); restartIfPlaying(); } },
+});
+function renderStrip() {
+  const c = cur(); if (!c) return;
+  const host = document.getElementById("strip");
+  host.innerHTML = "";
+  c.chips.forEach((ch, i) => {
+    const el = document.createElement("div");
+    el.className = "fchip" + (ch.k === "gap" ? " gapc" : ch.k === "hold" ? " holdc" : "");
+    el.innerHTML = chipLabel(ch) + `<span class="dur">${durLabel(ch.beats)}</span>`;
+    el.onclick = () => onChipTap(i);
+    host.appendChild(el);
+  });
+  const add = document.createElement("div");
+  add.className = "fchip addc";
+  add.textContent = "＋";
+  add.onclick = () => onChipTap(-1);
+  host.appendChild(add);
+  document.getElementById("totBeats").textContent = fmtBeats(totBeats(c));
+}
+function renderEditor() {
+  const c = cur();
+  if (!c) { showList(); return; }
+  document.getElementById("compName").value = c.name || "";
+  const rs = document.getElementById("ragaSel");
+  rs.innerHTML = `<option value="">Chromatic (no raga)</option>` +
+    RAGAS.map(r => `<option value="${r.id}"${r.id === c.ragaId ? " selected" : ""}>${r.name}</option>`).join("");
+  rs.onchange = () => { c.ragaId = rs.value || null; touch(c); restartIfPlaying(); };
+  const ss = document.getElementById("saSel");
+  ss.innerHTML = SA_NAMES.map((n, i) =>
+    `<option value="${i}"${i === c.saOffset ? " selected" : ""}>Sa = ${n}</option>`).join("");
+  ss.onchange = () => { c.saOffset = +ss.value; touch(c); restartIfPlaying(); };
+  tempoCtl.set(c.tempo);
+  document.getElementById("loopBtn").classList.toggle("on", !!c.loop);
+  renderStrip();
+  refreshPlayButtons();
+}
+function pickNewChip(title, ragaId, done) {
+  let beats = 1;
+  openPicker({ title, ragaId, stackMode: true,
+    duration: { value: beats, options: DURS },
+    onDuration: v => { beats = v; },
+    onPick: p => {
+      if (p.kind === "swara") done({ k: "note", stack: [{ st: p.st, oct: p.oct }], beats });
+      else if (p.kind === "hold") done({ k: "hold", beats });
+      else if (p.kind === "gap") done({ k: "gap", beats });
+      else if (p.kind === "stack") done({ k: "note", stack: p.stack, beats });
+    }});
+}
+function onChipTap(i) {
+  const c = cur(); if (!c) return;
+  if (i < 0) {
+    pickNewChip("Append swara", c.ragaId, chip => {
+      stopPlayback();
+      c.chips.push(chip);
+      touch(c); renderStrip(); refreshPlayButtons();
+    });
+    return;
+  }
+  const ch = c.chips[i];
+  openPicker({ title: `Edit chip #${i + 1}`, ragaId: c.ragaId, stackMode: true,
+    insert: true,
+    onInsert: where => {
+      const at = where === "before" ? i : i + 1;
+      pickNewChip(`Insert ${where} chip #${i + 1}`, c.ragaId, chip => {
+        stopPlayback();
+        c.chips.splice(at, 0, chip);
+        touch(c); renderStrip(); refreshPlayButtons();
+      });
+    },
+    current: `Now: ${chipLabel(ch)}`,
+    prefill: ch.k === "note" ? ch.stack : ch.k === "hold" ? [{ hold: true }] : null,
+    stackOn: ch.k === "note" && ch.stack.length > 1,
+    duration: { value: ch.beats, options: DURS },
+    onDuration: v => { c.chips[i].beats = v; touch(c); renderStrip(); },
+    onPick: p => {
+      stopPlayback();
+      if (p.kind === "swara") c.chips[i] = { k: "note", stack: [{ st: p.st, oct: p.oct }], beats: ch.beats };
+      else if (p.kind === "hold") c.chips[i] = { k: "hold", beats: ch.beats };
+      else if (p.kind === "gap") c.chips[i] = { k: "gap", beats: ch.beats };
+      else if (p.kind === "clear") c.chips.splice(i, 1);
+      else if (p.kind === "stack") c.chips[i] = { k: "note", stack: p.stack, beats: ch.beats };
+      else return;
+      touch(c); renderStrip(); refreshPlayButtons();
+    }});
+}
+document.getElementById("compName").addEventListener("input", e => {
+  const c = cur(); if (!c) return;
+  c.name = e.target.value; touch(c);
+});
+document.getElementById("loopBtn").onclick = () => {
+  const c = cur(); if (!c) return;
+  c.loop = !c.loop; touch(c);
+  document.getElementById("loopBtn").classList.toggle("on", c.loop);
+};
+document.getElementById("edPlay").onclick = () => {
+  const c = cur(); if (!c || !c.chips.length) return;
+  togglePlay(c, highlightChip);
+};
+document.getElementById("exportBtn").onclick = () => {
+  const c = cur(); if (!c) return;
+  const payload = {
+    app: "Compose Studio", version: 1, kind: "composition",
+    composition: {
+      name: c.name || "Untitled composition",
+      ragaId: c.ragaId, saOffset: c.saOffset, tempo: c.tempo, loop: !!c.loop,
+      chips: c.chips,
+    },
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const slug = (c.name || "").replace(/[^\w\- ]+/g, "").trim().replace(/\s+/g, "-").toLowerCase();
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (slug || "composition") + ".json";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+document.getElementById("deleteBtn").onclick = () => {
+  const c = cur(); if (!c) return;
+  if (!confirm(`Delete "${c.name || "Untitled"}"? This can't be undone.`)) return;
+  stopPlayback();
+  store.data.compositions = comps().filter(x => x.id !== c.id);
+  store.save();
+  showList();
+};
+document.getElementById("backBtn").onclick = () => showList();
+document.getElementById("homeBtn").onclick = () => { stopPlayback(); location.href = "../"; };
+
+/* ================= RAW JSON MODE ================= */
+let rawMode = false;
+function compToRawText(c) {
+  const head = [
+    '  "name": ' + JSON.stringify(c.name || ""),
+    '  "ragaId": ' + JSON.stringify(c.ragaId || null),
+    '  "saOffset": ' + (c.saOffset | 0),
+    '  "tempo": ' + c.tempo,
+    '  "loop": ' + (c.loop ? "true" : "false"),
+  ];
+  let s = "{\n" + head.join(",\n") + ',\n  "chips": [';
+  if (c.chips.length)
+    s += "\n" + c.chips.map(ch => "    " + JSON.stringify(ch)).join(",\n") + "\n  ";
+  return s + "]\n}";
+}
+function setRawMode(on) {
+  const c = cur();
+  rawMode = !!on && !!c;
+  if (rawMode) {
+    stopPlayback();
+    document.getElementById("rawText").value = compToRawText(c);
+  }
+  document.getElementById("rawCard").classList.toggle("hidden", !rawMode);
+  document.getElementById("setupCard").classList.toggle("hidden", rawMode);
+  document.getElementById("phraseCard").classList.toggle("hidden", rawMode);
+  document.getElementById("rawBtn").textContent = rawMode ? "♪ Phrase" : "{ } JSON";
+}
+document.getElementById("rawBtn").onclick = () => setRawMode(!rawMode);
+document.getElementById("rawCancel").onclick = () => setRawMode(false);
+document.getElementById("rawApply").onclick = () => {
+  const c = cur(); if (!c) return;
+  let obj;
+  try { obj = JSON.parse(document.getElementById("rawText").value); }
+  catch (e) { alert("Invalid JSON: " + e.message); return; }
+  const clean = sanitizeComposition(obj);
+  if (!clean) { alert("That doesn't look like a valid composition — check the chips and try again."); return; }
+  stopPlayback();
+  c.name = clean.name; c.ragaId = clean.ragaId; c.saOffset = clean.saOffset;
+  c.tempo = clean.tempo; c.loop = clean.loop; c.chips = clean.chips;
+  touch(c);
+  setRawMode(false);
+  renderEditor();
+};
+document.getElementById("rawCopy").onclick = async () => {
+  const ta = document.getElementById("rawText");
+  const btn = document.getElementById("rawCopy");
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch (e) {
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {}
+  }
+  const old = btn.textContent;
+  btn.textContent = "Copied ✓";
+  setTimeout(() => { btn.textContent = old; }, 1200);
+};
+
+/* ================= SWARA PICKER SHEET =================
+   opts: {title, ragaId|null (null=chromatic), oct, showSpecials,
+          stackMode (Stack toggle, off by default),
+          insert + onInsert(where) (edit sheets: ＋ popover, top-right),
+          prefill (initial stack selection), current (html under title),
+          duration:{value, options} + onDuration(v),
+          onPick({kind:'swara',st,oct}|{kind:'hold'|'gap'|'clear'}|{kind:'stack',stack})} */
+let pickerEl = null, veilEl = null;
+function ensurePickerDOM() {
+  if (pickerEl) return;
+  veilEl = document.createElement("div");
+  veilEl.className = "pkveil";
+  pickerEl = document.createElement("div");
+  pickerEl.className = "pksheet";
+  document.body.appendChild(veilEl);
+  document.body.appendChild(pickerEl);
+  veilEl.onclick = closePicker;
+  // Insert popover: a tap anywhere else in the sheet dismisses it (and is
+  // swallowed, so it doesn't also trigger the control underneath).
+  pickerEl.addEventListener("click", e => {
+    const m = pickerEl.querySelector(".pinsmenu");
+    if (!m || m.hidden) return;
+    const b = pickerEl.querySelector(".pinsbtn");
+    if (e.target === b || m.contains(e.target)) return;
+    m.hidden = true;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+}
+function closePicker() {
+  if (pickerEl) pickerEl.classList.remove("on");
+  if (veilEl) veilEl.classList.remove("on");
+}
+function openPicker(opts) {
+  ensurePickerDOM();
+  const raga = opts.ragaId ? ragaById(opts.ragaId) : null;
+  const list = raga ? ragaPickerList(raga) : CHROMATIC;
+  let oct = opts.oct != null ? opts.oct : 0;
+  let stackOn = !!opts.stackOn;
+  let sel = (opts.prefill || []).map(n => n.hold ? { hold:true } : { st:n.st, oct:n.oct });
+  let durVal = opts.duration ? opts.duration.value : null;
+  const selLabel = n => n.hold ? "," : n.st + (n.oct > 0 ? "'" : n.oct < 0 ? "." : "");
+  const durLbl = b => b === 1 ? "1" : b === 0.5 ? "½" : b === 0.25 ? "¼" : b + "";
+  const render = () => {
+    const sub = st => {
+      const m = st.match(/^([A-Z])(\d?)$/);
+      return m ? m[1] + (m[2] ? "<sub>"+m[2]+"</sub>" : "") : st;
+    };
+    const inSel = st => sel.some(x => !x.hold && x.st === st && x.oct === oct);
+    pickerEl.innerHTML =
+      `<div class="pkhead"><h3>${opts.title || "Pick swara"}</h3>` +
+      (opts.insert ?
+        `<button class="pinsbtn" aria-label="Insert a chip">＋</button>` +
+        `<div class="pinsmenu" hidden>` +
+          `<button data-ins="before">Insert before</button>` +
+          `<button data-ins="after">Insert after</button>` +
+        `</div>` : "") +
+      `</div>` +
+      (opts.current ? `<div class="pkcur">${opts.current}</div>` : "") +
+      `<div class="pkseg" id="pkOct">` +
+        `<button data-o="-1" class="${oct===-1?"on":""}">low (˙S)</button>` +
+        `<button data-o="0" class="${oct===0?"on":""}">middle</button>` +
+        `<button data-o="1" class="${oct===1?"on":""}">high (S˙)</button>` +
+      `</div>` +
+      `<div class="pgrid">` +
+        list.map(s => `<button class="pkbtn${stackOn && inSel(s) ? " picked" : ""}" data-st="${s}">${sub(s)}</button>`).join("") +
+      `</div>` +
+      (opts.showSpecials === false ? "" :
+      `<div class="pkrow">` +
+        `<button class="pkbtn" data-sp="hold">, hold</button>` +
+        (opts.showSpecials === "hold" ? "" :
+        `<button class="pkbtn" data-sp="gap">– gap</button>` +
+        `<button class="pkbtn" data-sp="clear">✕ clear</button>`) +
+      `</div>`) +
+      (opts.duration ? `<div class="pkdur"><span>Length</span><div class="pkseg" id="pkDur">` +
+        opts.duration.options.map(x =>
+          `<button data-d="${x}" class="${x === durVal ? "on" : ""}">${durLbl(x)}</button>`).join("") +
+        `</div></div>` : "") +
+      (opts.stackMode ?
+        `<div class="stackbar">` +
+          `<button class="stacktgl${stackOn ? " on" : ""}" id="pkStackTgl">Stack ＋</button>` +
+          (stackOn ?
+            `<div id="pkSel">` +
+              (sel.length ? sel.map((n, i) =>
+                `<button class="selchip" data-i="${i}">${selLabel(n)}<span class="x">×</span></button>`
+              ).join("") : `<span class="ph">tap swaras…</span>`) +
+            `</div>` +
+            `<button class="donebtn2" id="pkDone" ${sel.length ? "" : "disabled"}>✅</button>`
+          : "") +
+        `</div>`
+      : "") +
+      `<div class="hint">${stackOn ? "tap several in order · tap a selected chip to remove · then ✓ Done"
+        : (raga ? raga.name + " · tap a swara, or hold/gap/clear" : "Chromatic · all 16 sthanas")}</div>`;
+    pickerEl.querySelectorAll("#pkOct button").forEach(b => b.onclick = () => {
+      oct = +b.dataset.o; render();
+    });
+    pickerEl.querySelectorAll("#pkDur button").forEach(b => b.onclick = () => {
+      durVal = parseFloat(b.dataset.d);
+      if (opts.onDuration) opts.onDuration(durVal);
+      render();
+    });
+    const tgl = pickerEl.querySelector("#pkStackTgl");
+    if (tgl) tgl.onclick = () => { stackOn = !stackOn; render(); };
+    pickerEl.querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
+      const st = b.dataset.st;
+      if (stackOn) { sel.push({ st, oct }); render(); }
+      else { closePicker(); opts.onPick({ kind:"swara", st, oct }); }
+    });
+    pickerEl.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => {
+      if (stackOn && b.dataset.sp === "hold") { sel.push({ hold:true }); render(); return; }
+      closePicker(); opts.onPick({ kind:b.dataset.sp });
+    });
+    pickerEl.querySelectorAll("[data-ins]").forEach(b => b.onclick = () => {
+      const where = b.dataset.ins;
+      closePicker(); if (opts.onInsert) opts.onInsert(where);
+    });
+    const insBtn = pickerEl.querySelector(".pinsbtn");
+    if (insBtn) insBtn.onclick = () => {
+      const m = pickerEl.querySelector(".pinsmenu");
+      if (m) m.hidden = !m.hidden;
+    };
+    pickerEl.querySelectorAll(".selchip").forEach(b => b.onclick = () => {
+      sel.splice(+b.dataset.i, 1); render();
+    });
+    const done = pickerEl.querySelector("#pkDone");
+    if (done) done.onclick = () => {
+      if (!sel.length) return;
+      closePicker(); opts.onPick({ kind:"stack", stack:sel.map(n => ({ ...n })) });
+    };
+  };
+  render();
+  pickerEl.classList.add("on");
+  veilEl.classList.add("on");
+}
+
+/* ================= NAVIGATION ================= */
+function render() {
+  document.getElementById("v-list").classList.toggle("on", view === "list");
+  document.getElementById("v-editor").classList.toggle("on", view === "editor");
+  if (view === "list") renderList(); else renderEditor();
+}
+function showList() { stopPlayback(); setRawMode(false); view = "list"; openId = null; render(); }
+function openEditor(id) { stopPlayback(); setRawMode(false); view = "editor"; openId = id; render(); }
+
+render();
+</script>
+</body>
+</html>
