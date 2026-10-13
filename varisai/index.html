@@ -140,6 +140,7 @@ const swaraLabel = s => simpleLabels ? norm(s).replace(/[123]/g, "") : norm(s);
 const isRest = s => s === "-" || s === ",";
 const upOct = s => (s.match(/'/g) || []).length;
 const dnOct = s => (s.match(/,/g) || []).length; // mandra sthayi: ,S = S one octave down
+const dotLow = lab => lab.slice(0, 1) + "\u0323" + lab.slice(1); // combining dot below the LETTER, not the digit
 
 let curLesson = null, patIdx = 0, chipGrid = null;
 let saOffset = 0, tempo = 60, speed = 2, loopOn = true, simpleLabels = false;
@@ -285,7 +286,7 @@ function openPattern(i) {
   }
   // Grouped or flat notation
   const gridOpts = {
-    labelFn: s => swaraLabel(s) + (s[0] === "," ? "\u0323" : "") + "'".repeat(upOct(s)),
+    labelFn: s => (s[0] === "," ? dotLow(swaraLabel(s)) : swaraLabel(s)) + "'".repeat(upOct(s)),
     isRest, isLow: s => s[0] === "," && s !== ","
   };
   if (p.dlines) {
