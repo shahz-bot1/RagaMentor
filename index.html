@@ -80,6 +80,14 @@
       </span>
       <span class="chev">›</span>
     </button>
+    <button class="appcard" id="composeCard">
+      <span class="appicon">🎼</span>
+      <span class="appmeta">
+        <b>Compose Studio</b>
+        <p>Compose your own swara phrases.</p>
+      </span>
+      <span class="chev">›</span>
+    </button>
   </div>
   <p class="coming">More studios coming</p>
 </div>
@@ -103,6 +111,7 @@
   document.getElementById("talaCard").onclick = function () { location.href = "tala/"; };
   document.getElementById("ragaCard").onclick = function () { location.href = "raga/"; };
   document.getElementById("varisaiCard").onclick = function () { location.href = "varisai/"; };
+  document.getElementById("composeCard").onclick = function () { location.href = "compose/"; };
   // live counts from the shared song library
   try {
     var req = indexedDB.open("slowloop-proto", 1);
