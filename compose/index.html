@@ -74,11 +74,6 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 .fchip.cur { outline: 2px solid var(--warn); }
 .fchip .dur { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .fchip sub { font-size: 10px; color: var(--muted); }
-.fchip .st { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.05; }
-.fchip .st::before { content: ""; display: block; height: 9px; font-size: 11px; line-height: 9px; color: var(--accent); }
-.fchip .st::after { content: ""; display: block; height: 9px; font-size: 13px; line-height: 9px; color: var(--accent); }
-.fchip .st.oct-up::before { content: "˙"; }
-.fchip .st.oct-dn::after { content: "."; }
 .fchip.addc { border-style: dashed; border-color: var(--accent); color: var(--accent);
   font-size: 24px; min-width: 56px; display: flex; align-items: center; justify-content: center; }
 
@@ -246,10 +241,12 @@ function slotLabelHTML(slot) {
   if (slot.k !== "note" || !slot.stack.length) return "";
   return slot.stack.map(n => {
     if (n.hold) return `<span class="st">,</span>`;
-    const cls = n.oct > 0 ? "oct-up" : n.oct < 0 ? "oct-dn" : "";
     const m = n.st.match(/^([A-Z])(\d?)$/);
-    const inner = m ? m[1] + (m[2] ? "<sub>"+m[2]+"</sub>" : "") : n.st;
-    return `<span class="st ${cls}">${inner}</span>`;
+    if (!m) return `<span class="st">${n.st}</span>`;
+    /* octave as a combining dot ON the letter glyph (print style, user-chosen 2026-10-13) */
+    const dot = n.oct > 0 ? "\u0307" : n.oct < 0 ? "\u0323" : "";
+    const inner = m[1] + dot + (m[2] ? "<sub>"+m[2]+"</sub>" : "");
+    return `<span class="st">${inner}</span>`;
   }).join("");
 }
 
