@@ -106,6 +106,10 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
 </style>
 </head>
 <body>
+<div id="pickBanner" hidden style="margin:12px auto 0;max-width:860px;padding:12px 16px;border:1.5px solid var(--accent);border-radius:12px;background:var(--panel);font-size:14.5px">
+  🎼 <b>Pick a raga for your composition.</b> Open any raga and tap <b>Use this raga</b> — you'll go straight back with it applied, and it joins your Favourites in the composers.
+  <div style="margin-top:6px"><a href="#" id="pickCancel" style="color:var(--accent)">← Cancel and go back</a></div>
+</div>
 <header class="apphead">
   <div class="llrow">
     <button id="homeBtn">‹ RagaMentor</button>
@@ -182,6 +186,7 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
     <div class="piano-wrap"><div class="piano" id="pianoStrip"></div></div>
     <div class="playrow">
       <button class="bigplay" id="playBtn">▶ Play arohana + avarohana</button>
+      <button class="bigplay" id="pickUseBtn" hidden style="background:var(--accent);border-color:var(--accent);color:#fff">✓ Use this raga</button>
     </div>
     <div id="tempoRow"></div>
     <p class="note" id="audioStatus" style="margin:10px 0 0">Audio: not started — tap Test beep below</p>
@@ -476,7 +481,39 @@ main { max-width: 640px; margin: 0 auto; padding: 10px 16px; overflow-x: hidden;
 
   /* ---------- favourites ---------- */
   let favs = new Set(JSON.parse(localStorage.getItem("raga-favs") || "[]"));
-  const saveFavs = () => { try { localStorage.setItem("raga-favs", JSON.stringify([...favs])); } catch (e) {} };
+  const saveFavs = () => { try { localStorage.setItem("raga-favs", JSON.stringify([...favs])); } catch (e) {} mirrorFavData(); };
+  /* bridge for the composers (Compose Studio / LoopLab): they cannot resolve
+     RagaBrowser ids on their own, so favourites are mirrored with full scale
+     data into "raga-fav-data-v1" and imported into their raga registry. */
+  function mirrorFavData() {
+    const data = {};
+    favs.forEach(id => { const r = byId(id); if (r) data[id] = { name: r.name, aro: r.aro, ava: r.ava }; });
+    try { localStorage.setItem("raga-fav-data-v1", JSON.stringify(data)); } catch (e) {}
+  }
+  mirrorFavData();
+
+  /* ---------- pick mode (arriving from a composer's RagaBrowser entry) ---------- */
+  const pickParams = new URLSearchParams(location.search);
+  const pickReturn = pickParams.get("return") || "";
+  const pickMode = pickParams.get("pick") === "1" && (() => {
+    try { const u = new URL(pickReturn, location.href); return u.origin === location.origin; }
+    catch (e) { return false; }
+  })();
+  if (pickMode) {
+    document.getElementById("pickBanner").hidden = false;
+    document.getElementById("pickUseBtn").hidden = false;
+    document.title = "Pick a raga — RagaBrowser";
+  }
+  document.getElementById("pickCancel").onclick = e => {
+    e.preventDefault();
+    if (pickReturn) location.href = pickReturn; else history.back();
+  };
+  document.getElementById("pickUseBtn").onclick = () => {
+    if (!cur) return;
+    const pick = { srcId: cur.id, name: cur.name, aro: cur.aro, ava: cur.ava, ts: Date.now() };
+    try { localStorage.setItem("ragabrowser-pick-v1", JSON.stringify(pick)); } catch (e) {}
+    if (pickReturn) location.href = pickReturn;
+  };
   function starBtn(r) {
     const b = document.createElement("button");
     b.className = "star" + (favs.has(r.id) ? " fav" : "");
