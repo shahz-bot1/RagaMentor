@@ -226,7 +226,97 @@ const RAGAS = [
   { id:"shubhapanthuvarali", name:"Shubhapanthuvarali",
     aro:["S","R1","G2","M2","P","D1","N3"], ava:["S","N3","D1","P","M2","G2","R1"] },
 ];
-const ragaById = id => RAGAS.find(r => r.id === id) || null;
+const ragaById = id => RAGAS.find(r => r.id === id) || registryRaga(id) || null;
+/* ---- RagaBrowser link: personal raga registry, recents, favourites bridge.
+   Picks land in "ragabrowser-pick-v1" (written by RagaBrowser); RagaBrowser
+   favourites are mirrored with scale data in "raga-fav-data-v1" and imported
+   here. A pick matching the built-in table by scale signature uses the table
+   id (names differ across sources); anything else is stored in the registry
+   "raga-registry-v1" under an rb- id. Recents: "raga-recents-v1" (last 5). */
+const RAGA_PICK_KEY = "ragabrowser-pick-v1";
+const RAGA_REG_KEY = "raga-registry-v1";
+const RAGA_FAVDATA_KEY = "raga-fav-data-v1";
+const RAGA_RECENTS_KEY = "raga-recents-v1";
+const normAro = a => { const x = (a || []).map(v => String(v).replace(/'/g, "")); if (x.length > 1 && x[x.length - 1] === "S") x.pop(); return x; };
+const normAva = a => { const x = (a || []).map(v => String(v).replace(/'/g, "")); if (x.length > 1 && x[x.length - 1] === "S") x.pop(); return x; };
+const scaleSig = r => normAro(r.aro).join(" ") + "|" + normAva(r.ava).join(" ");
+function loadRagaRegistry() { try { return JSON.parse(localStorage.getItem(RAGA_REG_KEY)) || {}; } catch (e) { return {}; } }
+function saveRagaRegistry(reg) { try { localStorage.setItem(RAGA_REG_KEY, JSON.stringify(reg)); } catch (e) {} }
+function registryRaga(id) { const r = loadRagaRegistry()[id]; return r ? { id, name: r.name, aro: r.aro, ava: r.ava } : null; }
+function resolveRagaId(pick) {
+  const sig = normAro(pick.aro).join(" ") + "|" + normAva(pick.ava).join(" ");
+  const hit = RAGAS.find(r => scaleSig(r) === sig) ||
+    RAGAS.find(r => r.name.toLowerCase() === String(pick.name || "").toLowerCase());
+  return hit ? hit.id : null;
+}
+function registryIdFor(name) {
+  return "rb-" + String(name || "raga").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function registerPickedRaga(pick, src) {
+  const tableId = resolveRagaId(pick);
+  if (tableId) return tableId;
+  const reg = loadRagaRegistry();
+  const id = registryIdFor(pick.name);
+  if (!reg[id] || src === "pick")
+    reg[id] = { name: pick.name, aro: normAro(pick.aro), ava: normAva(pick.ava), src: src || "pick", srcId: pick.srcId || null };
+  saveRagaRegistry(reg);
+  return id;
+}
+function extraRagas() {
+  const reg = loadRagaRegistry();
+  return Object.keys(reg).map(id => ({ id, name: reg[id].name, aro: reg[id].aro, ava: reg[id].ava }));
+}
+function syncFavRegistry() {
+  let favData = {};
+  try { favData = JSON.parse(localStorage.getItem(RAGA_FAVDATA_KEY) || "{}"); } catch (e) {}
+  const reg = loadRagaRegistry();
+  for (const [srcId, d] of Object.entries(favData)) {
+    if (!d || !d.aro || !d.ava || resolveRagaId(d)) continue;
+    const id = registryIdFor(d.name);
+    if (!reg[id]) reg[id] = { name: d.name, aro: normAro(d.aro), ava: normAva(d.ava), src: "fav", srcId };
+  }
+  for (const [id, e] of Object.entries(reg))
+    if (e && e.src === "fav" && e.srcId && !favData[e.srcId]) delete reg[id];
+  saveRagaRegistry(reg);
+}
+function consumeRagaPick() {
+  let pick = null;
+  try { pick = JSON.parse(localStorage.getItem(RAGA_PICK_KEY) || "null"); } catch (e) {}
+  if (!pick) return null;
+  try { localStorage.removeItem(RAGA_PICK_KEY); } catch (e) {}
+  if (!pick.aro || !pick.ava || Date.now() - (pick.ts || 0) > 10 * 60 * 1000) return null;
+  return pick;
+}
+function noteRagaUsed(id) {
+  if (!id) return;
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem(RAGA_RECENTS_KEY) || "[]"); } catch (e) {}
+  list = [id, ...list.filter(x => x !== id)].slice(0, 5);
+  try { localStorage.setItem(RAGA_RECENTS_KEY, JSON.stringify(list)); } catch (e) {}
+}
+function recentRagas() {
+  let list = [];
+  try { list = JSON.parse(localStorage.getItem(RAGA_RECENTS_KEY) || "[]"); } catch (e) {}
+  return list.map(id => ragaById(id)).filter(Boolean);
+}
+/* the composer raga dropdown: Chromatic, Recents, Favourites, RagaBrowser.
+   Groups are deduped (first group wins); the current raga always appears. */
+function ragaOptionsHTML(currentId) {
+  const opt = r => `<option value="${r.id}"${r.id === currentId ? " selected" : ""}>${r.name}</option>`;
+  const recents = recentRagas();
+  const seen = new Set(recents.map(r => r.id));
+  const favs = extraRagas().filter(r => !seen.has(r.id));
+  let recentsHtml = recents.map(opt).join("");
+  if (currentId && !seen.has(currentId) && !favs.some(r => r.id === currentId)) {
+    const curR = ragaById(currentId);
+    if (curR) recentsHtml = opt(curR) + recentsHtml;
+  }
+  return `<option value="">Chromatic (no raga)</option>` +
+    (recentsHtml ? `<optgroup label="Recents">${recentsHtml}</optgroup>` : "") +
+    (favs.length ? `<optgroup label="Favourites">${favs.map(opt).join("")}</optgroup>` : "") +
+    `<option value="__browse__">RagaBrowser ›</option>`;
+}
+
 /* picker order: arohana order (dedup), then avarohana-only sthanas;
    full pitch set = union of aro+ava */
 const ragaPickerList = raga => {
@@ -512,9 +602,16 @@ function renderEditor() {
   if (!c) { showList(); return; }
   document.getElementById("compName").value = c.name || "";
   const rs = document.getElementById("ragaSel");
-  rs.innerHTML = `<option value="">Chromatic (no raga)</option>` +
-    RAGAS.map(r => `<option value="${r.id}"${r.id === c.ragaId ? " selected" : ""}>${r.name}</option>`).join("");
-  rs.onchange = () => { c.ragaId = rs.value || null; touch(c); restartIfPlaying(); };
+  rs.innerHTML = ragaOptionsHTML(c.ragaId);
+  rs.onchange = () => {
+    if (rs.value === "__browse__") {
+      rs.value = c.ragaId || "";
+      try { localStorage.setItem("raga-resume-v1", JSON.stringify({ app: "compose", id: c.id, ts: Date.now() })); } catch (e) {}
+      location.href = "../raga/?pick=1&return=" + encodeURIComponent(location.href.split("#")[0]);
+      return;
+    }
+    c.ragaId = rs.value || null; noteRagaUsed(c.ragaId); touch(c); restartIfPlaying();
+  };
   const ss = document.getElementById("saSel");
   ss.innerHTML = SA_NAMES.map((n, i) =>
     `<option value="${i}"${i === c.saOffset ? " selected" : ""}>Sa = ${n}</option>`).join("");
@@ -814,6 +911,20 @@ function render() {
 }
 function showList() { stopPlayback(); setRawMode(false); view = "list"; openId = null; render(); }
 function openEditor(id) { stopPlayback(); setRawMode(false); view = "editor"; openId = id; render(); }
+
+syncFavRegistry();
+(function resumeRagaPick() {
+  const pick = consumeRagaPick();
+  let resume = null;
+  try { resume = JSON.parse(localStorage.getItem("raga-resume-v1") || "null"); } catch (e) {}
+  if (resume) { try { localStorage.removeItem("raga-resume-v1"); } catch (e) {} }
+  if (!pick || !resume || resume.app !== "compose") return;
+  const c = byId(resume.id); if (!c) return;
+  c.ragaId = registerPickedRaga(pick);
+  noteRagaUsed(c.ragaId);
+  touch(c);
+  openEditor(c.id);
+})();
 
 render();
 </script>
