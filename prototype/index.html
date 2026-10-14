@@ -173,6 +173,108 @@
   #fsImpExpRow { display: flex; align-items: center; gap: 8px; min-width: 0; }
   #fsLoopsMsg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .warnBanner{margin:0 0 10px;padding:8px 12px;border-radius:10px;font-size:13px;background:rgba(255,170,0,.14);border:1px solid rgba(255,170,0,.55)}
+.backbtn {border: 0; background: none; color: var(--accent); font-size: 15px;
+  padding: 4px 0 12px; cursor: pointer; }
+.listbtns .bigplay {flex: 1; }
+.listbtns .loopbtn {flex: none; padding: 12px 16px; }
+/* editor */
+.titlein {width: 100%; box-sizing: border-box; font: inherit; font-size: 17px; font-weight: 600;
+  color: var(--text); background: transparent; border: none;
+  border-bottom: 1px solid var(--border); padding: 4px 2px; margin-bottom: 12px; }
+.titlein:focus {outline: none; border-bottom-color: var(--accent); }
+.ctl-bar {display: flex; gap: 8px; margin: 12px 0; }
+.ctl-drop {flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.ctl-drop span {font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.ctl-drop select {width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 9px; padding: 10px 28px 10px 12px; font-size: 15px; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa4b2' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; }
+.bigplay {width: 100%; border: 0; border-radius: 12px; background: var(--accent);
+  color: #fff; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; }
+.bigplay.playing {background: #e05252; }
+.playrow {display: flex; gap: 8px; margin-top: 10px; }
+.loopbtn {flex: 1; border: 1px solid var(--border); background: var(--panel2);
+  color: var(--muted); border-radius: 12px; font-size: 14px; padding: 12px 6px; cursor: pointer; }
+.loopbtn.on {color: var(--accent); border-color: var(--accent); font-weight: 700; }
+.loopbtn.danger {color: var(--bad); }
+/* raw JSON mode */
+#rawText {width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace;
+  font-size: 12.5px; line-height: 1.55; color: var(--text); background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+/* flow strip */
+.strip {display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.fchip {background: var(--panel2); border: 1.5px solid var(--accent); border-radius: 12px;
+  padding: 10px 12px; font-size: 16px; font-weight: 700; min-width: 56px; text-align: center;
+  position: relative; cursor: pointer; }
+.fchip.gapc {border-color: var(--border); color: var(--muted); }
+.fchip.holdc {border-color: var(--border); color: var(--muted); }
+.fchip.cur {outline: 2px solid var(--warn); }
+.fchip .dur {display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+.fchip sub {font-size: 10px; color: var(--muted); }
+.fchip.addc {border-style: dashed; border-color: var(--accent); color: var(--accent);
+  font-size: 24px; min-width: 56px; display: flex; align-items: center; justify-content: center; }
+/* picker sheet (studio-unique; ported from the Swara Builder playground) */
+.pkveil {position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 40; display: none; }
+.pkveil.on {display: block; }
+.pksheet {position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; background: var(--panel);
+  border-top: 1px solid var(--border); border-radius: 18px 18px 0 0; padding: 14px 14px 26px;
+  display: none; max-height: 72vh; overflow-y: auto; }
+.pksheet.on {display: block; }
+.pksheet h3 {margin: 0 0 10px; font-size: 15px; }
+.pkhead {position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.pinsbtn {flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--accent); font-size: 20px; line-height: 1; margin-top: -5px; padding: 0; }
+.pinsmenu {position: absolute; top: 36px; right: 0; z-index: 5; background: var(--panel2);
+  border: 1px solid var(--border); border-radius: 12px; padding: 6px; min-width: 172px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.pinsmenu[hidden] {display: none; }
+.pinsmenu button {display: block; width: 100%; text-align: left; background: transparent; border: none;
+  color: var(--text); font-size: 15px; padding: 10px 12px; border-radius: 8px; }
+.pinsmenu button:active {background: var(--accent-soft); }
+.pkbtn {background: var(--panel2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 12px; padding: 12px 4px; font-size: 17px; font-weight: 700; }
+.pkbtn sub {font-size: 11px; color: var(--muted); }
+.pkbtn:active {background: var(--accent-soft); }
+.pkrow {display: flex; gap: 8px; margin-top: 10px; }
+.pkrow .pkbtn {flex: 1; }
+.pkseg {display: flex; gap: 6px; margin: 10px 0; }
+.pkseg button {flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--muted); font-size: 13px; }
+.pkseg button.on {background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.pksheet .hint {font-size: 12px; color: var(--muted); margin-top: 10px; }
+.stackbar {display: flex; align-items: center; gap: 8px; margin: 10px 0 12px; }
+#pkSel {flex: 1; display: flex; gap: 6px; overflow-x: auto; padding: 4px 2px; min-width: 0;
+  font-size: 15px; color: var(--text); white-space: nowrap; align-items: center; }
+#pkSel .ph {color: var(--muted); font-size: 13px; }
+.pkbtn.picked {border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.pkcur {font-size: 14px; color: var(--muted); margin: -6px 0 6px; }
+.pkdur {display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.pkdur > span {font-size: 13px; color: var(--muted); white-space: nowrap; }
+.pkdur .pkseg {flex: 1; margin: 0; }
+  /* ---- Swaras section + composer (LoopLab) ---- */
+  #fsSwSection { margin-top: 4px; }
+  .swSecHead { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  .swSecHead > span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; flex: 0 0 auto; }
+  .swSecHead::after { content: ""; flex: 1; height: 1px; background: var(--border); order: 1; }
+  .swSecHead .swHeadBtns { order: 2; display: flex; align-items: center; gap: 8px; }
+  .roundplay { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff;
+    border: 0; font-size: 15px; cursor: pointer; padding: 0; }
+  .roundplay.playing { background: var(--warn); color: #111; }
+  .roundplay[hidden] { display: none; }
+  .loopsub { font-size: 12.5px; color: var(--muted); margin: 6px 0 8px; }
+  .temporow { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--muted); }
+  .temporow input[type="range"] { flex: 1; }
+  .temporow b { color: var(--text); min-width: 52px; text-align: right; }
+  .swmark { color: var(--accent); font-size: 11px; }
+  #swView { position: fixed; inset: 0; z-index: 30; background: var(--bg); color: var(--text);
+    overflow-y: auto; padding: 14px 14px 48px; }
+  #swView[hidden] { display: none; }
+  #swView .hidden { display: none; }
+  #swView .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; }
+  #swView h2 { margin: 0 0 10px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  #swView .note { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+  .swEdTitle { font-weight: 700; font-size: 16px; padding: 4px 0 12px; }
 </style>
 </head>
 <body>
@@ -283,6 +385,18 @@
         <input id="fsNewName" maxlength="40" placeholder="Loop name (optional)" aria-label="New loop name">
         <button class="btn small" id="fsAddBtn">＋ Add loop</button>
       </div>
+
+      <div id="fsSwSection" hidden>
+        <div class="swSecHead"><span>Swaras</span><span class="swHeadBtns"><button class="roundplay" id="swSecPlay" hidden title="Play this loop's swaras">▶</button><button class="btn small ghost" id="swSecEdit" hidden>✎ Edit</button><button class="btn small ghost" id="swSecAdd" hidden>＋ Add swaras</button></span></div>
+        <p class="loopsub" id="swSecSub" hidden></p>
+        <p class="hint" id="swSecNoLoop">Select a loop to add its swaras.</p>
+        <p class="hint" id="swSecEmpty" hidden>No swaras for this loop yet. Tap ＋ Add swaras to compose the phrase you hear in this loop.</p>
+        <div id="swSecBody" hidden>
+          <div class="strip" id="swSecStrip"></div>
+          <div class="temporow"><span>Tempo</span><input type="range" id="swSecTempo" min="30" max="120" step="1"><b id="swSecTempoV"></b></div>
+          <p class="hint" id="swSecMeta"></p>
+        </div>
+      </div>
     </div>
     <div class="fsPage" id="fsPageMore" hidden>
       <div class="fsSecLabel"><span>Speed</span></div>
@@ -301,8 +415,44 @@
   </div>
 </div>
 
+
+<div id="swView" hidden>
+  <button class="backbtn" id="backBtn">‹ Done</button>
+  <div class="swEdTitle">Compose swaras · <span id="swLoopName"></span></div>
+  <section class="card" id="setupCard">
+    <div class="ctl-bar">
+      <div class="ctl-drop"><span>Raga</span><select id="ragaSel"></select></div>
+      <div class="ctl-drop"><span>Sa</span><select id="saSel"></select></div>
+    </div>
+    <div id="tempoRow"></div>
+    <button class="bigplay" id="edPlay">▶ Play</button>
+    <div class="playrow">
+      <button class="loopbtn" id="loopBtn">🔁 Loop</button>
+      <button class="loopbtn" id="rawBtn">{ } JSON</button>
+      <button class="loopbtn danger" id="deleteBtn">Delete swaras</button>
+    </div>
+    <p class="note">Tap a chip to edit it, or ＋ to append. Total beats: <b id="totBeats">0</b>.</p>
+  </section>
+  <section class="card" id="phraseCard">
+    <h2>Phrase</h2>
+    <div class="strip" id="strip"></div>
+  </section>
+  <section class="card hidden" id="rawCard">
+    <h2>Raw JSON</h2>
+    <textarea id="rawText" rows="16" spellcheck="false"></textarea>
+    <div class="playrow">
+      <button class="loopbtn" id="rawApply">Apply</button>
+      <button class="loopbtn" id="rawCopy">Copy all</button>
+      <button class="loopbtn" id="rawCancel">Cancel</button>
+    </div>
+    <p class="note">One chip per line — copy a section and paste it elsewhere to repeat it.
+    Apply validates everything first; nothing is saved until it passes.</p>
+  </section>
+</div>
 <footer>Prototype only — audio &amp; loops live in this browser (IndexedDB). Same DRM rule as native: no Spotify/Apple Music streams.</footer>
 
+<script src="../shared/components.js"></script>
+<script src="../shared/audio.js"></script>
 <script>
 "use strict";
 /* ============================== utils ============================== */
@@ -552,6 +702,7 @@ async function rebuildAudioSource() {
 }
 async function togglePlay() {
   if (!cur()) return;
+  swStopPlayback();
   if (audio.paused) {
     try { await audio.play(); }
     catch (e) {
@@ -814,7 +965,7 @@ function renderFSChips() {
     c.appendChild(b);
     return b;
   };
-  const loopChip = lp => chip(escapeHtml(lp.name), lp.id === selectedLoopId ? "on" : "", () => {
+  const loopChip = lp => chip(escapeHtml(lp.name) + (swHasPhrase(lp) ? ' <span class="swmark">♪</span>' : ""), lp.id === selectedLoopId ? "on" : "", () => {
     if (lp.id === selectedLoopId) { // tap the active chip again to deselect
       selectedLoopId = null; looping = false; workingA = workingB = null;
       persist(); renderLoops(); updateABUI();
@@ -1131,6 +1282,7 @@ function updateFSABUI() {
   t.classList.toggle("on", looping);
   t.setAttribute("aria-checked", looping ? "true" : "false");
   updateSplitBtn();
+  renderSwSection();
 }
 function updateFSSpeedUI() {
   if (!fsOpen) return;
@@ -1572,7 +1724,8 @@ function buildExportData() {
       name: lp.name || ("Loop " + (i + 1)),
       start: Math.round(lp.start * 100) / 100,
       end: Math.round(lp.end * 100) / 100,
-      note: lp.note || ""
+      note: lp.note || "",
+      swaras: sanitizePhrase(lp.swaras) || undefined
     })),
     groups: (s.groups || []).map(g => ({
       id: toSerial.get(g.id),
@@ -1616,7 +1769,7 @@ function importLoopsData(data) {
     const start = clamp(st, 0, d), end = clamp(en, 0, d);
     if (end - start < MIN_LOOP) return;                         // skip degenerate
     loops.push({ id: hasKey(raw) ? idForKey(raw.id) : freshId(),
-      name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || "") });
+      name: String(raw.name || ("Loop " + (i + 1))).slice(0, 40), start, end, note: String(raw.note || ""), swaras: sanitizePhrase(raw.swaras) });
   });
   s.loops = loops;                                              // replace semantics
   const loopById = {}, groupById = {};
@@ -1686,6 +1839,619 @@ document.addEventListener("keydown", e => {
     refreshWaveColors();
   };
 })();
+
+
+/* ================= SWARA ENGINE (transplanted from Compose Studio) ================= */
+const SEMI = { S:0, R1:1, R2:2, R3:2, G1:2, G2:3, G3:4, M1:5, M2:6,
+               P:7, D1:8, D2:9, D3:10, N1:9, N2:10, N3:11 };
+const CHROMATIC = ["S","R1","R2","R3","G1","G2","G3","M1","M2","P","D1","D2","D3","N1","N2","N3"];
+const SA_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+/* Curated raga set (arohana / avarohana). Anchor-checked against standard lakshana. */
+const RAGAS = [
+  { id:"mohanam",          name:"Mohanam",
+    aro:["S","R2","G3","P","D2"],            ava:["S","D2","P","G3","R2"] },
+  { id:"hamsadhvani",      name:"Hamsadhvani",
+    aro:["S","R2","G3","P","N3"],            ava:["S","N3","P","G3","R2"] },
+  { id:"shankarabharanam", name:"Shankarabharanam",
+    aro:["S","R2","G3","M1","P","D2","N3"],  ava:["S","N3","D2","P","M1","G3","R2"] },
+  { id:"kalyani",          name:"Kalyani",
+    aro:["S","R2","G3","M2","P","D2","N3"],  ava:["S","N3","D2","P","M2","G3","R2"] },
+  { id:"mayamalavagowla",  name:"Mayamalavagowla",
+    aro:["S","R1","G3","M1","P","D1","N3"],  ava:["S","N3","D1","P","M1","G3","R1"] },
+  { id:"hindolam",         name:"Hindolam",
+    aro:["S","G2","M1","D1","N2"],           ava:["S","N2","D1","M1","G2"] },
+  { id:"abhogi",           name:"Abhogi",
+    aro:["S","R2","G2","M1","D2"],           ava:["S","D2","M1","G2","R2"] },
+  { id:"bhairavi",         name:"Bhairavi",
+    aro:["S","R2","G2","M1","P","D2","N2"],  ava:["S","N2","D1","P","M1","G2","R2"] },
+  { id:"aanandabhairavi",  name:"Aananda Bhairavi",
+    aro:["S","G2","R2","G2","M1","P","D2","P","N2"], ava:["S","N2","D2","P","M1","G2","R2"] },
+  { id:"shubhapanthuvarali", name:"Shubhapanthuvarali",
+    aro:["S","R1","G2","M2","P","D1","N3"], ava:["S","N3","D1","P","M2","G2","R1"] },
+];
+const ragaById = id => RAGAS.find(r => r.id === id) || null;
+/* picker order: arohana order (dedup), then avarohana-only sthanas;
+   full pitch set = union of aro+ava */
+const ragaPickerList = raga => {
+  const seen = new Set(), out = [];
+  raga.aro.forEach(s => { if (!seen.has(s)) { seen.add(s); out.push(s); } });
+  raga.ava.forEach(s => { if (!seen.has(s)) { seen.add(s); out.push(s); } });
+  return out;
+};
+function slotLabelHTML(slot) {
+  if (slot.k === "hold") return ",";
+  if (slot.k === "gap") return "–";
+  if (slot.k !== "note" || !slot.stack.length) return "";
+  return slot.stack.map(n => {
+    if (n.hold) return `<span class="st">,</span>`;
+    const m = n.st.match(/^([A-Z])(\d?)$/);
+    if (!m) return `<span class="st">${n.st}</span>`;
+    /* octave as a combining dot ON the letter glyph (print style, user-chosen 2026-10-13) */
+    const dot = n.oct > 0 ? "\u0307" : n.oct < 0 ? "\u0323" : "";
+    const inner = m[1] + dot + (m[2] ? "<sub>"+m[2]+"</sub>" : "");
+    return `<span class="st">${inner}</span>`;
+  }).join("");
+}
+const DURS = [0.25, 0.5, 1, 2, 4];
+const durLabel = b => b === 1 ? "1 beat" : b === 0.5 ? "½ beat" : b === 0.25 ? "¼ beat" : b + " beats";
+const totBeats = c => c.chips.reduce((a, x) => a + x.beats, 0);
+const ragaName = id => (id && ragaById(id)) ? ragaById(id).name : "Chromatic";
+const chipLabel = ch => ch.k === "note" ? slotLabelHTML(ch) : ch.k === "hold" ? "," : "–";
+function fmtBeats(b) {
+  const w = Math.floor(b + 1e-9), f = Math.round((b - w) * 100) / 100;
+  const fm = { 0: "", 0.25: "¼", 0.5: "½", 0.75: "¾" };
+  const fs = fm[f] !== undefined ? fm[f] : (f ? String(f) : "");
+  return w ? w + fs : (fs || "0");
+}
+
+function sanitizePhrase(raw) {
+  const c = raw && raw.composition ? raw.composition : raw;
+  if (!c || !Array.isArray(c.chips)) return null;
+  const chips = [];
+  for (const ch of c.chips) {
+    if (!ch || typeof ch !== "object") return null;
+    const beats = DURS.includes(ch.beats) ? ch.beats : 1;
+    if (ch.k === "hold" || ch.k === "gap") { chips.push({ k: ch.k, beats }); continue; }
+    if (ch.k !== "note" || !Array.isArray(ch.stack) || !ch.stack.length) return null;
+    const stack = [];
+    for (const n of ch.stack) {
+      if (n && n.hold === true) stack.push({ hold: true });
+      else if (n && SEMI[n.st] !== undefined)
+        stack.push({ st: n.st, oct: [-1, 0, 1].includes(n.oct) ? n.oct : 0 });
+      else return null;
+    }
+    chips.push({ k: "note", stack, beats });
+  }
+  return {
+    ragaId: ragaById(c.ragaId) ? c.ragaId : null,
+    saOffset: Number.isInteger(c.saOffset) && c.saOffset >= 0 && c.saOffset < 12 ? c.saOffset : 0,
+    tempo: Math.min(120, Math.max(30, +c.tempo || 60)),
+    loop: !!c.loop,
+    chips,
+  };
+}
+const SAMPLES = "../raga/samples/harmonium/";
+const SAMPLE_FILES = ["C4","Cs4","D4","Ds4","E4","F4","G4","Gs4","A4","As4","B4","C5"].map(f => f + ".mp3");
+const FILE_NAMES = ["C","Cs","D","Ds","E","F","Fs","G","Gs","A","As","B"];
+/* nearest harmonium sample for a semitone offset above C4 */
+function swSampleFor(semi) {
+  const avail = [0,1,2,3,4,5,7,8,9,10,11,12]; // C4..C5 minus Fs4
+  const baseSemi = ((semi % 12) + 12) % 12;
+  const oct = 4 + Math.floor(semi / 12);
+  let file = FILE_NAMES[baseSemi] + oct + ".mp3";
+  let rate = 1;
+  if (!avail.includes(semi) || file === "Fs4.mp3") {
+    let best = avail[0], bestD = 99;
+    avail.forEach(a => { const d = Math.abs(a - semi); if (d < bestD) { bestD = d; best = a; } });
+    file = FILE_NAMES[best % 12] + (4 + Math.floor(best / 12)) + ".mp3";
+    rate = Math.pow(2, (semi - best) / 12);
+  }
+  if (file === "Fs4.mp3") { file = "F4.mp3"; rate = Math.pow(2, 1 / 12); }
+  return { file, rate };
+}
+const swActiveNodes = [];
+function swStopAllNodes() {
+  swActiveNodes.forEach(n => { try { n.stop(); } catch (e) {} });
+  swActiveNodes.length = 0;
+}
+function swPlayNoteAt(t, st, oct, saOffset, soundDur) {
+  const semi = SEMI[st] + oct * 12 + saOffset;
+  const { file, rate } = swSampleFor(semi);
+  const buf = StudioAudio.getBuf(SAMPLES, file);
+  if (buf) { StudioAudio.playSampledSustain(t, buf, rate, soundDur, n => swActiveNodes.push(n)); return; }
+  StudioAudio.playSynth(t, 261.63 * Math.pow(2, semi / 12), soundDur, n => swActiveNodes.push(n));
+}
+
+/* ================= SWARAS (per-loop phrases) =================
+   A loop may carry one swara phrase, stored on the loop record itself
+   (lp.swaras) — it never appears in Compose Studio. The composer below is
+   Compose Studio's editor transplanted onto that storage. */
+let swEdit = null, swEditLoopId = null;
+const swCur = () => swEdit;
+function swEditLoop() {
+  const s = cur(); if (!s || !swEditLoopId) return null;
+  return s.loops.find(l => l.id === swEditLoopId) || null;
+}
+function swDefaultPhrase() { return { ragaId: "mohanam", saOffset: 0, tempo: 72, loop: false, chips: [] }; }
+function swHasPhrase(lp) { return !!(lp && lp.swaras && lp.swaras.chips && lp.swaras.chips.length); }
+function swSave() {
+  const lp = swEditLoop(); if (!lp || !swEdit) return;
+  if (!swEdit.chips.length && !lp.swaras) return; // a never-saved empty phrase stays unsaved
+  lp.swaras = swEdit;
+  persist();
+  renderSwSection();
+}
+/* tempo control: StudioUI when available (shared component), else a no-op
+   shim so the page also runs headless */
+let swTempoCtlReal = null;
+function swTempoSet(v) {
+  if (!(window.StudioUI && StudioUI.tempoSlider)) return;
+  if (!swTempoCtlReal) {
+    swTempoCtlReal = StudioUI.tempoSlider(document.getElementById("tempoRow"), {
+      label: "Tempo", min: 30, max: 120, step: 1, value: v,
+      onChange: val => { const c = swCur(); if (c) { c.tempo = val; swSave(); swRestartIfPlaying(); } },
+    });
+  }
+  swTempoCtlReal.set(v);
+}
+function openSwEditor() {
+  const lp = selLoop(); if (!lp) return;
+  swStopPlayback();
+  swEditLoopId = lp.id;
+  swEdit = lp.swaras ? JSON.parse(JSON.stringify(lp.swaras)) : swDefaultPhrase();
+  swSetRawMode(false);
+  document.getElementById("swView").hidden = false;
+  renderEditor();
+}
+function closeSwEditor() {
+  swStopPlayback(); swSetRawMode(false);
+  document.getElementById("swView").hidden = true;
+  swEdit = null; swEditLoopId = null;
+  renderLoops(); updateABUI();
+}
+document.getElementById("loopBtn").onclick = () => {
+  const c = swCur(); if (!c) return;
+  c.loop = !c.loop; swSave();
+  document.getElementById("loopBtn").classList.toggle("on", c.loop);
+};
+document.getElementById("edPlay").onclick = () => {
+  const c = swCur(); if (!c || !c.chips.length) return;
+  swTogglePlay(c, swHighlightChip, { loopId: swEditLoopId, where: "editor" });
+};
+document.getElementById("deleteBtn").onclick = () => {
+  const lp = swEditLoop(); if (!lp) return;
+  if (!confirm(`Delete the swaras for "${lp.name}"? This can't be undone.`)) return;
+  lp.swaras = null; persist();
+  closeSwEditor();
+};
+document.getElementById("backBtn").onclick = () => closeSwEditor();
+
+/* ================= SWARA PLAYBACK ================= */
+let swPb = null, swPbToken = 0; // swPb: { phrase, loopId, where, timers }
+function swStopPlayback() {
+  swPbToken++;
+  if (!swPb) { swRefreshPlayButtons(); return; }
+  swPb.timers.forEach(clearTimeout); swPb = null;
+  swStopAllNodes();
+  swRefreshPlayButtons();
+}
+function swCtxValid(ctx) {
+  if (!ctx) return false;
+  if (ctx.where === "editor") return !document.getElementById("swView").hidden && swEditLoopId === ctx.loopId;
+  return fsOpen && selectedLoopId === ctx.loopId;
+}
+async function swStartPlayback(phrase, onChip, ctx) {
+  swStopPlayback();
+  if (!phrase || !phrase.chips.length) return;
+  if (!audio.paused) audio.pause();
+  const token = ++swPbToken;
+  StudioAudio.ensure();
+  try { await StudioAudio.loadSamples(SAMPLES, SAMPLE_FILES); } catch (e) {}
+  if (token !== swPbToken) return; // superseded while samples loaded
+  const beat = 60 / phrase.tempo, t0 = StudioAudio.ensure().currentTime + 0.1;
+  const timers = [];
+  const mine = { phrase, loopId: ctx.loopId, where: ctx.where, timers };
+  swPb = mine;
+  swRefreshPlayButtons();
+  const evs = [];
+  let pending = null;
+  const flush = () => { if (pending) { evs.push(pending); pending = null; } };
+  let t = t0;
+  phrase.chips.forEach((ch, ci) => {
+    const ct = t;
+    timers.push(setTimeout(() => { if (swPb === mine && onChip) onChip(ci); },
+      Math.max(0, (ct - t0) * 1000)));
+    if (ch.k === "hold") { if (pending) pending.dur += ch.beats * beat; t += ch.beats * beat; return; }
+    if (ch.k === "note" && ch.stack.length && ch.stack.every(n => n.hold)) {
+      if (pending) pending.dur += ch.beats * beat; t += ch.beats * beat; return;
+    }
+    flush();
+    if (ch.k === "note") pending = { chip: ch, t, dur: ch.beats * beat };
+    t += ch.beats * beat;
+  });
+  flush();
+  evs.forEach(ev => {
+    const stack = ev.chip.stack || [];
+    const n = stack.length;
+    if (!n) return;
+    const units = [];
+    stack.forEach(sn => {
+      if (sn.hold) { if (units.length) units[units.length - 1].shares += 1; }
+      else units.push({ note: sn, shares: 1 });
+    });
+    if (!units.length) return;
+    const ownDur = ev.chip.beats * beat;
+    const sub = ownDur / n;
+    const extra = ev.dur - ownDur;
+    let st = ev.t;
+    units.forEach((u, ui) => {
+      let ud = u.shares * sub;
+      if (ui === units.length - 1) ud += extra;
+      swPlayNoteAt(st, u.note.st, u.note.oct, phrase.saOffset, ud + Math.min(0.28, ud * 0.7));
+      st += ud;
+    });
+  });
+  timers.push(setTimeout(() => {
+    if (swPb !== mine) return;
+    if (phrase.loop && swCtxValid(ctx)) { swStartPlayback(phrase, onChip, ctx); return; }
+    swPb = null;
+    if (onChip) onChip(-1);
+    swRefreshPlayButtons();
+  }, (t - t0) * 1000 + 400));
+}
+function swTogglePlay(phrase, onChip, ctx) {
+  if (swPb && swPb.loopId === ctx.loopId && swPb.where === ctx.where) swStopPlayback();
+  else swStartPlayback(phrase, onChip, ctx);
+}
+function swRestartIfPlaying() {
+  if (swPb && swPb.where === "editor" && swEdit)
+    swStartPlayback(swEdit, swHighlightChip, { loopId: swEditLoopId, where: "editor" });
+}
+function swRefreshPlayButtons() {
+  const sp = document.getElementById("swSecPlay");
+  if (sp) {
+    const active = !!swPb && swPb.where === "section" && swPb.loopId === selectedLoopId;
+    sp.textContent = active ? "⏹" : "▶";
+    sp.classList.toggle("playing", active);
+  }
+  const ep = document.getElementById("edPlay");
+  if (ep && swEdit) {
+    const active = !!swPb && swPb.where === "editor";
+    ep.textContent = active ? "⏹ Stop" : "▶ Play";
+    ep.classList.toggle("playing", active);
+  }
+}
+const swHighlightChip = i => {
+  document.querySelectorAll("#strip .fchip.cur").forEach(x => x.classList.remove("cur"));
+  if (i < 0 || document.getElementById("swView").hidden) return;
+  const host = document.getElementById("strip");
+  if (host && host.children[i]) host.children[i].classList.add("cur");
+};
+function swSectionHighlight(loopId) {
+  return i => {
+    const host = document.getElementById("swSecStrip"); if (!host) return;
+    [...host.children].forEach(x => x.classList.remove("cur"));
+    if (i < 0 || selectedLoopId !== loopId) return;
+    if (host.children[i]) host.children[i].classList.add("cur");
+  };
+}
+
+/* ================= SWARAS SECTION (A–B tab) ================= */
+let swSecKey = "";
+function renderSwSection() {
+  const sec = document.getElementById("fsSwSection"); if (!sec) return;
+  const lp = selLoop();
+  if (!fsOpen || !cur()) { sec.hidden = true; swSecKey = ""; return; }
+  sec.hidden = false;
+  swRefreshPlayButtons();
+  const key = (lp ? lp.id : "-") + "|" + (lp && lp.swaras ? JSON.stringify(lp.swaras) : "null");
+  if (key === swSecKey) return;
+  swSecKey = key;
+  const has = swHasPhrase(lp);
+  document.getElementById("swSecNoLoop").hidden = !!lp;
+  document.getElementById("swSecSub").hidden = !lp;
+  document.getElementById("swSecEmpty").hidden = !lp || has;
+  document.getElementById("swSecBody").hidden = !has;
+  document.getElementById("swSecAdd").hidden = !lp || has;
+  document.getElementById("swSecEdit").hidden = !has;
+  document.getElementById("swSecPlay").hidden = !has;
+  if (!lp) return;
+  document.getElementById("swSecSub").textContent = `${lp.name} · A ${fmt(lp.start)} – B ${fmt(lp.end)}`;
+  if (!has) return;
+  const host = document.getElementById("swSecStrip");
+  host.innerHTML = "";
+  lp.swaras.chips.forEach(ch => {
+    const el = document.createElement("div");
+    el.className = "fchip" + (ch.k === "gap" ? " gapc" : ch.k === "hold" ? " holdc" : "");
+    el.innerHTML = chipLabel(ch) + `<span class="dur">${durLabel(ch.beats)}</span>`;
+    host.appendChild(el);
+  });
+  document.getElementById("swSecTempo").value = lp.swaras.tempo;
+  document.getElementById("swSecTempoV").textContent = lp.swaras.tempo + " bpm";
+  document.getElementById("swSecMeta").textContent =
+    `${ragaName(lp.swaras.ragaId)} · ${fmtBeats(totBeats(lp.swaras))} beats · read-only — tap Edit to change the swaras`;
+}
+document.getElementById("swSecAdd").onclick = () => openSwEditor();
+document.getElementById("swSecEdit").onclick = () => openSwEditor();
+document.getElementById("swSecPlay").onclick = () => {
+  const lp = selLoop(); if (!swHasPhrase(lp)) return;
+  swTogglePlay(lp.swaras, swSectionHighlight(lp.id), { loopId: lp.id, where: "section" });
+};
+document.getElementById("swSecTempo").addEventListener("input", e => {
+  const lp = selLoop(); if (!swHasPhrase(lp)) return;
+  lp.swaras.tempo = +e.target.value;
+  document.getElementById("swSecTempoV").textContent = lp.swaras.tempo + " bpm";
+  persist();
+  if (swPb && swPb.where === "section" && swPb.loopId === lp.id)
+    swStartPlayback(lp.swaras, swSectionHighlight(lp.id), { loopId: lp.id, where: "section" });
+});
+
+function renderStrip() {
+  const c = swCur(); if (!c) return;
+  const host = document.getElementById("strip");
+  host.innerHTML = "";
+  c.chips.forEach((ch, i) => {
+    const el = document.createElement("div");
+    el.className = "fchip" + (ch.k === "gap" ? " gapc" : ch.k === "hold" ? " holdc" : "");
+    el.innerHTML = chipLabel(ch) + `<span class="dur">${durLabel(ch.beats)}</span>`;
+    el.onclick = () => onChipTap(i);
+    host.appendChild(el);
+  });
+  const add = document.createElement("div");
+  add.className = "fchip addc";
+  add.textContent = "＋";
+  add.onclick = () => onChipTap(-1);
+  host.appendChild(add);
+  document.getElementById("totBeats").textContent = fmtBeats(totBeats(c));
+}
+function renderEditor() {
+  const c = swCur();
+  if (!c) { closeSwEditor(); return; }
+  document.getElementById("swLoopName").textContent = (swEditLoop() || {}).name || "";
+  const rs = document.getElementById("ragaSel");
+  rs.innerHTML = `<option value="">Chromatic (no raga)</option>` +
+    RAGAS.map(r => `<option value="${r.id}"${r.id === c.ragaId ? " selected" : ""}>${r.name}</option>`).join("");
+  rs.onchange = () => { c.ragaId = rs.value || null; swSave(); restartIfPlaying(); };
+  const ss = document.getElementById("saSel");
+  ss.innerHTML = SA_NAMES.map((n, i) =>
+    `<option value="${i}"${i === c.saOffset ? " selected" : ""}>Sa = ${n}</option>`).join("");
+  ss.onchange = () => { c.saOffset = +ss.value; swSave(); restartIfPlaying(); };
+  swTempoSet(c.tempo);
+  document.getElementById("loopBtn").classList.toggle("on", !!c.loop);
+  renderStrip();
+  swRefreshPlayButtons();
+}
+function pickNewChip(title, ragaId, done) {
+  let beats = 1;
+  swOpenPicker({ title, ragaId, stackMode: true,
+    duration: { value: beats, options: DURS },
+    onDuration: v => { beats = v; },
+    onPick: p => {
+      if (p.kind === "swara") done({ k: "note", stack: [{ st: p.st, oct: p.oct }], beats });
+      else if (p.kind === "hold") done({ k: "hold", beats });
+      else if (p.kind === "gap") done({ k: "gap", beats });
+      else if (p.kind === "stack") done({ k: "note", stack: p.stack, beats });
+    }});
+}
+function onChipTap(i) {
+  const c = swCur(); if (!c) return;
+  if (i < 0) {
+    pickNewChip("Append swara", c.ragaId, chip => {
+      swStopPlayback();
+      c.chips.push(chip);
+      swSave(); renderStrip(); swRefreshPlayButtons();
+    });
+    return;
+  }
+  const ch = c.chips[i];
+  swOpenPicker({ title: `Edit chip #${i + 1}`, ragaId: c.ragaId, stackMode: true,
+    insert: true,
+    onInsert: where => {
+      const at = where === "before" ? i : i + 1;
+      pickNewChip(`Insert ${where} chip #${i + 1}`, c.ragaId, chip => {
+        swStopPlayback();
+        c.chips.splice(at, 0, chip);
+        swSave(); renderStrip(); swRefreshPlayButtons();
+      });
+    },
+    current: `Now: ${chipLabel(ch)}`,
+    prefill: ch.k === "note" ? ch.stack : ch.k === "hold" ? [{ hold: true }] : null,
+    stackOn: ch.k === "note" && ch.stack.length > 1,
+    duration: { value: ch.beats, options: DURS },
+    onDuration: v => { c.chips[i].beats = v; swSave(); renderStrip(); },
+    onPick: p => {
+      swStopPlayback();
+      if (p.kind === "swara") c.chips[i] = { k: "note", stack: [{ st: p.st, oct: p.oct }], beats: ch.beats };
+      else if (p.kind === "hold") c.chips[i] = { k: "hold", beats: ch.beats };
+      else if (p.kind === "gap") c.chips[i] = { k: "gap", beats: ch.beats };
+      else if (p.kind === "clear") c.chips.splice(i, 1);
+      else if (p.kind === "stack") c.chips[i] = { k: "note", stack: p.stack, beats: ch.beats };
+      else return;
+      swSave(); renderStrip(); swRefreshPlayButtons();
+    }});
+}
+
+let swRawMode = false;
+function swCompToRawText(c) {
+  const head = [
+    '  "ragaId": ' + JSON.stringify(c.ragaId || null),
+    '  "saOffset": ' + (c.saOffset | 0),
+    '  "tempo": ' + c.tempo,
+    '  "loop": ' + (c.loop ? "true" : "false"),
+  ];
+  let s = "{\n" + head.join(",\n") + ',\n  "chips": [';
+  if (c.chips.length)
+    s += "\n" + c.chips.map(ch => "    " + JSON.stringify(ch)).join(",\n") + "\n  ";
+  return s + "]\n}";
+}
+function swSetRawMode(on) {
+  const c = swCur();
+  swRawMode = !!on && !!c;
+  if (swRawMode) {
+    swStopPlayback();
+    document.getElementById("rawText").value = swCompToRawText(c);
+  }
+  document.getElementById("rawCard").classList.toggle("hidden", !swRawMode);
+  document.getElementById("setupCard").classList.toggle("hidden", swRawMode);
+  document.getElementById("phraseCard").classList.toggle("hidden", swRawMode);
+  document.getElementById("rawBtn").textContent = swRawMode ? "♪ Phrase" : "{ } JSON";
+}
+document.getElementById("rawBtn").onclick = () => swSetRawMode(!swRawMode);
+document.getElementById("rawCancel").onclick = () => swSetRawMode(false);
+document.getElementById("rawApply").onclick = () => {
+  const c = swCur(); if (!c) return;
+  let obj;
+  try { obj = JSON.parse(document.getElementById("rawText").value); }
+  catch (e) { alert("Invalid JSON: " + e.message); return; }
+  const clean = sanitizePhrase(obj);
+  if (!clean) { alert("That doesn't look like a valid composition — check the chips and try again."); return; }
+  swStopPlayback();
+  c.ragaId = clean.ragaId; c.saOffset = clean.saOffset;
+  c.tempo = clean.tempo; c.loop = clean.loop; c.chips = clean.chips;
+  swSave();
+  swSetRawMode(false);
+  renderEditor();
+};
+document.getElementById("rawCopy").onclick = async () => {
+  const ta = document.getElementById("rawText");
+  const btn = document.getElementById("rawCopy");
+  try { await navigator.clipboard.writeText(ta.value); }
+  catch (e) {
+    ta.focus(); ta.select();
+    try { document.execCommand("copy"); } catch (e2) {}
+  }
+  const old = btn.textContent;
+  btn.textContent = "Copied ✓";
+  setTimeout(() => { btn.textContent = old; }, 1200);
+};
+
+let swPickerEl = null, swVeilEl = null;
+function swEnsurePickerDOM() {
+  if (swPickerEl) return;
+  swVeilEl = document.createElement("div");
+  swVeilEl.className = "pkveil";
+  swPickerEl = document.createElement("div");
+  swPickerEl.className = "pksheet";
+  document.body.appendChild(swVeilEl);
+  document.body.appendChild(swPickerEl);
+  swVeilEl.onclick = swClosePicker;
+  // Insert popover: a tap anywhere else in the sheet dismisses it (and is
+  // swallowed, so it doesn't also trigger the control underneath).
+  swPickerEl.addEventListener("click", e => {
+    const m = swPickerEl.querySelector(".pinsmenu");
+    if (!m || m.hidden) return;
+    const b = swPickerEl.querySelector(".pinsbtn");
+    if (e.target === b || m.contains(e.target)) return;
+    m.hidden = true;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+}
+function swClosePicker() {
+  if (swPickerEl) swPickerEl.classList.remove("on");
+  if (swVeilEl) swVeilEl.classList.remove("on");
+}
+function swOpenPicker(opts) {
+  swEnsurePickerDOM();
+  const raga = opts.ragaId ? ragaById(opts.ragaId) : null;
+  const list = raga ? ragaPickerList(raga) : CHROMATIC;
+  let oct = opts.oct != null ? opts.oct : 0;
+  let stackOn = !!opts.stackOn;
+  let sel = (opts.prefill || []).map(n => n.hold ? { hold:true } : { st:n.st, oct:n.oct });
+  let durVal = opts.duration ? opts.duration.value : null;
+  const selLabel = n => n.hold ? "," : n.st + (n.oct > 0 ? "'" : n.oct < 0 ? "." : "");
+  const durLbl = b => b === 1 ? "1" : b === 0.5 ? "½" : b === 0.25 ? "¼" : b + "";
+  const render = () => {
+    const sub = st => {
+      const m = st.match(/^([A-Z])(\d?)$/);
+      return m ? m[1] + (m[2] ? "<sub>"+m[2]+"</sub>" : "") : st;
+    };
+    const inSel = st => sel.some(x => !x.hold && x.st === st && x.oct === oct);
+    swPickerEl.innerHTML =
+      `<div class="pkhead"><h3>${opts.title || "Pick swara"}</h3>` +
+      (opts.insert ?
+        `<button class="pinsbtn" aria-label="Insert a chip">＋</button>` +
+        `<div class="pinsmenu" hidden>` +
+          `<button data-ins="before">Insert before</button>` +
+          `<button data-ins="after">Insert after</button>` +
+        `</div>` : "") +
+      `</div>` +
+      (opts.current ? `<div class="pkcur">${opts.current}</div>` : "") +
+      `<div class="pkseg" id="pkOct">` +
+        `<button data-o="-1" class="${oct===-1?"on":""}">low (˙S)</button>` +
+        `<button data-o="0" class="${oct===0?"on":""}">middle</button>` +
+        `<button data-o="1" class="${oct===1?"on":""}">high (S˙)</button>` +
+      `</div>` +
+      `<div class="pgrid">` +
+        list.map(s => `<button class="pkbtn${stackOn && inSel(s) ? " picked" : ""}" data-st="${s}">${sub(s)}</button>`).join("") +
+      `</div>` +
+      (opts.showSpecials === false ? "" :
+      `<div class="pkrow">` +
+        `<button class="pkbtn" data-sp="hold">, hold</button>` +
+        (opts.showSpecials === "hold" ? "" :
+        `<button class="pkbtn" data-sp="gap">– gap</button>` +
+        `<button class="pkbtn" data-sp="clear">✕ clear</button>`) +
+      `</div>`) +
+      (opts.duration ? `<div class="pkdur"><span>Length</span><div class="pkseg" id="pkDur">` +
+        opts.duration.options.map(x =>
+          `<button data-d="${x}" class="${x === durVal ? "on" : ""}">${durLbl(x)}</button>`).join("") +
+        `</div></div>` : "") +
+      (opts.stackMode ?
+        `<div class="stackbar">` +
+          `<button class="stacktgl${stackOn ? " on" : ""}" id="pkStackTgl">Stack ＋</button>` +
+          (stackOn ?
+            `<div id="pkSel">` +
+              (sel.length ? sel.map((n, i) =>
+                `<button class="selchip" data-i="${i}">${selLabel(n)}<span class="x">×</span></button>`
+              ).join("") : `<span class="ph">tap swaras…</span>`) +
+            `</div>` +
+            `<button class="donebtn2" id="pkDone" ${sel.length ? "" : "disabled"}>✅</button>`
+          : "") +
+        `</div>`
+      : "") +
+      `<div class="hint">${stackOn ? "tap several in order · tap a selected chip to remove · then ✓ Done"
+        : (raga ? raga.name + " · tap a swara, or hold/gap/clear" : "Chromatic · all 16 sthanas")}</div>`;
+    swPickerEl.querySelectorAll("#pkOct button").forEach(b => b.onclick = () => {
+      oct = +b.dataset.o; render();
+    });
+    swPickerEl.querySelectorAll("#pkDur button").forEach(b => b.onclick = () => {
+      durVal = parseFloat(b.dataset.d);
+      if (opts.onDuration) opts.onDuration(durVal);
+      render();
+    });
+    const tgl = swPickerEl.querySelector("#pkStackTgl");
+    if (tgl) tgl.onclick = () => { stackOn = !stackOn; render(); };
+    swPickerEl.querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
+      const st = b.dataset.st;
+      if (stackOn) { sel.push({ st, oct }); render(); }
+      else { swClosePicker(); opts.onPick({ kind:"swara", st, oct }); }
+    });
+    swPickerEl.querySelectorAll("[data-sp]").forEach(b => b.onclick = () => {
+      if (stackOn && b.dataset.sp === "hold") { sel.push({ hold:true }); render(); return; }
+      swClosePicker(); opts.onPick({ kind:b.dataset.sp });
+    });
+    swPickerEl.querySelectorAll("[data-ins]").forEach(b => b.onclick = () => {
+      const where = b.dataset.ins;
+      swClosePicker(); if (opts.onInsert) opts.onInsert(where);
+    });
+    const insBtn = swPickerEl.querySelector(".pinsbtn");
+    if (insBtn) insBtn.onclick = () => {
+      const m = swPickerEl.querySelector(".pinsmenu");
+      if (m) m.hidden = !m.hidden;
+    };
+    swPickerEl.querySelectorAll(".selchip").forEach(b => b.onclick = () => {
+      sel.splice(+b.dataset.i, 1); render();
+    });
+    const done = swPickerEl.querySelector("#pkDone");
+    if (done) done.onclick = () => {
+      if (!sel.length) return;
+      swClosePicker(); opts.onPick({ kind:"stack", stack:sel.map(n => ({ ...n })) });
+    };
+  };
+  render();
+  swPickerEl.classList.add("on");
+  swVeilEl.classList.add("on");
+}
 
 /* ============================== boot ============================== */
 (async function boot() {
