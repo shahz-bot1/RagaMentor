@@ -275,6 +275,20 @@
   #swView h2 { margin: 0 0 10px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
   #swView .note { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
   .swEdTitle { font-weight: 700; font-size: 16px; padding: 4px 0 12px; }
+  .pgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .stacktgl { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel2); color: var(--text); cursor: pointer; }
+  .stacktgl.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .selchip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 16px;
+    background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 600; }
+  .selchip .x { font-size: 12px; opacity: .7; }
+  .donebtn2 { padding: 8px 12px; border-radius: 10px; border: none; background: var(--accent);
+    color: #fff; font-size: 16px; cursor: pointer; }
+  .donebtn2[disabled] { opacity: .35; }
+  .sliderow { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+  .sliderow label { font-size: 13.5px; color: var(--muted); flex: none; min-width: 44px; }
+  .sliderow input[type=range] { flex: 1; accent-color: var(--accent); }
+  .sliderow span { font-size: 13px; color: var(--muted); min-width: 64px; text-align: right; }
   /* the picker sheet must clear both swView and LoopLab's #fsOverlay (z 1000) */
   /* (deployed 2026-10-14) */
   .pkveil { z-index: 1110; }
@@ -364,6 +378,17 @@
         <button id="fsTrash" title="Delete selected loop"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </div>
       <div id="fsNote" class="hint"></div>
+      <div id="fsSwSection" hidden>
+        <div class="swSecHead"><span>Swaras</span><span class="swHeadBtns"><button class="roundplay" id="swSecPlay" hidden title="Play this loop's swaras">▶</button><button class="btn small ghost" id="swSecEdit" hidden>✎ Edit</button><button class="btn small ghost" id="swSecAdd" hidden>＋ Add swaras</button></span></div>
+        <p class="loopsub" id="swSecSub" hidden></p>
+        <p class="hint" id="swSecNoLoop">Select a loop to add its swaras.</p>
+        <p class="hint" id="swSecEmpty" hidden>No swaras for this loop yet. Tap ＋ Add swaras to compose the phrase you hear in this loop.</p>
+        <div id="swSecBody" hidden>
+          <div class="strip" id="swSecStrip"></div>
+          <div class="temporow"><span>Tempo</span><input type="range" id="swSecTempo" min="30" max="120" step="1"><b id="swSecTempoV"></b></div>
+          <p class="hint" id="swSecMeta"></p>
+        </div>
+      </div>
       <div id="fsImpExpRow">
         <span class="hint" id="fsLoopsMsg"></span>
       </div>
@@ -390,17 +415,6 @@
         <button class="btn small" id="fsAddBtn">＋ Add loop</button>
       </div>
 
-      <div id="fsSwSection" hidden>
-        <div class="swSecHead"><span>Swaras</span><span class="swHeadBtns"><button class="roundplay" id="swSecPlay" hidden title="Play this loop's swaras">▶</button><button class="btn small ghost" id="swSecEdit" hidden>✎ Edit</button><button class="btn small ghost" id="swSecAdd" hidden>＋ Add swaras</button></span></div>
-        <p class="loopsub" id="swSecSub" hidden></p>
-        <p class="hint" id="swSecNoLoop">Select a loop to add its swaras.</p>
-        <p class="hint" id="swSecEmpty" hidden>No swaras for this loop yet. Tap ＋ Add swaras to compose the phrase you hear in this loop.</p>
-        <div id="swSecBody" hidden>
-          <div class="strip" id="swSecStrip"></div>
-          <div class="temporow"><span>Tempo</span><input type="range" id="swSecTempo" min="30" max="120" step="1"><b id="swSecTempoV"></b></div>
-          <p class="hint" id="swSecMeta"></p>
-        </div>
-      </div>
     </div>
     <div class="fsPage" id="fsPageMore" hidden>
       <div class="fsSecLabel"><span>Speed</span></div>
@@ -421,7 +435,7 @@
 
 
 <div id="swView" hidden>
-  <button class="backbtn" id="backBtn">‹ Done</button>
+  <button class="backbtn" id="swDoneBtn">‹ Done</button>
   <div class="swEdTitle">Compose swaras · <span id="swLoopName"></span></div>
   <section class="card" id="setupCard">
     <div class="ctl-bar">
@@ -1989,7 +2003,7 @@ function swSave() {
    shim so the page also runs headless */
 let swTempoCtlReal = null;
 function swTempoSet(v) {
-  if (!(window.StudioUI && StudioUI.tempoSlider)) return;
+  if (typeof StudioUI === "undefined" || !StudioUI.tempoSlider) return;
   if (!swTempoCtlReal) {
     swTempoCtlReal = StudioUI.tempoSlider(document.getElementById("tempoRow"), {
       label: "Tempo", min: 30, max: 120, step: 1, value: v,
@@ -2028,7 +2042,7 @@ document.getElementById("deleteBtn").onclick = () => {
   lp.swaras = null; persist();
   closeSwEditor();
 };
-document.getElementById("backBtn").onclick = () => closeSwEditor();
+document.getElementById("swDoneBtn").onclick = () => closeSwEditor();
 
 /* ================= SWARA PLAYBACK ================= */
 let swPb = null, swPbToken = 0; // swPb: { phrase, loopId, where, timers }
@@ -2409,7 +2423,7 @@ function swOpenPicker(opts) {
                 `<button class="selchip" data-i="${i}">${selLabel(n)}<span class="x">×</span></button>`
               ).join("") : `<span class="ph">tap swaras…</span>`) +
             `</div>` +
-            `<button class="donebtn2" id="pkDone" ${sel.length ? "" : "disabled"}>✅</button>`
+            `<button class="donebtn2" id="pkDone" ${sel.length ? "" : "disabled"}>Done</button>`
           : "") +
         `</div>`
       : "") +
