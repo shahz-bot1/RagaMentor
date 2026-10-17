@@ -25,7 +25,7 @@ Home screen with one card per studio. Native AppShell mirrors this: the same fiv
 ### 2.2 LoopLab (web: `prototype/index.html`, 2,657 lines)
 Already largely shipped in v0.6.0 (PLAN.md M1–M6). The parity deltas are:
 - **Swaras** (§2.3) — the one missing feature block.
-- **Loops JSON v3 compatibility.** Web exports `{app:"RagaMentor", version:3, …}` with file-local serial ids, loops sorted by start, `swaras` additive per loop. Native backup is v1 today. Parity: native reads and writes v3 (including phrases), and still reads v1 files.
+- **Loops JSON v3 compatibility.** Web exports `{app:"RagaMentor", version:3, …}` with file-local serial ids, loops sorted by start, `swaras` additive per loop. Native backup is v1 today. Parity: native reads and writes v3 (including phrases) — and only v3. The short-lived native v1 format is retired entirely (user decision 2026-10-17): one platform-independent JSON, byte-consistent with the web export.
 - **Micro-rules to verify against the inventory**, including: selecting a song resets speed to 1 (not stored per song); Add-loop starts playback if paused and the new loop joins the open group; tapping the selected loop's chip again deselects it; loop badge tap = restart at range start; A–B tab with a group selected lets the playhead roam (no wrap) while a selected loop keeps wrapping; name fields cap at 40 chars; split point = playhead rounded to 0.1s, second name bumps the trailing number then unique-ifies.
 - **No repair flow.** The web's broken-song repair (re-import matched by title + file size) exists because IndexedDB loses audio bytes. Native stores real files; the failure mode does not exist. Dedupe on re-import already covers the user intent.
 - **Peaks stay native-style**: persisted sidecar cache (web recomputes 6,000 buckets per selection; native's cache is strictly better and invisible to the user).
@@ -146,7 +146,7 @@ Local Swift Packages, one per module, so boundaries are compiler-enforced and ev
 | `ragabrowser-pick-v1`, `raga-resume-v1` | not stored — typed `RagaPicker` return value |
 
 ### 5.2 Web → native content migration (one-time imports)
-- **Loops**: P1 teaches the native backup the web's v3 format (read + write, phrases included). A user exports from web LoopLab and imports in native LoopLab; loops, groups, notes and phrases land intact. Native v1 files remain readable.
+- **Loops**: P1 teaches the native backup the web's v3 format (read + write, phrases included). A user exports from web LoopLab and imports in native LoopLab; loops, groups, notes and phrases land intact. Exports from either platform have the same shape (same keys, order and formatting).
 - **Compositions**: P2's import accepts the web Compose export envelope (and bare composition JSON, matching the web sanitizer). Web compositions import from Files with fresh ids.
 - **Favourites/recents**: no file format exists on web; they start fresh natively. (The registry/favourites are small and rebuild in normal use; a migration path is not worth a format.)
 
@@ -170,7 +170,7 @@ Translation rule: bucket (a) ports as unit tests over RagaCore/data with the sam
 | split-test (16) | RagaCore loop-ops tests | (a) | Naming bump + unique-ify, note copied, phrase stays on first piece, group slot/order preserved. Already partly covered by v0.6.0 tests; restated in package target. |
 | raga-browser-test (9) | RagaCore registry + RagaPicker contract tests | (a) | Source-string checks become data/contract checks: registry counts (72/4/11), pick payload shape, resolution rules. |
 | sustain-test (17) | AudioKit render tests | (b) | Offline-render the sustain chain; assert combined gain ≈ 1 and segment timing, as the web asserts on its mock graph. |
-| roundtrip-test (11) | PersistenceKit backup tests | (d) | v3 export → import: fresh ids, duplicate names survive, byte-stable second export, garbage rejected. Extends the v0.6.0 v1 tests. |
+| roundtrip-test (11) | PersistenceKit backup tests | (d) | v3 export → import: fresh ids, duplicate names survive, byte-stable second export, garbage rejected. (The v0.6.0-era v1 tests were retired with the v1 format in P1.) |
 | raga-link-test (17) | RagaLibrary tests | (d) | Favourites bridge → registry, recents order + cap, signature pick (melakarta 29 → Shankarabharanam, no registry entry), unstar removes `src:fav` but keeps `src:pick`. |
 | backbtn (8) | LoopLab view-model tests | (c) | Destination-labelled back (`‹ Pallavi`, `‹ All`), back selects + arms the parent. |
 | checklist-top (14) + subgroup-check (7) | RagaCore group-ops + LoopLab view-model tests | (c)/(a) | Candidate rules per entry mode (top-level, open Add, new sub-group). The candidate computation is pure → RagaCore; the flow states → view model. |
@@ -201,6 +201,7 @@ Sequence note: P1/P2 build the editor stack; P3 completes the raga loop (browser
 |---|---|---|---|
 | **P0** ✅ | **Modular refactor.** Split v0.6.0 into packages (RagaCore, AudioKit, PersistenceKit, DesignSystem shell, LoopLab feature, AppShell). Extract protocols (`FilePlaybackEngine`, `SongStore`, `SettingsStore`); PlaybackController becomes the LoopLab view model over protocols with fakes. All 25 existing tests move to package targets and stay green. **Launch-screen fix rides along** (LaunchScreen + config), ending the compatibility-size display. | v0.7.0 | ~1 week |
 | **P1** | **RagaLibrary + SwaraEditor + LoopLab Swaras.** Phrase model + expansion + sanitizers in RagaCore; ToneEngine (samples + sustain) in AudioKit; RagaLibrary service; SwaraEditor module; LoopLab hosts it (§2.3); per-song raga memory; loops backup learns **v3** (read/write, phrases) — the web→native loops migration lands here. RagaPicker protocol defined; until P3, the picker contract is served by RagaBrowser's future module, so the editor's "RagaBrowser ›" entry is present but routes to a registry browse sheet inside the editor (same data, interim UI) — replaced by the real browser in P3. Tests: swaras (69) + raga-link (17) translations. | v0.8.0 | ~1.5 weeks |
+| **P1.5** | **Design pass** (§10): the web design language in DesignSystem; LoopLab + SwaraEditor restyled. Runs immediately after P1, before P2, so later studios are born styled. | v0.8.1 | ~2–3 days |
 | **P2** | **Compose Studio.** Composer feature: list + editor (SwaraEditor host #2), envelope export/import (§2.4), raw-JSON mode parity. Tests: compose (65) translation. | v0.9.0 | ~1 week |
 | **P3** | **RagaBrowser.** Registry data port; four tabs; detail (notation toggle, Listen card, piano display); favourites into RagaLibrary; **RagaPicker goes live** — editors' "RagaBrowser ›" now opens the real browser in pick mode. Tests: raga-browser (9) translation + new runtime suites (search, chakra, detail sequencing). CC-BY attribution line in the Listen card. | v0.10.0 | ~1.5 weeks |
 | **P4** | **Tala Studio.** TalaSpec in RagaCore; LookaheadScheduler in AudioKit; wheel view (exact web geometry) + controls + settings with validation and `adi` migration. Tests: new tala suite (§6.3). | v0.11.0 | ~3–4 days |
@@ -218,7 +219,7 @@ Sequence note: P1/P2 build the editor stack; P3 completes the raga loop (browser
 
 ## 8. Risks & open decisions
 
-1. **R3 semitone quirk (decision, default: replicate).** RagaBrowser's semitone map codes `R3: 2`, colliding with R2/G1 (conventional sthana value 3). Melakartas 61–72 use R3, so web playback frequencies and piano positions follow the coded value. Default: port the map as coded (audible parity), and record the quirk in RagaCore next to the table. Changing it later is a one-line data change plus a plan amendment.
+1. **R3 semitone quirk (decision, default: replicate).** All three web sources (RagaBrowser, Compose, LoopLab) code `R3: 2` uniformly, colliding with R2/G1 (conventional sthana value 3). Source-verified 2026-10-17. Melakartas 61–72 use R3, so web playback frequencies and piano positions follow the coded value. Default: port the map as coded (audible parity), and record the quirk in RagaCore next to the table. Changing it later is a one-line data change plus a plan amendment.
 2. **Vocal formant synth (optional add, default: out).** Fully coded on web but unreachable — no UI selects it. Porting it into ToneEngine is cheap (one synth voice), but it is not parity. It lands only on an explicit ask, as a timbre selector in RagaBrowser (which would itself be a UI change needing design approval).
 3. **Tappable piano (default: out).** Web keys are display-only. Making them play is an enhancement, not parity; it needs a design pass (it changes the Listen card's contract).
 4. **Allied-raga data quirk (default: fix in data).** One Hindustani allied entry is an id (`bhairav_h`), not a name, so its chip never renders on web. The port resolves allied by id-or-name; the invisible fix makes one chip appear that web never showed. Noted here so the difference is a decision, not a surprise.
@@ -232,3 +233,36 @@ Sequence note: P1/P2 build the editor stack; P3 completes the raga loop (browser
 ## 9. What "done" means
 
 Parity is done at v1.0.0 when: every §2 behaviour is present natively; the translated suites (§6.2) plus the new gap suites (§6.3) are green in CI; a web export (loops v3, composition envelope) imports cleanly into the native app; and Shahzin's on-device pass confirms the ear-level behaviours (sustain, seams, clicks, legato) match what the web versions do — with the native advantages (background playback, real files, gapless engine looping) intact throughout.
+
+---
+
+## 10. Design pass (v0.8.1) — visual parity
+
+Approved by Shahzin 2026-10-17 ("the current design looks very old
+iOS 10 plain style"). Stock SwiftUI lists and forms are the cause;
+the fix is to build the web design language into DesignSystem and
+restyle the screens with it.
+
+The web design language (shared/studio.css + LoopLab styles):
+- Dark (default): bg #101318, panel #171c24, panel2 #1f2631, text
+  #e8ecf2, muted #9aa4b2, border #2a323e, accent #5b9dff (+16% soft).
+- Light: bg #f4f6f9, panel #ffffff, panel2 #eef1f5, text #1b2330,
+  muted #5d6b7d, border #dde3ea, accent #2f6fe4.
+- Cards: panel fill, 1px border, 14pt radius, 16pt padding; section
+  titles 14pt uppercase, letterspaced, muted.
+- Segmented controls: panel2 track (10pt radius, 3pt padding);
+  selected segment accent-filled, white semibold label.
+- Chips: full pills on panel2 with border; selected = accent;
+  group colours = the web palette (ported in P0).
+- Buttons: primary accent-filled; secondary bordered/transparent;
+  transport play = 54pt accent circle.
+- Header: "Raga" + accent "Mentor" wordmark; pill buttons.
+- One in-app theme setting shared by all studios (the web's
+  per-page theme keys unify natively), default dark like the web.
+
+Scope: DesignSystem grows StudioCard, StudioSegmented, StudioChip,
+StudioSlider and the theme tokens; LoopLab (library rows, player
+card, fullscreen tabs + mini-transport, loops, A–B, More) and
+SwaraEditor (section, editor, picker) are restyled onto them.
+Behaviour stays native (SF Symbols, native sheets/navigation,
+Dynamic Type); only the visual language matches the web.
