@@ -8,10 +8,14 @@ const StudioAudio = (() => {
   const bufs = {};    // "base/file" -> AudioBuffer
   const loading = {}; // base -> promise
 
-  /* Singleton AudioContext; resumes if suspended. */
+  /* Singleton AudioContext; resumes whenever it is not running. iOS reports
+     "interrupted" (not "suspended") after the browser returns from background,
+     so testing only for "suspended" left the engine frozen until a refresh. */
   function ensure() {
     if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-    if (actx.state === "suspended") actx.resume();
+    if (actx.state !== "running") {
+      try { const p = actx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+    }
     return actx;
   }
 
