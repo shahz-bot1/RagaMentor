@@ -27,7 +27,6 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 .crow .pbtn2 { flex: none; width: 42px; height: 42px; border-radius: 50%;
   border: 1.5px solid var(--accent); background: var(--accent-soft);
   color: var(--accent); font-size: 15px; cursor: pointer; }
-.crow .pbtn2.playing { background: var(--accent); color: #fff; }
 .crow .meta { flex: 1; min-width: 0; }
 .crow .meta b { font-size: 16px; display: block; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis; }
@@ -52,7 +51,6 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 .sliderow span { font-size: 13px; color: var(--muted); min-width: 64px; text-align: right; }
 .bigplay { width: 100%; border: 0; border-radius: 12px; background: var(--accent);
   color: #fff; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; }
-.bigplay.playing { background: #e05252; }
 .playrow { display: flex; gap: 8px; margin-top: 10px; }
 .loopbtn { flex: 1; border: 1px solid var(--border); background: var(--panel2);
   color: var(--muted); border-radius: 12px; font-size: 14px; padding: 12px 6px; cursor: pointer; }
@@ -127,7 +125,10 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 .pkcur { font-size: 14px; color: var(--muted); margin: -6px 0 6px; }
 .pkdur { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .pkdur > span { font-size: 13px; color: var(--muted); white-space: nowrap; }
-.pkdur .pkseg { flex: 1; margin: 0; }
+.pkstep { flex: none; width: 44px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer; }
+.pkstep[disabled] { opacity: .35; cursor: default; }
+.pkdur .pkdurval { flex: 1; text-align: center; font-size: 15px; font-weight: 600; color: var(--text); }
 </style>
 </head>
 <body>
@@ -345,8 +346,10 @@ function slotLabelHTML(slot) {
 /* ================= STORE ================= */
 /* Same key as the playground preview (same origin) — compositions carry over. */
 const LS_KEY = "compose-studio-v1";
-const DURS = [0.25, 0.5, 1, 2, 4];
-const durLabel = b => b === 1 ? "1 beat" : b === 0.5 ? "½ beat" : b === 0.25 ? "¼ beat" : b + " beats";
+const DUR_MIN = 0.25, DUR_MAX = 8, DUR_STEP = 0.25;
+const beatOK = v => typeof v === "number" && v >= DUR_MIN && v <= DUR_MAX &&
+  Math.abs(v * 4 - Math.round(v * 4)) < 1e-9;
+const durLabel = b => fmtBeats(b) + (b > 1 ? " beats" : " beat");
 const uid = () => "c" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
 const store = {
   data: (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || { compositions: [] }; }
@@ -377,7 +380,7 @@ function sanitizeComposition(raw) {
   const chips = [];
   for (const ch of c.chips) {
     if (!ch || typeof ch !== "object") return null;
-    const beats = DURS.includes(ch.beats) ? ch.beats : 1;
+    const beats = beatOK(ch.beats) ? Math.round(ch.beats * 4) / 4 : 1;
     if (ch.k === "hold" || ch.k === "gap") { chips.push({ k: ch.k, beats }); continue; }
     if (ch.k !== "note" || !Array.isArray(ch.stack) || !ch.stack.length) return null;
     const stack = [];
@@ -627,7 +630,7 @@ function renderEditor() {
 function pickNewChip(title, ragaId, done) {
   let beats = 1;
   openPicker({ title, ragaId, stackMode: true,
-    duration: { value: beats, options: DURS },
+    duration: { value: beats },
     onDuration: v => { beats = v; },
     onPick: p => {
       if (p.kind === "swara") done({ k: "note", stack: [{ st: p.st, oct: p.oct }], beats });
@@ -660,7 +663,7 @@ function onChipTap(i) {
     current: `Now: ${chipLabel(ch)}`,
     prefill: ch.k === "note" ? ch.stack : ch.k === "hold" ? [{ hold: true }] : null,
     stackOn: ch.k === "note" && ch.stack.length > 1,
-    duration: { value: ch.beats, options: DURS },
+    duration: { value: ch.beats },
     onDuration: v => { c.chips[i].beats = v; touch(c); renderStrip(); },
     onPick: p => {
       stopPlayback();
@@ -776,7 +779,7 @@ document.getElementById("rawCopy").onclick = async () => {
           stackMode (Stack toggle, off by default),
           insert + onInsert(where) (edit sheets: ＋ popover, top-right),
           prefill (initial stack selection), current (html under title),
-          duration:{value, options} + onDuration(v),
+          duration:{value} (¼-step stepper, ¼–8 beats) + onDuration(v),
           onPick({kind:'swara',st,oct}|{kind:'hold'|'gap'|'clear'}|{kind:'stack',stack})} */
 let pickerEl = null, veilEl = null;
 function ensurePickerDOM() {
@@ -813,7 +816,6 @@ function openPicker(opts) {
   let sel = (opts.prefill || []).map(n => n.hold ? { hold:true } : { st:n.st, oct:n.oct });
   let durVal = opts.duration ? opts.duration.value : null;
   const selLabel = n => n.hold ? "," : n.st + (n.oct > 0 ? "'" : n.oct < 0 ? "." : "");
-  const durLbl = b => b === 1 ? "1" : b === 0.5 ? "½" : b === 0.25 ? "¼" : b + "";
   const render = () => {
     const sub = st => {
       const m = st.match(/^([A-Z])(\d?)$/);
@@ -845,10 +847,11 @@ function openPicker(opts) {
         `<button class="pkbtn" data-sp="gap">– gap</button>` +
         `<button class="pkbtn" data-sp="clear">✕ clear</button>`) +
       `</div>`) +
-      (opts.duration ? `<div class="pkdur"><span>Length</span><div class="pkseg" id="pkDur">` +
-        opts.duration.options.map(x =>
-          `<button data-d="${x}" class="${x === durVal ? "on" : ""}">${durLbl(x)}</button>`).join("") +
-        `</div></div>` : "") +
+      (opts.duration ? `<div class="pkdur"><span>Length</span>` +
+        `<button class="pkstep" id="pkDurMinus" ${durVal <= DUR_MIN ? "disabled" : ""}>−</button>` +
+        `<span class="pkdurval">${durLabel(durVal)}</span>` +
+        `<button class="pkstep" id="pkDurPlus" ${durVal >= DUR_MAX ? "disabled" : ""}>＋</button>` +
+        `</div>` : "") +
       (opts.stackMode ?
         `<div class="stackbar">` +
           `<button class="stacktgl${stackOn ? " on" : ""}" id="pkStackTgl">Stack ＋</button>` +
@@ -867,11 +870,18 @@ function openPicker(opts) {
     pickerEl.querySelectorAll("#pkOct button").forEach(b => b.onclick = () => {
       oct = +b.dataset.o; render();
     });
-    pickerEl.querySelectorAll("#pkDur button").forEach(b => b.onclick = () => {
-      durVal = parseFloat(b.dataset.d);
+    const dMinus = pickerEl.querySelector("#pkDurMinus");
+    if (dMinus) dMinus.onclick = () => {
+      durVal = Math.max(DUR_MIN, Math.round((durVal - DUR_STEP) * 4) / 4);
       if (opts.onDuration) opts.onDuration(durVal);
       render();
-    });
+    };
+    const dPlus = pickerEl.querySelector("#pkDurPlus");
+    if (dPlus) dPlus.onclick = () => {
+      durVal = Math.min(DUR_MAX, Math.round((durVal + DUR_STEP) * 4) / 4);
+      if (opts.onDuration) opts.onDuration(durVal);
+      render();
+    };
     const tgl = pickerEl.querySelector("#pkStackTgl");
     if (tgl) tgl.onclick = () => { stackOn = !stackOn; render(); };
     pickerEl.querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
