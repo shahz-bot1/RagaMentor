@@ -9,10 +9,12 @@
   :root, [data-theme="dark"] {
     --danger: #ff6b6b; --wave: #6f7f95; --playhead: #ff5d5d;
     --chip: #242c38;
+    --bad: #f87171; --warn: #fbbf24; --warn-ink: #111827;
   }
   [data-theme="light"] {
     --danger: #d64545; --wave: #8a97a8; --playhead: #e04444;
     --chip: #e8edf3;
+    --bad: #dc2626; --warn: #b45309; --warn-ink: #ffffff;
   }
   main { display: grid; grid-template-columns: 300px 1fr; gap: 16px;
          padding: 16px 20px; max-width: 1200px; margin: 0 auto; }
@@ -208,7 +210,9 @@
   position: relative; cursor: pointer; }
 .fchip.gapc {border-color: var(--border); color: var(--muted); }
 .fchip.holdc {border-color: var(--border); color: var(--muted); }
-.fchip.cur {outline: 2px solid var(--warn); }
+.fchip.cur {background: var(--warn); border-color: var(--warn); color: var(--warn-ink);
+  outline: 2px solid var(--warn); outline-offset: 1px; }
+.fchip.cur .dur, .fchip.cur sub {color: var(--warn-ink); opacity: .75; }
 .fchip .dur {display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .fchip sub {font-size: 10px; color: var(--muted); }
 .fchip.addc {border-style: dashed; border-color: var(--accent); color: var(--accent);
@@ -259,7 +263,7 @@
   .swSecHead .swHeadBtns { order: 2; display: flex; align-items: center; gap: 8px; }
   .roundplay { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff;
     border: 0; font-size: 15px; cursor: pointer; padding: 0; }
-  .roundplay.playing { background: var(--warn); color: #111; }
+  .roundplay.playing { background: var(--warn); color: var(--warn-ink); }
   .roundplay[hidden] { display: none; }
   .loopsub { font-size: 12.5px; color: var(--muted); margin: 6px 0 8px; }
   .temporow { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--muted); }
@@ -2143,6 +2147,7 @@ document.getElementById("swDoneBtn").onclick = () => closeSwEditor();
 let swPb = null, swPbToken = 0; // swPb: { phrase, loopId, where, timers }
 function swStopPlayback() {
   swPbToken++;
+  document.querySelectorAll(".fchip.cur").forEach(x => x.classList.remove("cur"));
   if (!swPb) { swRefreshPlayButtons(); return; }
   swPb.timers.forEach(clearTimeout); swPb = null;
   swStopAllNodes();
