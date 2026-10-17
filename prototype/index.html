@@ -475,7 +475,7 @@
 <footer>Prototype only — audio &amp; loops live in this browser (IndexedDB). Same DRM rule as native: no Spotify/Apple Music streams.</footer>
 
 <script src="../shared/components.js"></script>
-<script src="../shared/audio.js"></script>
+<script src="../shared/audio.js?v=2"></script>
 <script>
 "use strict";
 /* ============================== utils ============================== */
@@ -2220,6 +2220,11 @@ async function swStartPlayback(phrase, onChip, ctx) {
     swRefreshPlayButtons();
   }, (t - t0) * 1000 + 400));
 }
+/* iOS suspends Web Audio in the background: stop cleanly on hide, wake on show */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) swStopPlayback();
+  else StudioAudio.ensure();
+});
 function swTogglePlay(phrase, onChip, ctx) {
   if (swPb && swPb.loopId === ctx.loopId && swPb.where === ctx.where) swStopPlayback();
   else swStartPlayback(phrase, onChip, ctx);
