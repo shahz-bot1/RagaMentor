@@ -193,7 +193,6 @@
   background-repeat: no-repeat; background-position: right 10px center; }
 .bigplay {width: 100%; border: 0; border-radius: 12px; background: var(--accent);
   color: #fff; font-size: 16px; font-weight: 700; padding: 14px; cursor: pointer; }
-.bigplay.playing {background: #e05252; }
 .playrow {display: flex; gap: 8px; margin-top: 10px; }
 .loopbtn {flex: 1; border: 1px solid var(--border); background: var(--panel2);
   color: var(--muted); border-radius: 12px; font-size: 14px; padding: 12px 6px; cursor: pointer; }
@@ -254,7 +253,10 @@
 .pkcur {font-size: 14px; color: var(--muted); margin: -6px 0 6px; }
 .pkdur {display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .pkdur > span {font-size: 13px; color: var(--muted); white-space: nowrap; }
-.pkdur .pkseg {flex: 1; margin: 0; }
+.pkstep {flex: none; width: 44px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--text); font-size: 20px; cursor: pointer; }
+.pkstep[disabled] {opacity: .35; cursor: default; }
+.pkdur .pkdurval {flex: 1; text-align: center; font-size: 15px; font-weight: 600; color: var(--text); }
   /* ---- Swaras section + composer (LoopLab) ---- */
   #fsSwSection { margin-top: 4px; }
   .swSecHead { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
@@ -263,7 +265,6 @@
   .swSecHead .swHeadBtns { order: 2; display: flex; align-items: center; gap: 8px; }
   .roundplay { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff;
     border: 0; font-size: 15px; cursor: pointer; padding: 0; }
-  .roundplay.playing { background: var(--warn); color: var(--warn-ink); }
   .roundplay[hidden] { display: none; }
   .loopsub { font-size: 12.5px; color: var(--muted); margin: 6px 0 8px; }
   .temporow { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 13.5px; color: var(--muted); }
@@ -2004,8 +2005,10 @@ function slotLabelHTML(slot) {
     return `<span class="st">${inner}</span>`;
   }).join("");
 }
-const DURS = [0.25, 0.5, 1, 2, 4];
-const durLabel = b => b === 1 ? "1 beat" : b === 0.5 ? "½ beat" : b === 0.25 ? "¼ beat" : b + " beats";
+const DUR_MIN = 0.25, DUR_MAX = 8, DUR_STEP = 0.25;
+const beatOK = v => typeof v === "number" && v >= DUR_MIN && v <= DUR_MAX &&
+  Math.abs(v * 4 - Math.round(v * 4)) < 1e-9;
+const durLabel = b => fmtBeats(b) + (b > 1 ? " beats" : " beat");
 const totBeats = c => c.chips.reduce((a, x) => a + x.beats, 0);
 const ragaName = id => (id && ragaById(id)) ? ragaById(id).name : "Chromatic";
 const chipLabel = ch => ch.k === "note" ? slotLabelHTML(ch) : ch.k === "hold" ? "," : "–";
@@ -2022,7 +2025,7 @@ function sanitizePhrase(raw) {
   const chips = [];
   for (const ch of c.chips) {
     if (!ch || typeof ch !== "object") return null;
-    const beats = DURS.includes(ch.beats) ? ch.beats : 1;
+    const beats = beatOK(ch.beats) ? Math.round(ch.beats * 4) / 4 : 1;
     if (ch.k === "hold" || ch.k === "gap") { chips.push({ k: ch.k, beats }); continue; }
     if (ch.k !== "note" || !Array.isArray(ch.stack) || !ch.stack.length) return null;
     const stack = [];
@@ -2350,7 +2353,7 @@ function renderEditor() {
 function pickNewChip(title, ragaId, done) {
   let beats = 1;
   swOpenPicker({ title, ragaId, stackMode: true,
-    duration: { value: beats, options: DURS },
+    duration: { value: beats },
     onDuration: v => { beats = v; },
     onPick: p => {
       if (p.kind === "swara") done({ k: "note", stack: [{ st: p.st, oct: p.oct }], beats });
@@ -2383,7 +2386,7 @@ function onChipTap(i) {
     current: `Now: ${chipLabel(ch)}`,
     prefill: ch.k === "note" ? ch.stack : ch.k === "hold" ? [{ hold: true }] : null,
     stackOn: ch.k === "note" && ch.stack.length > 1,
-    duration: { value: ch.beats, options: DURS },
+    duration: { value: ch.beats },
     onDuration: v => { c.chips[i].beats = v; swSave(); renderStrip(); },
     onPick: p => {
       swStopPlayback();
@@ -2486,7 +2489,6 @@ function swOpenPicker(opts) {
   let sel = (opts.prefill || []).map(n => n.hold ? { hold:true } : { st:n.st, oct:n.oct });
   let durVal = opts.duration ? opts.duration.value : null;
   const selLabel = n => n.hold ? "," : n.st + (n.oct > 0 ? "'" : n.oct < 0 ? "." : "");
-  const durLbl = b => b === 1 ? "1" : b === 0.5 ? "½" : b === 0.25 ? "¼" : b + "";
   const render = () => {
     const sub = st => {
       const m = st.match(/^([A-Z])(\d?)$/);
@@ -2518,10 +2520,11 @@ function swOpenPicker(opts) {
         `<button class="pkbtn" data-sp="gap">– gap</button>` +
         `<button class="pkbtn" data-sp="clear">✕ clear</button>`) +
       `</div>`) +
-      (opts.duration ? `<div class="pkdur"><span>Length</span><div class="pkseg" id="pkDur">` +
-        opts.duration.options.map(x =>
-          `<button data-d="${x}" class="${x === durVal ? "on" : ""}">${durLbl(x)}</button>`).join("") +
-        `</div></div>` : "") +
+      (opts.duration ? `<div class="pkdur"><span>Length</span>` +
+        `<button class="pkstep" id="pkDurMinus" ${durVal <= DUR_MIN ? "disabled" : ""}>−</button>` +
+        `<span class="pkdurval">${durLabel(durVal)}</span>` +
+        `<button class="pkstep" id="pkDurPlus" ${durVal >= DUR_MAX ? "disabled" : ""}>＋</button>` +
+        `</div>` : "") +
       (opts.stackMode ?
         `<div class="stackbar">` +
           `<button class="stacktgl${stackOn ? " on" : ""}" id="pkStackTgl">Stack ＋</button>` +
@@ -2540,11 +2543,18 @@ function swOpenPicker(opts) {
     swPickerEl.querySelectorAll("#pkOct button").forEach(b => b.onclick = () => {
       oct = +b.dataset.o; render();
     });
-    swPickerEl.querySelectorAll("#pkDur button").forEach(b => b.onclick = () => {
-      durVal = parseFloat(b.dataset.d);
+    const dMinus = swPickerEl.querySelector("#pkDurMinus");
+    if (dMinus) dMinus.onclick = () => {
+      durVal = Math.max(DUR_MIN, Math.round((durVal - DUR_STEP) * 4) / 4);
       if (opts.onDuration) opts.onDuration(durVal);
       render();
-    });
+    };
+    const dPlus = swPickerEl.querySelector("#pkDurPlus");
+    if (dPlus) dPlus.onclick = () => {
+      durVal = Math.min(DUR_MAX, Math.round((durVal + DUR_STEP) * 4) / 4);
+      if (opts.onDuration) opts.onDuration(durVal);
+      render();
+    };
     const tgl = swPickerEl.querySelector("#pkStackTgl");
     if (tgl) tgl.onclick = () => { stackOn = !stackOn; render(); };
     swPickerEl.querySelectorAll("[data-st]").forEach(b => b.onclick = () => {
