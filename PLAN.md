@@ -278,6 +278,7 @@ Publish ~20 Hz. The segment-offset math is the fiddliest part — prove it in th
 ---
 
 ## 13. Testing plan
+- **Native CI (decided 2026-10-17):** the native app lives in its OWN public repo, separate from this prototype repo. GitHub Actions (free on public repos) + fastlane auto-build and run tests on every push; TestFlight uploads only on tags / main merges. No paid Apple account is needed for debug builds or simulator tests; free provisioning (personal Apple ID) covers on-device debug with 7-day expiry and a 3-app limit; the paid Developer Program (~£79/yr) is needed only for TestFlight / App Store distribution.
 - **Unit**: seconds↔frames, loop clamp/swap, SHA-256 dedupe (same bytes → same song), persistence round-trip incl. notes
 - **Prototype as oracle**: every MVP interaction has a working web reference — behavior-parity checklist before 1.0
 - **Device (real iPhone)**: 0.25x listen test by ear, gapless loop seam, pinch/pan gestures, background + lock, call interruption, headphone unplug, airplane mode (all offline)
