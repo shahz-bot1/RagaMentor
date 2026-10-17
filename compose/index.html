@@ -6,8 +6,8 @@
 <title>Compose Studio · RagaMentor</title>
 <link rel="stylesheet" href="../shared/studio.css?v=4">
 <style>
-:root, [data-theme="dark"] { --bad: #f87171; --warn: #fbbf24; }
-[data-theme="light"] { --bad: #dc2626; --warn: #b45309; }
+:root, [data-theme="dark"] { --bad: #f87171; --warn: #fbbf24; --warn-ink: #111827; }
+[data-theme="light"] { --bad: #dc2626; --warn: #b45309; --warn-ink: #ffffff; }
 body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px; }
 .card { border-radius: 14px; margin-bottom: 12px; }
 .view.on { padding: 12px; }
@@ -71,7 +71,9 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
   position: relative; cursor: pointer; }
 .fchip.gapc { border-color: var(--border); color: var(--muted); }
 .fchip.holdc { border-color: var(--border); color: var(--muted); }
-.fchip.cur { outline: 2px solid var(--warn); }
+.fchip.cur { background: var(--warn); border-color: var(--warn); color: var(--warn-ink);
+  outline: 2px solid var(--warn); outline-offset: 1px; }
+.fchip.cur .dur, .fchip.cur sub { color: var(--warn-ink); opacity: .75; }
 .fchip .dur { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .fchip sub { font-size: 10px; color: var(--muted); }
 .fchip.addc { border-style: dashed; border-color: var(--accent); color: var(--accent);
@@ -434,6 +436,7 @@ function playNoteAt(t, st, oct, saOffset, soundDur) {
 let pb = null, pbToken = 0; // pb: { comp, timers }
 function stopPlayback() {
   pbToken++;
+  document.querySelectorAll(".fchip.cur").forEach(x => x.classList.remove("cur"));
   if (!pb) { refreshPlayButtons(); return; }
   pb.timers.forEach(clearTimeout); pb = null;
   stopAllNodes();
