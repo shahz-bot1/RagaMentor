@@ -197,7 +197,7 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
 </div>
 
 <script src="../shared/components.js"></script>
-<script src="../shared/audio.js"></script>
+<script src="../shared/audio.js?v=2"></script>
 <script>
 "use strict";
 
@@ -925,6 +925,11 @@ function render() {
 function showList() { stopPlayback(); setRawMode(false); view = "list"; openId = null; render(); }
 function openEditor(id) { stopPlayback(); setRawMode(false); view = "editor"; openId = id; render(); }
 
+/* iOS suspends Web Audio in the background: stop cleanly on hide, wake on show */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) stopPlayback();
+  else StudioAudio.ensure();
+});
 syncFavRegistry();
 (function resumeRagaPick() {
   const pick = consumeRagaPick();
