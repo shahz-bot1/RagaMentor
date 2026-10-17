@@ -516,13 +516,13 @@ function restartIfPlaying() {
 function refreshPlayButtons() {
   document.querySelectorAll("[data-play]").forEach(b => {
     const active = !!pb && pb.comp.id === b.dataset.play;
-    b.textContent = active ? "⏹" : "▶";
+    b.textContent = active ? "■" : "▶";
     b.classList.toggle("playing", active);
   });
   const ep = document.getElementById("edPlay");
   if (ep) {
     const active = !!pb && !!openId && pb.comp.id === openId;
-    ep.textContent = active ? "⏹ Stop" : "▶ Play";
+    ep.textContent = active ? "■ Stop" : "▶ Play";
     ep.classList.toggle("playing", active);
   }
 }
