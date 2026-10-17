@@ -69,9 +69,9 @@ body { font-family: -apple-system, "SF Pro Text", sans-serif; padding: 0 0 40px;
   position: relative; cursor: pointer; }
 .fchip.gapc { border-color: var(--border); color: var(--muted); }
 .fchip.holdc { border-color: var(--border); color: var(--muted); }
-.fchip.cur { background: var(--warn); border-color: var(--warn); color: var(--warn-ink);
-  outline: 2px solid var(--warn); outline-offset: 1px; }
-.fchip.cur .dur, .fchip.cur sub { color: var(--warn-ink); opacity: .75; }
+.fchip.cur { background: color-mix(in srgb, var(--panel2) 78%, var(--accent) 22%);
+  border-color: var(--accent); color: var(--text);
+  outline: 2px solid var(--accent); outline-offset: 1px; }
 .fchip .dur { display: block; font-size: 10px; color: var(--muted); font-weight: 400; margin-top: 2px; }
 .fchip sub { font-size: 10px; color: var(--muted); }
 .fchip.addc { border-style: dashed; border-color: var(--accent); color: var(--accent);
