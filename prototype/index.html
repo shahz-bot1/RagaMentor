@@ -2232,13 +2232,13 @@ function swRefreshPlayButtons() {
   const sp = document.getElementById("swSecPlay");
   if (sp) {
     const active = !!swPb && swPb.where === "section" && swPb.loopId === selectedLoopId;
-    sp.textContent = active ? "⏹" : "▶";
+    sp.textContent = active ? "■" : "▶";
     sp.classList.toggle("playing", active);
   }
   const ep = document.getElementById("edPlay");
   if (ep && swEdit) {
     const active = !!swPb && swPb.where === "editor";
-    ep.textContent = active ? "⏹ Stop" : "▶ Play";
+    ep.textContent = active ? "■ Stop" : "▶ Play";
     ep.classList.toggle("playing", active);
   }
 }
