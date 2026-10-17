@@ -1,6 +1,6 @@
 # RagaMentor — Native Parity Plan
 
-**Status:** Approved direction, 2026-10-17 (Shahzin). Architecture approved the same day.
+**Status:** Approved direction, 2026-10-17 (Shahzin). Architecture approved the same day. **P0 SHIPPED 2026-10-17 as v0.7.0** (CI run 39061586074, both jobs green, 25/25 tests; IPA 765,481 bytes on the `latest` release).
 **Goal:** the native iOS app reaches full feature parity with the web suite, with the UI matched closely to the web, while keeping the native advantages (native audio engine, true background playback, real on-device files, OS interruption handling).
 **Companion doc:** `PLAN.md` (the MVP plan, M1–M6, shipped as v0.6.0). This plan supersedes the PLAN.md §15 parking-lot closure for the items listed here.
 **Evidence base:** full source inventories of all five web studios + the shared modules, taken 2026-10-17, and a full run of the web test suites (16 suites, 795 counted assertions, all passing). The inventories are the parity checklists: every rule in them becomes a checklist item in the milestone that ports it.
@@ -189,6 +189,8 @@ Translation rule: bucket (a) ports as unit tests over RagaCore/data with the sam
 ### 6.4 CI
 Every package is a test target in the existing fastlane `test` lane; the suite is green only when all targets pass. Counts are reported per milestone in the release notes of each version, against the translated baseline above (795 web assertions is the reference, not a quota — native suites restate behaviours, and the three gap areas add new ones).
 
+*As built in P0 (2026-10-17):* the suites run in the app's test target, organised as one file per module — RagaCoreTests (17), AudioKitTests (4), PersistenceKitTests (1), LoopLabTests (2), AppTests (1) — each importing its package, through the existing fastlane simulator lane. Package-local SwiftPM test targets were not needed to get per-module suites; they can be introduced later without changing the tests. Two build lessons from P0: a SwiftData `ModelContainer.mainContext` access is @MainActor-isolated and cannot sit in a non-isolated store property; and the AppShell target must link the full package graph directly (AudioKit + RagaCore included), because public default arguments (e.g. `PlaybackController.init(engine:)`) make the shell reference lower-module symbols at link time.
+
 ---
 
 ## 7. Milestones
@@ -197,7 +199,7 @@ Sequence note: P1/P2 build the editor stack; P3 completes the raga loop (browser
 
 | ID | Scope | Version | Rough effort |
 |---|---|---|---|
-| **P0** | **Modular refactor.** Split v0.6.0 into packages (RagaCore, AudioKit, PersistenceKit, DesignSystem shell, LoopLab feature, AppShell). Extract protocols (`FilePlaybackEngine`, `SongStore`, `SettingsStore`); PlaybackController becomes the LoopLab view model over protocols with fakes. All 25 existing tests move to package targets and stay green. **Launch-screen fix rides along** (LaunchScreen + config), ending the compatibility-size display. | v0.7.0 | ~1 week |
+| **P0** ✅ | **Modular refactor.** Split v0.6.0 into packages (RagaCore, AudioKit, PersistenceKit, DesignSystem shell, LoopLab feature, AppShell). Extract protocols (`FilePlaybackEngine`, `SongStore`, `SettingsStore`); PlaybackController becomes the LoopLab view model over protocols with fakes. All 25 existing tests move to package targets and stay green. **Launch-screen fix rides along** (LaunchScreen + config), ending the compatibility-size display. | v0.7.0 | ~1 week |
 | **P1** | **RagaLibrary + SwaraEditor + LoopLab Swaras.** Phrase model + expansion + sanitizers in RagaCore; ToneEngine (samples + sustain) in AudioKit; RagaLibrary service; SwaraEditor module; LoopLab hosts it (§2.3); per-song raga memory; loops backup learns **v3** (read/write, phrases) — the web→native loops migration lands here. RagaPicker protocol defined; until P3, the picker contract is served by RagaBrowser's future module, so the editor's "RagaBrowser ›" entry is present but routes to a registry browse sheet inside the editor (same data, interim UI) — replaced by the real browser in P3. Tests: swaras (69) + raga-link (17) translations. | v0.8.0 | ~1.5 weeks |
 | **P2** | **Compose Studio.** Composer feature: list + editor (SwaraEditor host #2), envelope export/import (§2.4), raw-JSON mode parity. Tests: compose (65) translation. | v0.9.0 | ~1 week |
 | **P3** | **RagaBrowser.** Registry data port; four tabs; detail (notation toggle, Listen card, piano display); favourites into RagaLibrary; **RagaPicker goes live** — editors' "RagaBrowser ›" now opens the real browser in pick mode. Tests: raga-browser (9) translation + new runtime suites (search, chakra, detail sequencing). CC-BY attribution line in the Listen card. | v0.10.0 | ~1.5 weeks |
