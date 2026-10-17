@@ -279,7 +279,9 @@ Publish ~20 Hz. The segment-offset math is the fiddliest part — prove it in th
 
 ## 13. Testing plan
 - **Native CI (decided 2026-10-17):** the native app lives in its OWN public repo, separate from this prototype repo. GitHub Actions (free on public repos) + fastlane auto-build and run tests on every push; TestFlight uploads only on tags / main merges. No paid Apple account is needed for debug builds or simulator tests; free provisioning (personal Apple ID) covers on-device debug with 7-day expiry and a 3-app limit; the paid Developer Program (~£79/yr) is needed only for TestFlight / App Store distribution.
-- **Native CI (LIVE 2026-10-17):** repo `shahz-bot1/RagaMentor-iOS` (public) holds a Hello World SwiftUI app (bundle uk.co.shahz.ragamentor, iOS 17+, v0.1.0). The pipeline is green end to end (run 39035320125): on every push to main, GitHub Actions (macos-15) runs fastlane lane `test` (unit tests on an iPhone 16 simulator) and lane `build_unsigned` (unsigned device archive zipped into `RagaMentor-iOS-unsigned.ipa`, uploaded as a run artifact, 14-day retention; IPA structure verified: Payload/*.app with executable + Info.plist). Distribution route decided 2026-10-17: free SideStore sideload. CI republishes the IPA to a permanent `latest` GitHub release on every green build of main, and the repo root carries a SideStore source (`apps.json`) pointing at it, so installs and updates happen inside SideStore. His one-time SideStore install (computer + pairing file) is the only remaining step.
+- **Native CI (LIVE 2026-10-17):** repo `shahz-bot1/RagaMentor-iOS` (public), bundle uk.co.shahz.ragamentor, iOS 17+. The pipeline is green end to end: on every push to main, GitHub Actions (macos-15) runs fastlane lane `test` (unit tests on an iPhone 16 simulator) and lane `build_unsigned` (unsigned device archive zipped into `RagaMentor-iOS-unsigned.ipa`, uploaded as a run artifact, 14-day retention). CI republishes the IPA to a permanent `latest` GitHub release on every green build of main, and the repo root carries a SideStore source (`apps.json`) pointing at it. Version lineage: v0.1.0 Hello World → v0.1.1 Gamaka-wave icon → v0.2.0 M1 → v0.6.0 M1–M6 complete (run 39055499414; 25 unit tests, all green). Distribution route: free sideload. On-device install was reached on 2026-10-17: SideStore itself was sideloaded via AltServer, and RagaMentor was then installed through iloader's direct Install IPA, because SideStore's own in-app sign-in still fails with -80045 after Apple's 13 Oct 2026 sign-in change. Refresh path: re-run iloader's Install IPA with the current `latest` IPA before each 7-day free-signing expiry (first install 17 Oct → refresh by ~24 Oct 2026). App data survives overwrite installs.
+- **Hands-off execution (2026-10-17):** Shahzin authorized autonomous execution of this plan in RagaMentor-iOS ("start executing the plan. Use your best judgement. I will be hands off."). M1–M6 were built and CI-verified the same day. What remains is his on-device acceptance pass against the §14 criteria. Two verdicts are ear-only and CI cannot prove them: the realtime loop seam, and TimePitch quality at 0.25x on real material.
+- **M2 finding — offline rendering:** AVAudioEngine manual (offline) rendering does not pick up segments scheduled from `.dataPlayedBack` completion handlers; passes after the first rendered silent in tests. The offline path therefore pre-schedules loop passes (count = requested frames ÷ output-per-pass at the current rate, +2 margin). The realtime path keeps completion-handler re-scheduling, which is what makes the live loop gapless.
 - **Unit**: seconds↔frames, loop clamp/swap, SHA-256 dedupe (same bytes → same song), persistence round-trip incl. notes
 - **Prototype as oracle**: every MVP interaction has a working web reference — behavior-parity checklist before 1.0
 - **Device (real iPhone)**: 0.25x listen test by ear, gapless loop seam, pinch/pan gestures, background + lock, call interruption, headphone unplug, airplane mode (all offline)
@@ -289,14 +291,14 @@ Publish ~20 Hz. The segment-offset math is the fiddliest part — prove it in th
 
 ## 14. Milestones & rough effort (solo, part-time)
 
-| Milestone | Scope | Rough effort |
-|-----------|-------|--------------|
-| M1 | Scaffolding, import + SHA-256 dedupe, basic transport, library UI | ~1 week |
-| M2 | **Audio engine spike**: 0.25x time-pitch quality, position math, gapless segment loop — prove before UI | 3–4 days |
-| M3 | A–B loops: set/select/toggle, 0.1s nudge, rename/delete, per-loop notes | ~1 week |
-| M4 | Persistence/restore (position, selection, notes), delete flows | 3–4 days |
-| M5 | Waveform: peaks job + inline rendering + fullscreen zoom/pan/follow + chips + floating panel | ~1.5 weeks |
-| M6 | Interruptions, background, edge cases, TestFlight | ~1 week |
+| Milestone | Scope | Rough effort | Status |
+|-----------|-------|--------------|--------|
+| M1 | Scaffolding, import + SHA-256 dedupe, basic transport, library UI | ~1 week | DONE 2026-10-17 (CI green, v0.2.0) |
+| M2 | **Audio engine spike**: 0.25x time-pitch quality, position math, gapless segment loop — prove before UI | 3–4 days | DONE 2026-10-17 (CI; seam quality is an on-device ear test) |
+| M3 | A–B loops: set/select/toggle, 0.1s nudge, rename/delete, per-loop notes | ~1 week | DONE 2026-10-17 (CI) |
+| M4 | Persistence/restore (position, selection, notes), delete flows | 3–4 days | DONE 2026-10-17 (CI) |
+| M5 | Waveform: peaks job + inline rendering + fullscreen zoom/pan/follow + chips + floating panel | ~1.5 weeks | DONE 2026-10-17 (CI) |
+| M6 | Interruptions, background, edge cases, TestFlight | ~1 week | DONE 2026-10-17 (CI; sideload distribution instead of TestFlight) |
 
 **Total: roughly 6 weeks part-time** (rough estimates; M2 is the schedule risk — if the loop seam or position math fights back, it borrows from M5).
 
